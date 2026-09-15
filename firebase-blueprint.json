@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account state and metrics",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "username": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "accountBalance": { "type": "number" },
+        "earnedTotal": { "type": "number" },
+        "pendingWithdrawal": { "type": "number" },
+        "totalWithdrew": { "type": "number" },
+        "activeDeposit": { "type": "number" },
+        "lastDeposit": { "type": "number" },
+        "totalDeposit": { "type": "number" },
+        "lastWithdrawal": { "type": "string" },
+        "usdtTrc20": { "type": "string" },
+        "bitcoin": { "type": "string" },
+        "ethereum": { "type": "string" },
+        "usdtErc20": { "type": "string" }
+      },
+      "required": ["uid", "username", "fullName", "email"]
+    },
+    "DepositRecord": {
+      "title": "Deposit Record",
+      "description": "Historical deposit transact log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "processor": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "username", "amount", "date", "processor"]
+    },
+    "WithdrawalRecord": {
+      "title": "Withdrawal Record",
+      "description": "Historical withdrawal transact log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "processor": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "username", "amount", "date", "processor"]
+    },
+    "TransactionRecord": {
+      "title": "Transaction Record",
+      "description": "Every financial action log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "type": { "type": "string", "enum": ["Deposit", "Investment", "Profit", "Withdrawal", "Bonus"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected", "Completed"] },
+        "processor": { "type": "string" },
+        "planId": { "type": "string" },
+        "planName": { "type": "string" },
+        "term": { "type": "number" },
+        "roi": { "type": "number" },
+        "referenceId": { "type": "string" }
+      },
+      "required": ["id", "userId", "username", "type", "amount", "date", "timestamp", "status", "processor"]
+    },
+    "InvestmentPlanRecord": {
+      "title": "Investment Plan Record",
+      "description": "A dynamic investment plan format created from admin controls",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "roi": { "type": "number" },
+        "term": { "type": "number" },
+        "dailyRateText": { "type": "string" },
+        "hourlyRateText": { "type": "string" }
+      },
+      "required": ["id", "name", "min", "max", "roi", "term"]
+    },
+    "SystemSettings": {
+      "title": "System Settings",
+      "description": "Global settings for the website, including announcements and coin wallet addresses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "announcement": { "type": "string" },
+        "usdt_trc20_address": { "type": "string" },
+        "btc_address": { "type": "string" },
+        "eth_address": { "type": "string" },
+        "usdt_erc20_address": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and credentials"
+    },
+    "/deposits/{depositId}": {
+      "schema": "DepositRecord",
+      "description": "Deposits list for all users"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": "WithdrawalRecord",
+      "description": "Withdrawals list for all users"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "TransactionRecord",
+      "description": "All financial actions with audit logs"
+    },
+    "/plans/{planId}": {
+      "schema": "InvestmentPlanRecord",
+      "description": "DYNAMIC plans list configurable by admin"
+    },
+    "/settings/{settingsId}": {
+      "schema": "SystemSettings",
+      "description": "Global administration settings and cryptocurrency wallet address configurations"
+    }
+  }
+}

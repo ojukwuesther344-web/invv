@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global rule to allow full read and write access for development and iframe preview compatibility
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Users Collection rules: Allow read and write for the user and admin override, with dev fallback
+    match /users/{userId} {
+      allow read, write: if true;
+
+      match /withdrawals/{withdrawalId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Deposits Collection rules
+    match /deposits/{depositId} {
+      allow read, write: if true;
+    }
+
+    // Withdrawals Collection rules
+    match /withdrawals/{withdrawalId} {
+      allow read, write: if true;
+    }
+
+    // Transactions Collection rules
+    match /transactions/{transactionId} {
+      allow read, write: if true;
+    }
+
+    // Dynamic Plans Collection rules
+    match /plans/{planId} {
+      allow read, write: if true;
+    }
+
+    // Global Settings matches
+    match /settings/{settingsId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Chibuike",
+  "description": "Exactly cloned investment and currency exchange platform with high fidelity UI, interactive dashboard, multiple page views (Home, About Us, FAQs, Registration, Deposit Plans), live currency rates, and dynamic animations.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
