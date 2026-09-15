@@ -29,7 +29,7 @@ export default function LiveChatWidget({ isAdmin = false }: LiveChatWidgetProps)
     {
       id: '1',
       sender: 'agent',
-      text: 'Hello! Welcome to Chibuike Support. How can we assist with your investments, deposits, or account today?',
+      text: 'Hello! Welcome to Worldvestcapital Support. How can we assist with your investments, deposits, or account today?',
       time: 'Just now'
     }
   ]);
@@ -91,7 +91,7 @@ export default function LiveChatWidget({ isAdmin = false }: LiveChatWidgetProps)
   };
 
   return (
-    <div id="chibuike-live-chat-widget" className="fixed bottom-6 right-6 z-50 font-sans">
+    <div id="worldvestcapital-live-chat-widget" className="fixed bottom-6 right-6 z-50 font-sans">
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}

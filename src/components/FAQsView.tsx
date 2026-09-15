@@ -13,7 +13,7 @@ export default function FAQsView({ onPageChange, faqManImage }: FAQsViewProps) {
   const faqItems: FAQItem[] = [
     {
       id: 'faq_1',
-      question: 'How do I start investing or exchanging on Chibuike?',
+      question: 'How do I start investing or exchanging on WorldVest Capital?',
       answer: 'To initiate operations, click the "GET STARTED" button in the upper right. After creating and completing your account setup on the registration page, proceed to log in, deposit your target assets into your wallet, and choose from our dynamic high-yielding plans.'
     },
     {
@@ -29,7 +29,7 @@ export default function FAQsView({ onPageChange, faqManImage }: FAQsViewProps) {
     {
       id: 'faq_4',
       question: 'Is there a fee for deposit or withdrawal transactions?',
-      answer: 'No. Chibuike charges zero platform fees for processing standard incoming deposits or outgoing withdrawals. Network gas fees might vary depending on the target blockchain network.'
+      answer: 'No. WorldVest Capital charges zero platform fees for processing standard incoming deposits or outgoing withdrawals. Network gas fees might vary depending on the target blockchain network.'
     },
     {
       id: 'faq_5',

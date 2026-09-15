@@ -1,5 +1,5 @@
 import React from 'react';
-import logohead from '../assets/images/logohead.png';
+import logoheadLight from '../assets/images/logohead_light.png';
 import { 
   LayoutDashboard, 
   Wallet, 
@@ -70,16 +70,16 @@ export default function DashboardSidebar({
       <aside className={`w-64 bg-[#0a1626] border-r border-[#10253f] flex flex-col h-full text-slate-300 fixed md:relative inset-y-0 left-0 z-50 md:z-auto transition-transform duration-300 shrink-0 ${
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
-      {/* Brand logo block in matching style to screenshots */}
-      <div className="p-4 border-b border-[#10253f] bg-[#07101c] flex items-center justify-between">
+      {/* Brand logo block with deep blue background and high-visibility logo */}
+      <div className="p-4 border-b border-[#122845] bg-[#0B2545] flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2">
           <img 
-            src={logohead} 
-            alt="Logo" 
-            className="h-9 w-auto max-w-[150px] object-contain" 
+            src={logoheadLight} 
+            alt="WorldVest Capital LTD" 
+            className="h-9 w-auto max-w-[155px] object-contain drop-shadow-xs" 
           />
         </div>
-        <div className="text-[9px] text-[#C59B4E] font-black tracking-widest uppercase px-2 py-0.5 rounded bg-[#C59B4E]/10 border border-[#C59B4E]/20">PORTAL</div>
+        <div className="text-[9px] text-[#C59B4E] font-black tracking-widest uppercase px-2 py-0.5 rounded bg-[#C59B4E]/15 border border-[#C59B4E]/30">PORTAL</div>
       </div>
 
       {/* User Info Segment */}

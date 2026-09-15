@@ -42,13 +42,13 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
         <div className="max-w-7xl mx-auto flex flex-row justify-between items-center gap-2">
           {/* Left Contacts */}
           <div className="flex items-center gap-4 text-gray-300">
-            <a href="tel:+2455921125" className="flex items-center gap-1.5 hover:text-white transition-colors">
+            <a href="tel:+12125921125" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <Phone size={12} className="text-[#C59B4E]" />
-              <span>(+245) 592 1125</span>
+              <span>+1 (212) 592-1125</span>
             </a>
-            <a href="mailto:support@Chibuike.com" className="flex items-center gap-1.5 hover:text-white transition-colors">
+            <a href="mailto:support@worldvestcapital.ltd" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <Mail size={12} className="text-[#C59B4E]" />
-              <span>support@Chibuike.com</span>
+              <span>support@worldvestcapital.ltd</span>
             </a>
             <span className="flex items-center gap-1.5">
               <MapPin size={12} className="text-[#C59B4E]" />

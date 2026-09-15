@@ -129,10 +129,10 @@ export default function DashboardView({
     fetchSettings();
   }, [activeSection]);
 
-  // Dynamic receiving wallet registry of the company
+  // Receiving wallet registry of the company
   const COMPANY_WALLET_ADDRESSES: Record<string, { address: string; network: string; fullName: string }> = {
     usdt_trc20: {
-      address: liveSystemSettings?.usdt_trc20_address || 'TXtF7rG8p9WKmQz6SJy8L7pG4bXnQwE9Tr',
+      address: 'TPLHJEAZ8jhcydontm8K7uM872jCFzS54w',
       network: 'TRON (TRC20)',
       fullName: 'Tether USD TRC-20'
     },
@@ -1057,19 +1057,6 @@ export default function DashboardView({
         {/* Dashboard index content view */}
         {activeSection === 'dashboard' && (
           <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-            {/* Dynamic Announcement Ticker Box */}
-            {liveSystemSettings?.announcement && (
-              <div className="bg-gradient-to-r from-slate-900 via-[#0d1c2e] to-slate-900 border border-[#C59B4E]/30 rounded-xl p-4 md:p-4.5 text-slate-100 shadow-md flex items-center gap-3.5 animate-in slide-in-from-top-4 duration-300">
-                <div className="w-8 h-8 rounded-full bg-[#C59B4E]/10 flex items-center justify-center text-[#C59B4E] shrink-0 border border-[#C59B4E]/20 text-xs">
-                  📢
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <span className="text-[10px] uppercase font-black tracking-widest text-[#C59B4E] font-mono block leading-none mb-1">System Broadcast Bulletin:</span>
-                  <p className="text-xs md:text-sm font-semibold text-slate-200">{liveSystemSettings.announcement}</p>
-                </div>
-              </div>
-            )}
-
             {/* Quick action boxes grid of 8 cards matching screenshot 5 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               

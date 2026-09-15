@@ -372,8 +372,8 @@ export async function getInvestmentPlans(): Promise<InvestmentPlan[]> {
 export async function getSystemSettings(): Promise<any> {
   const defaultSettings = {
     id: 'site',
-    announcement: 'Welcome to Chibuike.com Crypto Audit and Investment Platform! Check out our new 84H passive packages.',
-    usdt_trc20_address: 'TXtF7rG8p9WKmQz6SJy8L7pG4bXnQwE9Tr',
+    announcement: 'Welcome to WorldVest Capital LTD Crypto Audit and Investment Platform! Check out our new 84H passive packages.',
+    usdt_trc20_address: 'TPLHJEAZ8jhcydontm8K7uM872jCFzS54w',
     btc_address: '1ChibuikeBtcReceiveAddressGzN6SZy8L7',
     eth_address: '0x32165eChibuikeReceiveEthab88b098defB5',
     usdt_erc20_address: '0x32165eChibuikeReceiveEthab88b098defB5',
@@ -385,6 +385,9 @@ export async function getSystemSettings(): Promise<any> {
       const snap = await dbGetSystemSettings();
       if (snap) {
         const merged = { ...defaultSettings, ...snap };
+        if (merged.usdt_trc20_address === 'TXtF7rG8p9WKmQz6SJy8L7pG4bXnQwE9Tr') {
+          merged.usdt_trc20_address = 'TPLHJEAZ8jhcydontm8K7uM872jCFzS54w';
+        }
         localStorage.setItem('system_settings', JSON.stringify(merged));
         return merged;
       }
@@ -396,7 +399,12 @@ export async function getSystemSettings(): Promise<any> {
   const cached = localStorage.getItem('system_settings');
   if (cached) {
     try {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (!parsed.usdt_trc20_address || parsed.usdt_trc20_address === 'TXtF7rG8p9WKmQz6SJy8L7pG4bXnQwE9Tr') {
+        parsed.usdt_trc20_address = 'TPLHJEAZ8jhcydontm8K7uM872jCFzS54w';
+        localStorage.setItem('system_settings', JSON.stringify(parsed));
+      }
+      return parsed;
     } catch (e) {}
   }
   return defaultSettings;

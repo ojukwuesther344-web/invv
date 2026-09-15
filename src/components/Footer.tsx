@@ -112,7 +112,7 @@ export default function Footer({ onPageChange }: FooterProps) {
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Email</div>
-                  <a href="mailto:support@Chibuike.com" className="text-gray-300 hover:text-[#C59B4E] transition-colors">support@Chibuike.com</a>
+                  <a href="mailto:support@worldvestcapital.ltd" className="text-gray-300 hover:text-[#C59B4E] transition-colors">support@worldvestcapital.ltd</a>
                 </div>
               </div>
 
@@ -123,7 +123,7 @@ export default function Footer({ onPageChange }: FooterProps) {
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Phone</div>
-                  <a href="tel:+13454567877" className="text-gray-300 hover:text-[#C59B4E] transition-colors">+1-3454-5678-77</a>
+                  <a href="tel:+12125921125" className="text-gray-300 hover:text-[#C59B4E] transition-colors">+1 (212) 592-1125</a>
                 </div>
               </div>
             </div>

@@ -166,7 +166,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   const [settings, setSettings] = useState<any>({
     id: 'site',
     announcement: '',
-    usdt_trc20_address: '',
+    usdt_trc20_address: 'TPLHJEAZ8jhcydontm8K7uM872jCFzS54w',
     btc_address: '',
     eth_address: '',
     usdt_erc20_address: '',

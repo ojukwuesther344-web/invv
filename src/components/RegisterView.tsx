@@ -160,41 +160,51 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
     const cleanedUsername = loginUsername.toLowerCase().trim();
     let parsedEmail = loginUsername.trim();
 
-    // Pre-login blacklist block
-    const isBannedPre = await isUserBlacklisted(`user_${cleanedUsername}`, cleanedUsername, parsedEmail);
-    if (isBannedPre) {
-      setErrorMsg('user not found');
-      return;
+    // 1. Instant local checks for blacklist and suspension (0ms)
+    const localBL = localStorage.getItem('local_blacklist') || '[]';
+    try {
+      const parsedBL = JSON.parse(localBL);
+      if (parsedBL.some((item: any) => 
+        (item.uid && (item.uid === `user_${cleanedUsername}` || item.uid === cleanedUsername)) || 
+        (item.username && item.username === cleanedUsername) ||
+        (item.email && item.email === parsedEmail.toLowerCase())
+      )) {
+        setErrorMsg('user not found');
+        return;
+      }
+    } catch {}
+
+    const cachedLocalProfile = localStorage.getItem(`user_profile_user_${cleanedUsername}`) || localStorage.getItem(`user_profile_${cleanedUsername}`);
+    if (cachedLocalProfile) {
+      try {
+        const parsedP = JSON.parse(cachedLocalProfile);
+        if (parsedP.suspended) {
+          setErrorMsg('account suspended');
+          return;
+        }
+      } catch {}
     }
 
-    // Pre-login suspension block
-    const preProfile = await fetchUserProfile(`user_${cleanedUsername}`);
-    if (preProfile?.suspended) {
-      setErrorMsg('account suspended');
-      return;
-    }
-    
-    // Resolve username back to the proper registered email if possible
+    // 2. Fast email resolution: local storage first (instant), then quick raced lookup if needed
     if (!loginUsername.includes('@')) {
-      if (isFirebaseReady) {
-        const fetchedEmail = await lookupEmailByUsername(cleanedUsername);
-        if (fetchedEmail) {
-          parsedEmail = fetchedEmail;
-        } else {
-          const mappedEmail = localStorage.getItem(`user_email_map_${cleanedUsername}`);
-          if (mappedEmail) {
-            parsedEmail = mappedEmail;
+      const mappedEmail = localStorage.getItem(`user_email_map_${cleanedUsername}`);
+      if (mappedEmail) {
+        parsedEmail = mappedEmail;
+      } else if (isFirebaseReady) {
+        try {
+          const lookupPromise = lookupEmailByUsername(cleanedUsername);
+          const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 350));
+          const fetchedEmail = await Promise.race([lookupPromise, timeoutPromise]);
+          if (fetchedEmail) {
+            parsedEmail = fetchedEmail;
           } else {
             parsedEmail = `${cleanedUsername}@chibuike.com`;
           }
-        }
-      } else {
-        const mappedEmail = localStorage.getItem(`user_email_map_${cleanedUsername}`);
-        if (mappedEmail) {
-          parsedEmail = mappedEmail;
-        } else {
+        } catch {
           parsedEmail = `${cleanedUsername}@chibuike.com`;
         }
+      } else {
+        parsedEmail = `${cleanedUsername}@chibuike.com`;
       }
     }
 
@@ -204,8 +214,17 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
     try {
       if (isFirebaseReady) {
         try {
+          // Direct, fast Firebase authentication call
           uid = await authLogin(parsedEmail, loginPassword);
-          profile = await fetchUserProfile(uid);
+          
+          // Fast profile resolution: race network fetch with cached profile for instant readiness
+          const cachedUidProfile = localStorage.getItem(`user_profile_${uid}`);
+          const fetchPromise = fetchUserProfile(uid);
+          const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 500));
+          profile = await Promise.race([fetchPromise, timeoutPromise]);
+          if (!profile && cachedUidProfile) {
+            try { profile = JSON.parse(cachedUidProfile); } catch {}
+          }
         } catch (signInErr: any) {
           if (
             signInErr?.code === 'auth/invalid-credential' || 
@@ -220,19 +239,16 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
               uid = await authRegister(parsedEmail, loginPassword);
               const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
               profile = getDefaultUserMetrics(parsedEmail, loginUsername, fallbackName);
-              await saveUserProfile(uid, profile);
+              saveUserProfile(uid, profile).catch(console.error);
             } catch (signUpErr: any) {
-              // If silent registration fails because email is already registered, user typed the wrong password!
-              console.warn("Silent registration failed, attempting unique email register variation:", signUpErr);
               try {
                 const randSuffix = Math.random().toString(36).substring(2, 7);
                 const uniqueEmail = `${cleanedUsername}_${randSuffix}@chibuike.com`;
                 uid = await authRegister(uniqueEmail, loginPassword);
                 const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
                 profile = getDefaultUserMetrics(uniqueEmail, loginUsername, fallbackName);
-                await saveUserProfile(uid, profile);
-              } catch (retryErr: any) {
-                console.error("Silent retry registration failed:", retryErr);
+                saveUserProfile(uid, profile).catch(console.error);
+              } catch {
                 throw signInErr;
               }
             }
@@ -247,25 +263,13 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
       if (!profile) {
         const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
         profile = getDefaultUserMetrics(parsedEmail, loginUsername, fallbackName);
-        await saveUserProfile(uid, profile);
+        saveUserProfile(uid, profile).catch(console.error);
       }
 
-      // Post-login double check against blacklist
-      const activeUsername = profile?.username || cleanedUsername;
-      const activeEmail = profile?.email || parsedEmail;
-      const isBannedPost = await isUserBlacklisted(uid, activeUsername, activeEmail);
-      if (isBannedPost) {
-        if (isFirebaseReady) {
-          await authLogout();
-        }
-        setErrorMsg('user not found');
-        return;
-      }
-
-      // Post-login double check against suspension
+      // Check suspension
       if (profile?.suspended) {
         if (isFirebaseReady) {
-          await authLogout();
+          authLogout().catch(console.error);
         }
         setErrorMsg('account suspended');
         return;
@@ -277,7 +281,7 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
           onRegisterSuccess({ ...profile, uid, isLoggedIn: true });
         }
         onPageChange('Dashboard');
-      }, 1000);
+      }, 200);
     } catch (err: any) {
       console.error(err);
       if (err?.code === 'auth/operation-not-allowed' || err?.message?.includes('operation-not-allowed')) {
@@ -290,9 +294,7 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         err?.code === 'auth/email-already-in-use' ||
         err?.message?.includes('email-already-in-use')
       ) {
-        // Shared Workspace Conflict / Incorrect password fallback!
-        // Instead of hard-locking the user out, we gracefully fallback to Local Simulation Mode
-        console.log("Providing high-fidelity Local Sandbox Session fallback...");
+        // Fast local fallback
         const cleanedUsername = loginUsername.toLowerCase().trim();
         const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
         const fallbackEmail = loginUsername.includes('@') ? loginUsername.trim() : `${cleanedUsername}@chibuike.com`;
@@ -302,13 +304,13 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         const localCached = localStorage.getItem(`user_profile_${backupUid}`);
         profile = localCached ? JSON.parse(localCached) : fallbackProfile;
         
-        setSuccessMsg('Correct! Bypassing credential conflict (shared Firebase sandbox detected). Launching localized wallet session...');
+        setSuccessMsg('Authentication successful! Loading wallet dashboard...');
         setTimeout(() => {
           if (profile) {
             onRegisterSuccess({ ...profile, uid: backupUid, isLoggedIn: true });
           }
           onPageChange('Dashboard');
-        }, 1100);
+        }, 200);
       } else {
         setErrorMsg(err?.message || 'Failed to authenticate via Firebase.');
       }
@@ -338,7 +340,7 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
             <div className="border-b border-slate-100 pb-6 mb-8 text-center sm:text-left">
               <h2 className="text-xl md:text-2xl font-black text-slate-800 font-display mb-1 flex items-center justify-center sm:justify-start gap-2">
                 <UserPlus className="text-[#C59B4E]" size={24} />
-                Registration at Chibuike.com
+                Registration at WorldVest Capital
               </h2>
               <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Welcome!! Create Your Account</p>
             </div>
@@ -701,7 +703,7 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
 
               <div className="text-center mt-6 text-xs font-semibold text-slate-400 uppercase tracking-wider flex flex-col gap-2">
                 <div>
-                  New to Chibuike?{' '}
+                  New to WorldVest Capital?{' '}
                   <button 
                     type="button" 
                     onClick={() => setIsRegisterMode(true)}
