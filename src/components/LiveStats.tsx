@@ -17,7 +17,7 @@ export default function LiveStats({ onPlanClick }: LiveStatsProps) {
     { username: 'brian_k', amount: 500.00, date: 'Oct-12-2023 11:22:15 AM', processor: 'USDT TRC20' },
     { username: 'lucas_invest', amount: 1250.00, date: 'Oct-12-2023 09:14:40 AM', processor: 'Bitcoin' },
     { username: 'mariam99', amount: 85.00, date: 'Oct-12-2023 08:05:02 AM', processor: 'Dogecoin' },
-    { username: 'tony_stake', amount: 3100.00, date: 'Oct-11-2023 04:30:19 PM', processor: 'XRP' },
+    { username: 'tony_stake', amount: 3100.00, date: 'Oct-11-2023 04:30:19 PM', processor: 'Tron' },
     { username: 'crypto_guru', amount: 50.00, date: 'Oct-11-2023 02:18:11 PM', processor: 'USDT TRC20' },
   ]);
 
@@ -30,7 +30,7 @@ export default function LiveStats({ onPlanClick }: LiveStatsProps) {
     { username: 'anna_active', amount: 240.00, date: 'Oct-13-2023 08:12:15 AM', processor: 'Ethereum' },
     { username: 'user_982', amount: 75.20, date: 'Oct-12-2023 11:45:10 PM', processor: 'Tron' },
     { username: 'richard1', amount: 620.00, date: 'Oct-12-2023 08:30:55 PM', processor: 'USDT TRC20' },
-    { username: 'hyper_pay', amount: 12.50, date: 'Oct-12-2023 02:15:00 PM', processor: 'XRP' },
+    { username: 'hyper_pay', amount: 12.50, date: 'Oct-12-2023 02:15:00 PM', processor: 'USDT TRC20' },
     { username: 'forex_king', amount: 430.00, date: 'Oct-12-2023 01:05:43 PM', processor: 'Bitcoin' },
   ]);
 

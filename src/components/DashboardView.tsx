@@ -1522,7 +1522,7 @@ export default function DashboardView({
                   </div>
                   <div className="text-slate-400 text-xs font-bold uppercase">No Transaction Logs Recorded</div>
                   <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
-                    Once you execute any financial action on Chibuike ledger, its secure receipt trail will update here instantly.
+                    Once you execute any financial action on WorldvestCapital ledger, its secure receipt trail will update here instantly.
                   </p>
                 </div>
               ) : (

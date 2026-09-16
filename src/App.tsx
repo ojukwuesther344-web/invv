@@ -96,7 +96,7 @@ export default function App() {
     isLoggedIn: false, // true once registered or signed in!
     username: 'aa',
     fullName: 'Alex Adams',
-    email: 'aa@Chibuike.com',
+    email: 'aa@WorldvestCapital.com',
     wallets: {
       usdtTrc20: '',
       bitcoin: '',
@@ -620,7 +620,7 @@ export default function App() {
 
   // Adjust browser tab title dynamically and scale viewport gracefully for a perfect zoomed-out high-fidelity desktop experience
   useEffect(() => {
-    document.title = `Chibuike | ${currentPage} - Crypto Investment & Exchange Platform`;
+    document.title = `WorldvestCapital | ${currentPage} - crypto investment & Exchange platform`;
 
     const htmlEl = document.documentElement;
     const bodyEl = document.body;
@@ -829,7 +829,7 @@ export default function App() {
 
                 {/* Big Display Title Exactly */}
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tight leading-tight uppercase font-display">
-                  Join to unique <span className="text-[#C59B4E]">investment</span> offer and profit opportunities
+                  Join the unique <span className="text-[#C59B4E]">investment</span> offer and profit opportunities
                 </h1>
 
                 {/* Body paragraph */}

@@ -8,8 +8,7 @@ const partners = [
   { name: 'bitcoin', symbol: 'BTC', iconColor: '#F7931A' },
   { name: 'Perfect Money', symbol: 'PM', iconColor: '#E21A22' },
   { name: 'tether', symbol: 'USDT', iconColor: '#26A17B' },
-  { name: 'TRON', symbol: 'TRX', iconColor: '#EC0623' },
-  { name: 'XRP', symbol: 'XRP', iconColor: '#23292F' }
+  { name: 'TRON', symbol: 'TRX', iconColor: '#EC0623' }
 ];
 
 export default function Partners({ title }: { title?: string }) {
