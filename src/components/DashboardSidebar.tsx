@@ -16,7 +16,8 @@ import {
   UserCog, 
   LogOut,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Home
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -71,15 +72,21 @@ export default function DashboardSidebar({
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
       {/* Brand logo block with deep blue background and high-visibility logo */}
-      <div className="p-4 border-b border-[#122845] bg-[#0B2545] flex items-center justify-between shadow-sm">
+      <div 
+        onClick={() => onPageChange && onPageChange('Home')}
+        className="p-4 border-b border-[#122845] bg-[#0B2545] flex items-center justify-between shadow-sm cursor-pointer hover:bg-[#0f2e54] transition-colors group"
+        title="Go to Website Homepage"
+      >
         <div className="flex items-center gap-2">
           <img 
             src={logoheadLight} 
             alt="WorldVest Capital LTD" 
-            className="h-9 w-auto max-w-[155px] object-contain drop-shadow-xs" 
+            className="h-9 w-auto max-w-[155px] object-contain drop-shadow-xs group-hover:scale-105 transition-transform" 
           />
         </div>
-        <div className="text-[9px] text-[#C59B4E] font-black tracking-widest uppercase px-2 py-0.5 rounded bg-[#C59B4E]/15 border border-[#C59B4E]/30">PORTAL</div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] text-[#C59B4E] font-black tracking-widest uppercase px-2 py-0.5 rounded bg-[#C59B4E]/15 border border-[#C59B4E]/30">PORTAL</span>
+        </div>
       </div>
 
       {/* User Info Segment */}
@@ -133,6 +140,20 @@ export default function DashboardSidebar({
           >
             <ShieldAlert size={16} className="text-purple-400 shrink-0" />
             <span>Admin Control Panel</span>
+          </button>
+        )}
+
+        {onPageChange && (
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+              onPageChange('Home');
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
+            title="Return to Website Homepage"
+          >
+            <Home size={16} className="text-[#C59B4E]" />
+            <span>Website Home</span>
           </button>
         )}
 

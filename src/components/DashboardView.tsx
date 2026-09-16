@@ -42,7 +42,9 @@ import {
   User,
   Copy,
   Upload,
-  ArrowRight
+  ArrowRight,
+  Home,
+  Delete
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -116,6 +118,87 @@ export default function DashboardView({
 
   // Dynamic system settings container
   const [liveSystemSettings, setLiveSystemSettings] = useState<any>(null);
+
+  // Navigation history tracking for sub menu pages to go back to previous page
+  const [sectionHistory, setSectionHistory] = useState<string[]>(['dashboard']);
+
+  React.useEffect(() => {
+    setSectionHistory((prev) => {
+      if (prev[prev.length - 1] === activeSection) return prev;
+      return [...prev, activeSection];
+    });
+  }, [activeSection]);
+
+  const handleGoBack = () => {
+    if (paymentSession) {
+      setPaymentSession(null);
+      setPaymentSuccess(false);
+      setPaymentError('');
+      return;
+    }
+    setSectionHistory((prev) => {
+      if (prev.length > 1) {
+        const newHistory = prev.slice(0, -1);
+        const previousSection = newHistory[newHistory.length - 1] || 'dashboard';
+        onSectionSelect(previousSection);
+        return newHistory;
+      } else {
+        onSectionSelect('dashboard');
+        return ['dashboard'];
+      }
+    });
+  };
+
+  const getSectionTitle = () => {
+    if (paymentSession) return 'Payment Gateway';
+    switch (activeSection) {
+      case 'dashboard':
+        return `Dashboard - Welcome ${user.username}`;
+      case 'make-deposit':
+        return 'Make Deposit';
+      case 'deposit-to-account':
+        return 'Deposit To Account';
+      case 'deposit-list':
+        return 'Deposit List';
+      case 'deposit-history':
+        return 'Deposit History';
+      case 'earnings-history':
+        return 'Earnings History';
+      case 'referrals-history':
+        return 'Referrals History';
+      case 'withdraw':
+        return 'Withdraw Funds';
+      case 'withdrawals-history':
+        return 'Withdrawals History';
+      case 'referrals':
+        return 'Referrals Program';
+      case 'ref-links':
+        return 'Referral Links';
+      case 'tell-a-friend':
+        return 'Tell A Friend';
+      case 'security':
+        return 'Security Settings';
+      case 'edit-profile':
+        return 'Edit Profile';
+      default:
+        return activeSection.replace('-', ' ');
+    }
+  };
+
+  const renderBackButton = (label = 'Back to Previous Page') => (
+    <div className="mb-3">
+      <button
+        type="button"
+        onClick={handleGoBack}
+        className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#C59B4E] border border-slate-200 hover:border-[#C59B4E]/40 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-xs cursor-pointer group active:scale-95"
+        title="Go back to previous page"
+        aria-label="Go back to previous page"
+      >
+        <Delete size={16} className="text-[#C59B4E] group-hover:-translate-x-0.5 transition-transform" />
+        <span>{label}</span>
+      </button>
+    </div>
+  );
 
   React.useEffect(() => {
     const fetchSettings = async () => {
@@ -635,29 +718,56 @@ export default function DashboardView({
   return (
     <div className="flex-1 bg-slate-100 flex flex-col overflow-y-auto overflow-x-hidden w-full relative">
       {/* Top dashboard toolbelt header - Sticky Static Position */}
-      <header className="bg-white border-b border-slate-200 py-4 px-6 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-sm">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-slate-200 py-3.5 px-4 sm:px-6 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-sm">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           {onToggleSidebar && (
             <button 
               type="button"
               onClick={onToggleSidebar}
-              className="p-1.5 text-slate-500 hover:text-[#C59B4E] hover:bg-slate-50 rounded-lg md:hidden transition-all cursor-pointer mr-1.5"
+              className="p-1.5 text-slate-500 hover:text-[#C59B4E] hover:bg-slate-50 rounded-lg md:hidden transition-all cursor-pointer mr-0.5"
               aria-label="Toggle Navigation Menu"
             >
               <Menu size={18} />
             </button>
           )}
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest leading-none">
-            Dashboard - Welcome {user.username}
+
+          {/* Backspace icon button on header when on any sub menu page */}
+          {(activeSection !== 'dashboard' || paymentSession) && (
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-[#C59B4E]/15 text-slate-700 hover:text-[#C59B4E] border border-slate-200 hover:border-[#C59B4E]/40 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs group"
+              title="Go back to previous page"
+              aria-label="Go back to previous page"
+            >
+              <Delete size={16} className="text-[#C59B4E] group-hover:-translate-x-0.5 transition-transform" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          )}
+
+          <h2 className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-wider sm:tracking-widest leading-none truncate max-w-[200px] sm:max-w-none">
+            {getSectionTitle()}
           </h2>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+          {/* Home Icon button on user dashboard to easily redirect to the homepage website */}
+          <button 
+            type="button"
+            onClick={() => onPageChange('Home')}
+            className="p-2 text-slate-600 hover:text-[#C59B4E] hover:bg-slate-50 border border-slate-200 hover:border-[#C59B4E]/40 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-xs group"
+            title="Go to Website Homepage"
+            aria-label="Go to Website Homepage"
+          >
+            <Home size={18} className="text-[#C59B4E] group-hover:scale-110 transition-transform" />
+            <span className="hidden md:inline text-xs font-bold text-slate-700 group-hover:text-[#C59B4E]">Home</span>
+          </button>
+
           <div className="relative hidden sm:block">
             <input 
               type="text" 
               placeholder="Search actions..." 
-              className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-md text-xs bg-slate-50 focus:outline-none focus:border-[#C59B4E] w-48"
+              className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-md text-xs bg-slate-50 focus:outline-none focus:border-[#C59B4E] w-36 md:w-48"
             />
             <Search size={13} className="text-slate-400 absolute left-2.5 top-2.5" />
           </div>
@@ -738,6 +848,10 @@ export default function DashboardView({
             {/* Background design accents */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#C59B4E]/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="mb-4 relative z-10">
+              {renderBackButton('Back to Previous Page')}
+            </div>
 
             {/* Header / Security Emblem */}
             <div className="border-b border-slate-900 pb-5 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
@@ -1041,10 +1155,11 @@ export default function DashboardView({
 
                       <button
                         type="button"
-                        onClick={() => setPaymentSession(null)}
-                        className="w-full text-center text-[9px] text-slate-500 hover:text-white uppercase tracking-widest font-bold pt-1 block"
+                        onClick={handleGoBack}
+                        className="w-full text-center text-[10px] text-slate-400 hover:text-white uppercase tracking-widest font-bold pt-2 flex items-center justify-center gap-1.5 hover:bg-slate-900 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-800"
                       >
-                        &lt; Return & Cancel Invoice
+                        <Delete size={14} className="text-[#C59B4E]" />
+                        <span>Return & Cancel Invoice</span>
                       </button>
                     </div>
                   </div>
@@ -1499,6 +1614,7 @@ export default function DashboardView({
         {/* MAKE DEPOSIT Plan select and spend section (Screenshot 6) */}
         {activeSection === 'make-deposit' && !paymentSession && (
           <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+            {renderBackButton()}
             
             {/* Heading section */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm text-center">
@@ -1685,6 +1801,7 @@ export default function DashboardView({
         {/* ===== DEPOSIT TO ACCOUNT BALANCE ===== */}
         {activeSection === 'deposit-to-account' && !paymentSession && (
           <div className="max-w-3xl mx-auto w-full p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {renderBackButton()}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
               <div className="p-6 bg-slate-950 text-white flex justify-between items-center">
                 <div>
@@ -1778,6 +1895,7 @@ export default function DashboardView({
         {/* ===== SUBMIT WITHDRAWAL REQUEST ===== */}
         {activeSection === 'withdraw' && (
           <div className="max-w-3xl mx-auto w-full p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {renderBackButton()}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
               <div className="p-6 bg-[#0a1626] text-white flex justify-between items-center">
                 <div>
@@ -1855,6 +1973,7 @@ export default function DashboardView({
         {/* ===== DEPOSITS / INVESTMENTS HISTORY ===== */}
         {(activeSection === 'deposit-list' || activeSection === 'deposit-history') && (
           <div className="w-full p-4 md:p-8 animate-in fade-in duration-300">
+            {renderBackButton()}
             <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest mb-6 font-display flex items-center gap-2">
               <History className="text-[#C59B4E]" size={20} /> Deposit & Investment Logs
             </h3>
@@ -1919,6 +2038,7 @@ export default function DashboardView({
         {/* ===== EARNINGS HISTORY ===== */}
         {activeSection === 'earnings-history' && (
           <div className="w-full p-4 md:p-8 animate-in fade-in duration-300">
+            {renderBackButton()}
             <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest mb-6 font-display flex items-center gap-2">
               <TrendingUp className="text-emerald-500" size={20} /> Accrued Profits & Bonus Registry
             </h3>
@@ -1977,6 +2097,7 @@ export default function DashboardView({
         {/* ===== WITHDRAWALS HISTORY WITH SIMULATOR ===== */}
         {activeSection === 'withdrawals-history' && (
           <div className="w-full p-4 md:p-8 animate-in fade-in duration-300">
+            {renderBackButton()}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div>
                 <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest font-display flex items-center gap-2">
@@ -2063,6 +2184,7 @@ export default function DashboardView({
         {/* ===== EDIT PROFILE MODULE WITH LIVE CAMERA PORTRAIT CAPTURE ===== */}
         {activeSection === 'edit-profile' && (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {renderBackButton()}
             <div className="border-b border-slate-100 pb-5 mb-6">
               <h2 className="text-xl font-black font-display text-slate-800 tracking-tight uppercase">Edit Account Profile</h2>
               <p className="text-xs text-slate-400 mt-1">Configure your personal credentials and customize your secure backoffice avatar.</p>
@@ -2299,6 +2421,9 @@ export default function DashboardView({
          activeSection !== 'admin-controls' && 
          activeSection !== 'edit-profile' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center flex flex-col items-center gap-4 animate-in fade-in max-w-lg mx-auto mt-12">
+            <div className="w-full flex justify-start">
+              {renderBackButton()}
+            </div>
             <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center text-[#C59B4E] mb-2">
               <ShieldCheck size={32} />
             </div>
