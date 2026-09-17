@@ -1,0 +1,33 @@
+# Apache Configuration for Single Page Application on Namecheap cPanel
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Ensure images and static assets are served directly if they exist
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Route all other URLs to index.html for React SPA client-side routing
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# MIME Types for Web Assets and Images
+<IfModule mod_mime.c>
+  AddType image/png .png
+  AddType image/jpeg .jpg .jpeg
+  AddType image/webp .webp
+  AddType image/svg+xml .svg
+  AddType text/javascript .js .mjs
+  AddType text/css .css
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+</IfModule>
+
+# Enable CORS for Assets & Images
+<IfModule mod_headers.c>
+  <FilesMatch "\.(png|jpe?g|gif|svg|webp|ico|css|js|woff2?)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Cache-Control "max-age=2592000, public"
+  </FilesMatch>
+</IfModule>

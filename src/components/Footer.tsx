@@ -1,6 +1,7 @@
 import React from 'react';
 import { Facebook, Twitter, Instagram, Linkedin, MapPin, Mail, Phone, ArrowUp } from 'lucide-react';
 import { Page } from '../types';
+import logoheadImg from '../assets/images/logohead.png';
 
 interface FooterProps {
   onPageChange: (page: Page) => void;
@@ -27,7 +28,7 @@ export default function Footer({ onPageChange }: FooterProps) {
               className="flex items-center gap-2 text-left cursor-pointer group"
             >
               <div className="bg-white/95 rounded-lg px-2.5 py-1.5 border border-[#C59B4E]/30 group-hover:border-[#C59B4E] transition-all">
-                <img src="/logohead.png" alt="WorldVest Capital LTD" className="h-8 w-auto object-contain" />
+                <img src={logoheadImg || "/logohead.png"} alt="WorldVest Capital LTD" className="h-8 w-auto object-contain" />
               </div>
             </button>
             <p className="text-sm text-gray-400 leading-relaxed font-normal">

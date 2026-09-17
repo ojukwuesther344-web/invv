@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import Partners from './components/Partners';
 import PopularTools from './components/PopularTools';
 import LiveStats from './components/LiveStats';
+import UkCertificateSection from './components/UkCertificateSection';
 import { BenefitsGrid, ReviewsList } from './components/AboutInfoCard';
 import Plans from './components/Plans';
 import DashboardSidebar from './components/DashboardSidebar';
@@ -54,15 +55,24 @@ import {
   Check
 } from 'lucide-react';
 
+import heroManTabletImg from './assets/images/hero_man_tablet_1779995294194.png';
+import heroWomanPhoneImg from './assets/images/hero_woman_phone_1779995309843.png';
+import aboutTeamImg from './assets/images/about_team_1779995328220.png';
+import faqManImg from './assets/images/faq_man_1779995352650.png';
+import aboutWomanTabletImg from './assets/images/about_woman_tablet_1779995376101.png';
+import aboutCashImg from './assets/images/about_cash_1779995392829.png';
+import aboutWalletImg from './assets/images/about_wallet_1779995414284.png';
+import aboutCoinsImg from './assets/images/about_coins_1779995433183.png';
+
 const ASSETS_IMAGES = {
-  hero_man_tablet: '/src/assets/images/hero_man_tablet_1779995294194.png',
-  hero_woman_phone: '/src/assets/images/hero_woman_phone_1779995309843.png',
-  about_team: '/src/assets/images/about_team_1779995328220.png',
-  faq_man: '/src/assets/images/faq_man_1779995352650.png',
-  about_woman_tablet: '/src/assets/images/about_woman_tablet_1779995376101.png',
-  about_cash: '/src/assets/images/about_cash_1779995392829.png',
-  about_wallet: '/src/assets/images/about_wallet_1779995414284.png', // Fallbacks are automatically safe
-  about_coins: '/src/assets/images/about_coins_1779995433183.png',
+  hero_man_tablet: heroManTabletImg,
+  hero_woman_phone: heroWomanPhoneImg,
+  about_team: aboutTeamImg,
+  faq_man: faqManImg,
+  about_woman_tablet: aboutWomanTabletImg,
+  about_cash: aboutCashImg,
+  about_wallet: aboutWalletImg,
+  about_coins: aboutCoinsImg,
 };
 
 export default function App() {
@@ -1055,6 +1065,9 @@ export default function App() {
 
             {/* 6. LIVE STATS SECTION */}
             <LiveStats />
+
+            {/* UK GOVT CERTIFICATE OF INCORPORATION SECTION */}
+            <UkCertificateSection />
 
             {/* 7. BENEFITS LIST (YOUR BENIFITS) */}
             <BenefitsGrid />
