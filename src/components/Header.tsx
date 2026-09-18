@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Phone, Mail, MapPin, ChevronDown, User, LogOut, Menu, X, ArrowRight } from 'lucide-react';
 import { Page, UserState } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
+import CryptoTickerBar from './CryptoTickerBar';
 
 interface HeaderProps {
   currentPage: Page;
@@ -172,6 +173,9 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
           </div>
         </div>
       </nav>
+
+      {/* Steady Moving Crypto & Market Ticker Bar with Dark Blue Background */}
+      <CryptoTickerBar />
     </header>
   );
 }

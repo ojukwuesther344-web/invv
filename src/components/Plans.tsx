@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Page, InvestmentPlan } from '../types';
-import { HelpCircle, Calculator, Info, CheckCircle2 } from 'lucide-react';
+import { HelpCircle, Calculator, Info, CheckCircle2, ArrowRight } from 'lucide-react';
+import { getInvestmentPlans } from '../services/db';
 
 interface PlansProps {
   onPlanSelect: (planId: string) => void;
@@ -12,7 +13,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
   const [calcPlan, setCalcPlan] = useState<string>('plan_84h');
   const [calcAmt, setCalcAmt] = useState<number>(100);
 
-  const investmentPlans: InvestmentPlan[] = [
+  const defaultPlans: InvestmentPlan[] = [
     {
       id: 'plan_84h',
       name: 'EVERY HOUR FOR 84H',
@@ -45,6 +46,24 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
     }
   ];
 
+  const [investmentPlans, setInvestmentPlans] = useState<InvestmentPlan[]>(defaultPlans);
+
+  useEffect(() => {
+    getInvestmentPlans().then((plans) => {
+      if (plans && plans.length > 0) {
+        // Normalize roi: if stored as 101.2% in db, convert to hourly 1.2% for display if > 50
+        const normalized = plans.map(p => ({
+          ...p,
+          roi: p.roi > 50 ? parseFloat((p.roi - 100).toFixed(2)) : p.roi
+        }));
+        setInvestmentPlans(normalized);
+        if (!normalized.some(p => p.id === calcPlan)) {
+          setCalcPlan(normalized[0].id);
+        }
+      }
+    }).catch(console.error);
+  }, []);
+
   const handleSignUpClick = (planId: string) => {
     onPlanSelect(planId);
     if (!isLoggedIn) {
@@ -56,20 +75,23 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
   };
 
   const getCalcResult = () => {
-    const active = investmentPlans.find(p => p.id === calcPlan);
-    if (!active) return { profit: 0, total: 0 };
-    const hours = calcPlan === 'plan_84h' ? 84 : calcPlan === 'plan_66h' ? 66 : 44;
-    const profit = calcAmt * (active.roi / 100) * hours;
+    const active = investmentPlans.find(p => p.id === calcPlan) || investmentPlans[0];
+    if (!active) return { profit: 0, total: 0, hourly: 0, hours: 84 };
+    const hours = active.id === 'plan_84h' ? 84 : active.id === 'plan_66h' ? 66 : active.id === 'plan_44h' ? 44 : Math.round((active.term || 3.5) * 24);
+    const hourlyProfit = calcAmt * (active.roi / 100);
+    const profit = hourlyProfit * hours;
     return {
+      hourly: parseFloat(hourlyProfit.toFixed(2)),
       profit: parseFloat(profit.toFixed(2)),
-      total: parseFloat((calcAmt + profit).toFixed(2))
+      total: parseFloat((calcAmt + profit).toFixed(2)),
+      hours
     };
   };
 
   const calcDetails = getCalcResult();
 
   return (
-    <section className="py-24 px-4 bg-[#fcfdfe] relative overflow-hidden">
+    <section className="py-24 px-4 bg-[#fcfdfe] relative overflow-hidden" id="plans-section">
       {/* Dynamic top circles */}
       <div className="absolute top-12 left-12 w-64 h-64 bg-amber-50/20 rounded-full blur-3xl -z-10"></div>
       
@@ -107,7 +129,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
 
                 {/* Subtitle ROI text */}
                 <div className="text-[#f05a3e] font-black text-sm tracking-widest mb-8 border-b border-slate-100 pb-3 w-3/4">
-                  {plan.dailyRateText}
+                  {plan.dailyRateText || `${plan.roi}% HOURLY`}
                 </div>
 
                 {/* Additional parameters list exactly */}
@@ -122,7 +144,9 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
                   </li>
                   <li className="flex justify-between pb-1">
                     <span className="text-slate-400">Plan Duration</span>
-                    <span className="text-slate-800 font-bold">{plan.id === 'plan_84h' ? '84Hours' : plan.id === 'plan_66h' ? '66Hours' : '44Hours'}</span>
+                    <span className="text-slate-800 font-bold">
+                      {plan.id === 'plan_84h' ? '84 Hours' : plan.id === 'plan_66h' ? '66 Hours' : plan.id === 'plan_44h' ? '44 Hours' : `${Math.round((plan.term || 1) * 24)} Hours`}
+                    </span>
                   </li>
                 </ul>
 
@@ -140,7 +164,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
 
         {/* Dynamic Investment Profit Calculator */}
         <div className="max-w-4xl mx-auto bg-slate-900 text-white rounded-3xl p-8 md:p-10 border border-slate-800 shadow-2xl relative">
-          <div className="absolute top-0 right-0 p-4 opacity-5 hover:opacity-15 text-white">
+          <div className="absolute top-0 right-0 p-4 opacity-5 hover:opacity-15 text-white pointer-events-none">
             <Calculator size={100} />
           </div>
 
@@ -150,7 +174,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
                 <Calculator size={16} className="text-[#C59B4E]" />
                 <span className="text-[#C59B4E] text-xs font-black uppercase tracking-wider">Dynamic Yield Tool</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-black font-display text-white">Compound Profit Estimator</h3>
+              <h3 className="text-xl md:text-2xl font-black font-display text-white">Estimated Profit Calculator</h3>
             </div>
             
             <div className="flex gap-4">
@@ -161,7 +185,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {/* Choose Plan */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Select Target Plan</label>
@@ -170,10 +194,15 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
                 onChange={(e) => setCalcPlan(e.target.value)}
                 className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-[#C59B4E] cursor-pointer"
               >
-                <option value="plan_84h">EVERY HOUR FOR 84H (1.2%)</option>
-                <option value="plan_66h">EVERY HOUR FOR 66H (2.2%)</option>
-                <option value="plan_44h">EVERY HOUR FOR 44H (4.2%)</option>
+                {investmentPlans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.roi}%/hr)
+                  </option>
+                ))}
               </select>
+              <span className="text-[11px] text-slate-400">
+                Duration: {calcDetails.hours} hours
+              </span>
             </div>
 
             {/* Principal Amount */}
@@ -183,23 +212,60 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
                 type="number" 
                 value={calcAmt}
                 min={10}
-                max={5000}
-                onChange={(e) => setCalcAmt(Number(e.target.value))}
+                max={10000}
+                onChange={(e) => setCalcAmt(Math.max(0, Number(e.target.value)))}
                 className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-[#C59B4E] font-mono"
               />
+              {/* Quick presets */}
+              <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                {[50, 100, 250, 500, 1000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setCalcAmt(amt)}
+                    className={`text-[10px] px-2 py-0.5 rounded font-mono transition-colors ${
+                      calcAmt === amt 
+                        ? 'bg-[#C59B4E] text-slate-900 font-bold' 
+                        : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    ${amt}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Results */}
-            <div className="bg-[#050e18] rounded-xl p-4 border border-slate-800 flex justify-between items-center md:col-span-1">
-              <div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Net Returns</div>
-                <div className="text-lg font-black text-[#C59B4E] font-mono">${calcDetails.total.toFixed(2)}</div>
+            <div className="bg-[#050e18] rounded-xl p-4 border border-slate-800 flex flex-col justify-between gap-3">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-800/80">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Hourly Return</span>
+                <span className="text-sm font-bold text-emerald-400 font-mono">+${calcDetails.hourly.toFixed(2)}/hr</span>
               </div>
-              <div className="text-right border-l border-slate-800 pl-4">
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pure Profit</div>
-                <div className="text-sm font-bold text-[#f05a3e] font-mono">+${calcDetails.profit.toFixed(2)}</div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Net Returns</div>
+                  <div className="text-lg font-black text-[#C59B4E] font-mono">${calcDetails.total.toFixed(2)}</div>
+                </div>
+                <div className="text-right border-l border-slate-800 pl-4">
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pure Profit</div>
+                  <div className="text-sm font-bold text-[#f05a3e] font-mono">+${calcDetails.profit.toFixed(2)}</div>
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Call to action within calculator */}
+          <div className="mt-6 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-slate-400">
+              Profits calculated on an hourly compounding basis and deposited directly into your balance.
+            </div>
+            <button
+              onClick={() => handleSignUpClick(calcPlan)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#C59B4E] to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-900 text-xs font-black uppercase tracking-wider shadow-md hover:-translate-y-0.5 transition-all cursor-pointer whitespace-nowrap"
+            >
+              {isLoggedIn ? 'Invest In This Plan' : 'Get Started Now'}
+              <ArrowRight size={13} />
+            </button>
           </div>
         </div>
       </div>

@@ -12,21 +12,21 @@ export default function PopularTools({ onPageChange }: PopularToolsProps) {
   const tools = [
     {
       title: 'Money Transfer',
-      desc: 'Lorem ipsum dolor sit amet iusn consect tetur adig elitfugit pariatur iusto provid entomo dolor amet.',
+      desc: 'Seamlessly transfer digital assets worldwide with instant settlement, guaranteed cryptographic verification, and minimal blockchain network fees.',
       btnText: 'SEND MONEY',
       icon: <Send className="text-[#C59B4E] w-6 h-6" />,
       action: () => onPageChange('Dashboard')
     },
     {
       title: 'Currency Charts',
-      desc: 'Lorem ipsum dolor sit amet iusn consect tetur adig elitfugit pariatur iusto provid entomo dolor amet.',
+      desc: 'Track live digital asset movements, exchange volatility, and hourly yield metrics with institutional-grade real-time market data charts.',
       btnText: 'VIEW CHART',
       icon: <LineChart className="text-[#C59B4E] w-6 h-6" />,
       action: () => onPageChange('Dashboard')
     },
     {
       title: 'Rate Alerts',
-      desc: 'Lorem ipsum dolor sit amet iusn consect tetur adig elitfugit pariatur iusto provid entomo dolor amet.',
+      desc: 'Configure custom market triggers and yield milestones to receive instant notifications via email and dashboard when optimal prices occur.',
       btnText: 'CREATE ALERT',
       icon: <Bell className="text-[#C59B4E] w-6 h-6" />,
       action: () => onPageChange('Dashboard')

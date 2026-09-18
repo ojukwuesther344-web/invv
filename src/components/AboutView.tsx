@@ -98,7 +98,7 @@ export default function AboutView({ onPageChange, images }: AboutViewProps) {
               Transfer & Exchange Your Money Anytime Inthis World
             </h2>
             <p className="text-sm text-slate-500 leading-relaxed font-normal">
-              Best Strategic planning dolor sit amet consectetur adipiscing elit. Scel erus isque ametus odio velit auctor nam elit nulla eget sodales dui pulvinar dolor strategic planning dolor sit sectetur morethe.
+              Worldvest Capital provides high-security digital asset auditing, professional capital growth solutions, and seamless cryptocurrency exchange operations for retail and institutional investors worldwide.
             </p>
 
             {/* List with light check circles */}
@@ -106,17 +106,17 @@ export default function AboutView({ onPageChange, images }: AboutViewProps) {
               {[
                 {
                   title: 'Powerful Mobile & Online App',
-                  desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.',
+                  desc: 'Manage your portfolio, deposit funds, monitor live compounding earnings, and request instant withdrawals seamlessly on web and mobile.',
                   icon: <Shield className="text-[#C59B4E] w-5 h-5" />
                 },
                 {
-                  title: 'Brings More Transperency & Speed',
-                  desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.',
+                  title: 'Brings More Transparency & Speed',
+                  desc: 'Every transaction is confirmed cryptographically on-chain and registered under UK statutory governance for absolute auditability and rapid execution.',
                   icon: <Sparkles className="text-[#C59B4E] w-5 h-5" />
                 },
                 {
                   title: 'Special For Multiple User Capabilities',
-                  desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.',
+                  desc: 'Multi-account management, custom portfolio allocation, and automated compounding tools built for individual investors and corporate treasuries.',
                   icon: <Users className="text-[#C59B4E] w-5 h-5" />
                 }
               ].map((item, idx) => (
@@ -153,7 +153,7 @@ export default function AboutView({ onPageChange, images }: AboutViewProps) {
               We Provide Currency Exchange Services World Wide
             </h2>
             <p className="text-sm text-slate-500 leading-relaxed font-normal">
-              Best Strategic planning dolor sit amet consectetur adipiscing elit. Scel erus isque ametus odio velit auctor nam elit nulla eget sodales dui pulvinar dolor strategic planning dolor sit sectetur morethe.
+              Worldvest Capital combines institutional algorithmic arbitrage, secure multi-currency exchange, and guaranteed hourly compounding yield blueprints tailored for global investors.
             </p>
 
             {/* Checklists */}
@@ -161,15 +161,15 @@ export default function AboutView({ onPageChange, images }: AboutViewProps) {
               {[
                 {
                   title: 'Historical Currency Rates',
-                  desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.'
+                  desc: 'Access verified price logs and currency exchange analytics to monitor market trends, compare asset performance, and optimize deposit timing.'
                 },
                 {
                   title: 'Travel Expense Calculator',
-                  desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.'
+                  desc: 'Instantly calculate conversion amounts, compare live market spreads, and evaluate net compounding yields before executing transactions.'
                 },
                 {
                   title: 'Currency Email Updates',
-                  desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.'
+                  desc: 'Get automated daily rate digests, real-time transaction confirmation alerts, and hourly yield milestone notices sent directly to your email.'
                 }
               ].map((chk, idx) => (
                 <div key={idx} className="flex gap-3 items-start bg-white p-4 rounded-xl border border-slate-100 shadow-sm">

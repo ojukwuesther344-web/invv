@@ -838,8 +838,10 @@ export default function App() {
                 </div>
 
                 {/* Big Display Title Exactly */}
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tight leading-tight uppercase font-display">
-                  Join the unique <span className="text-[#C59B4E]">investment</span> offer and profit opportunities
+                <h1 className="text-3xl md:text-4xl lg:text-[38px] font-extrabold text-slate-800 tracking-tight leading-[1.2] uppercase font-display">
+                  Join the unique<br />
+                  <span className="text-[#C59B4E]">investment</span> offer and<br />
+                  profit opportunities
                 </h1>
 
                 {/* Body paragraph */}
@@ -977,11 +979,11 @@ export default function App() {
                     {[
                       {
                         title: 'Powerful Mobile & Online App',
-                        desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.'
+                        desc: 'Manage your portfolio, deposit funds, monitor live compounding earnings, and request instant withdrawals seamlessly on web and mobile.'
                       },
                       {
-                        title: 'Brings More Transperency & Speed',
-                        desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.'
+                        title: 'Brings More Transparency & Speed',
+                        desc: 'Every transaction is confirmed cryptographically on-chain and registered under UK statutory governance for absolute auditability and rapid execution.'
                       }
                     ].map((bullet, idx) => (
                       <div key={idx} className="flex gap-3 items-start">
@@ -1021,15 +1023,24 @@ export default function App() {
                     We Provide Currency Exchange Services World Wide
                   </h2>
                   <p className="text-sm text-slate-500 font-normal leading-relaxed">
-                    Best Strategic planning dolor sit amet consectetur adipiscing elit. Scel erus isque ametus odio velit auctor nam elit nulla eget sodales dui pulvinar dolor strategic planning dolor sit sectetur morethe.
+                    Worldvest Capital delivers high-performance cryptocurrency management, institutional-grade exchange liquidity, and guaranteed hourly compounding yield blueprints tailored for global investors.
                   </p>
 
                   {/* Icon lines checkmark features exactly */}
                   <div className="flex flex-col gap-3 mt-1">
                     {[
-                      { title: 'Historical Currency Rates', desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque .' },
-                      { title: 'Travel Expense Calculator', desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.' },
-                      { title: 'Currency Email Updates', desc: 'Vestibulum ac diam sit amet quam vehicula elemen tum sed sit amet dui praesent sapien pellen tesque.' },
+                      { 
+                        title: 'Historical Currency Rates', 
+                        desc: 'Access verified price logs and currency exchange analytics to monitor market trends, compare asset performance, and optimize deposit timing.' 
+                      },
+                      { 
+                        title: 'Travel Expense Calculator', 
+                        desc: 'Instantly calculate conversion amounts, compare live market spreads, and evaluate net compounding yields before executing transactions.' 
+                      },
+                      { 
+                        title: 'Currency Email Updates', 
+                        desc: 'Get automated daily rate digests, real-time transaction confirmation alerts, and hourly yield milestone notices sent directly to your email.' 
+                      },
                     ].map((it, idx) => (
                       <div key={idx} className="flex gap-2.5 items-start">
                         <div className="w-4 h-4 rounded-full bg-amber-50 text-[#C59B4E] flex items-center justify-center shrink-0 mt-0.5 border border-amber-200/60">
@@ -1063,8 +1074,15 @@ export default function App() {
               </div>
             </section>
 
-            {/* 6. LIVE STATS SECTION */}
+            {/* 6. LIVE STATS / LATEST TRANSACTIONS SECTION */}
             <LiveStats />
+
+            {/* 7. SECURE BLUEPRINT INVESTMENT PLANS & ESTIMATED CALCULATOR */}
+            <Plans 
+              onPlanSelect={setActivePlanSelectionId} 
+              onPageChange={handlePageChange}
+              isLoggedIn={user.isLoggedIn}
+            />
 
             {/* UK GOVT CERTIFICATE OF INCORPORATION SECTION */}
             <UkCertificateSection />
@@ -1206,13 +1224,6 @@ export default function App() {
 
               </div>
             </section>
-
-            {/* 9. SECURE BLUEPRINT INVESTMENT PLANS */}
-            <Plans 
-              onPlanSelect={setActivePlanSelectionId} 
-              onPageChange={handlePageChange}
-              isLoggedIn={user.isLoggedIn}
-            />
 
             {/* 10. CUSTOM FEEDBACK REVIEWS */}
             <ReviewsList />

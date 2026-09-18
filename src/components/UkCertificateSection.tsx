@@ -22,7 +22,7 @@ export default function UkCertificateSection() {
   const [copiedNumber, setCopiedNumber] = useState(false);
 
   const handleCopyCompanyNumber = () => {
-    navigator.clipboard.writeText('14453818');
+    navigator.clipboard.writeText('14900226');
     setCopiedNumber(true);
     setTimeout(() => setCopiedNumber(false), 2000);
   };
@@ -40,7 +40,7 @@ export default function UkCertificateSection() {
             <ShieldCheck size={15} />
             <span>Official Government Licensing & Verification</span>
           </div>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tight font-display uppercase">
+          <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-800 tracking-tight font-display uppercase">
             UK Government Registered Company
           </h2>
           <p className="text-slate-500 text-sm md:text-base max-w-2xl mx-auto mt-3 font-normal leading-relaxed">
@@ -61,9 +61,9 @@ export default function UkCertificateSection() {
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   COMPANIES HOUSE CERTIFIED
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-xs font-bold">
-                  <CheckCircle2 size={13} className="text-emerald-600" />
-                  STATUS: ACTIVE
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded-md text-xs font-bold">
+                  <CheckCircle2 size={13} className="text-slate-600" />
+                  STATUS: DISSOLVED
                 </span>
                 <span className="text-xs font-semibold text-slate-400">
                   England & Wales Registry
@@ -99,7 +99,7 @@ export default function UkCertificateSection() {
                     </button>
                   </div>
                   <div className="text-base font-black text-slate-900 font-mono tracking-wider flex items-center gap-2">
-                    14453818
+                    14900226
                     {copiedNumber && <span className="text-[10px] text-emerald-600 font-sans font-bold">Copied!</span>}
                   </div>
                 </div>
@@ -111,8 +111,20 @@ export default function UkCertificateSection() {
                     Incorporation Date
                   </div>
                   <div className="text-sm md:text-base font-black text-slate-800 font-display">
-                    31st October 2020
+                    29th May 2023
                   </div>
+                </div>
+
+                {/* Registered Office Address */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 hover:border-[#C59B4E]/40 transition-colors">
+                  <div className="text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <MapPin size={13} className="text-[#C59B4E]" />
+                    Registered Office Address
+                  </div>
+                  <div className="text-sm font-bold text-slate-800 leading-snug">
+                    20-22 Wenlock Road
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-medium">London, England, N1 7GU</div>
                 </div>
 
                 {/* Company Legal Structure */}
@@ -127,18 +139,6 @@ export default function UkCertificateSection() {
                   <div className="text-[10px] text-slate-400">Limited by Shares</div>
                 </div>
 
-                {/* Jurisdiction */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 hover:border-[#C59B4E]/40 transition-colors">
-                  <div className="text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                    <MapPin size={13} className="text-[#C59B4E]" />
-                    Jurisdiction
-                  </div>
-                  <div className="text-sm font-bold text-slate-800">
-                    England and Wales
-                  </div>
-                  <div className="text-[10px] text-slate-400">Companies House, Cardiff</div>
-                </div>
-
                 {/* Statutory Law */}
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 hover:border-[#C59B4E]/40 transition-colors">
                   <div className="text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
@@ -148,7 +148,7 @@ export default function UkCertificateSection() {
                   <div className="text-sm font-bold text-slate-800">
                     Companies Act 2006
                   </div>
-                  <div className="text-[10px] text-slate-400">Section 1115 Authentication</div>
+                  <div className="text-[10px] text-slate-400">Cardiff Companies House</div>
                 </div>
 
                 {/* Authentication Barcode */}
@@ -158,9 +158,9 @@ export default function UkCertificateSection() {
                     Registry Authentication
                   </div>
                   <div className="text-sm font-bold font-mono text-slate-800 tracking-wider">
-                    *N14453818L*
+                    * 14900226D *
                   </div>
-                  <div className="text-[10px] text-slate-400">Electronic Registrar Seal (CH)</div>
+                  <div className="text-[10px] text-slate-400">Official Seal of the Registrar (CH)</div>
                 </div>
 
               </div>
@@ -174,7 +174,7 @@ export default function UkCertificateSection() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <a 
-                  href="https://find-and-update.company-information.service.gov.uk/company/14453818" 
+                  href="https://find-and-update.company-information.service.gov.uk/company/14900226" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
@@ -193,7 +193,7 @@ export default function UkCertificateSection() {
 
                 <a
                   href="/world.png"
-                  download="WORLDVEST_CAPITAL_LTD_Certificate_14453818.png"
+                  download="WORLDVEST_CAPITAL_LTD_Certificate_14900226.png"
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold tracking-wider transition-colors cursor-pointer"
                 >
                   <Download size={14} />
@@ -218,7 +218,7 @@ export default function UkCertificateSection() {
                   {/* world.png Certificate Image */}
                   <img 
                     src={worldImg} 
-                    alt="Worldvest Capital LTD Certificate of Incorporation (Company No. 14453818)" 
+                    alt="Worldvest Capital LTD Certificate of Incorporation (Company No. 14900226)" 
                     className="w-full h-auto object-contain rounded-lg group-hover:scale-[1.02] transition-transform duration-300"
                     referrerPolicy="no-referrer"
                   />
@@ -240,14 +240,14 @@ export default function UkCertificateSection() {
                     Certificate of Incorporation
                   </span>
                   <span className="font-mono text-[10px] text-slate-400 font-semibold">
-                    No. 14453818
+                    No. 14900226
                   </span>
                 </div>
               </div>
 
               {/* Caption Below Certificate */}
               <p className="text-[11px] text-slate-400 text-center mt-3 max-w-xs leading-normal">
-                Companies House, Crown Way, Cardiff, CF14 3UZ. Official public record of incorporation for Worldvest Capital LTD.
+                Companies House, Cardiff. Official public record of incorporation for Worldvest Capital LTD.
               </p>
 
             </div>
@@ -271,7 +271,7 @@ export default function UkCertificateSection() {
               <div className="flex items-center gap-2">
                 <ShieldCheck size={18} className="text-[#C59B4E]" />
                 <span className="text-xs md:text-sm font-black uppercase tracking-wider font-display">
-                  Official UK Certificate of Incorporation — Worldvest Capital LTD. (14453818)
+                  Official UK Certificate of Incorporation — Worldvest Capital LTD. (14900226)
                 </span>
               </div>
               <button 
@@ -298,12 +298,12 @@ export default function UkCertificateSection() {
             {/* Modal Footer */}
             <div className="p-3 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="text-slate-500 font-medium">
-                Given at Companies House, Cardiff on <strong>31st October 2020</strong>
+                Given at Companies House, Cardiff on <strong>29th May 2023</strong>
               </div>
               <div className="flex items-center gap-2">
                 <a
                   href={worldImg}
-                  download="WORLDVEST_CAPITAL_LTD_Certificate_14453818.png"
+                  download="WORLDVEST_CAPITAL_LTD_Certificate_14900226.png"
                   className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-colors"
                 >
                   <Download size={13} />
