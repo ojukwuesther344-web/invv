@@ -790,6 +790,7 @@ export default function App() {
           onClose={() => setIsSidebarOpen(false)}
           isAdmin={liveUser.email === 'blessingubah38@gmail.com'}
           onPageChange={handlePageChange}
+          accountBalance={liveUser.accountBalance}
         />
         <DashboardView 
           onPageChange={handlePageChange}

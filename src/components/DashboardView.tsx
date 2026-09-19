@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Page, UserState, Transaction, Withdrawal } from '../types';
+import logoheadImg from '../assets/images/logohead.png';
 import { 
   addDepositRecord, 
   addWithdrawalRecord, 
@@ -44,7 +45,9 @@ import {
   Upload,
   ArrowRight,
   Home,
-  Delete
+  Delete,
+  ChevronDown,
+  Share2
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -115,6 +118,30 @@ export default function DashboardView({
   const [paymentError, setPaymentError] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isCopyingAddress, setIsCopyingAddress] = useState(false);
+  const [copiedRef, setCopiedRef] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const officialReferralLink = `https://www.worldvestcapital.ltd/?ref=${user.username}`;
+
+  const handleCopyRefLink = (customText?: string) => {
+    const link = customText || officialReferralLink;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = link;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedRef(true);
+      setTimeout(() => setCopiedRef(false), 2500);
+    } catch {
+      // Fallback
+    }
+  };
 
   // Dynamic system settings container
   const [liveSystemSettings, setLiveSystemSettings] = useState<any>(null);
@@ -717,108 +744,123 @@ export default function DashboardView({
 
   return (
     <div className="flex-1 bg-slate-100 flex flex-col overflow-y-auto overflow-x-hidden w-full relative">
-      {/* Top dashboard toolbelt header - Sticky Static Position */}
-      <header className="bg-white border-b border-slate-200 py-3.5 px-4 sm:px-6 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-sm">
-        <div className="flex items-center gap-2.5 sm:gap-3">
+      {/* Top dashboard header matching screenshot style */}
+      <header className="bg-white border-b border-slate-200/80 py-3 px-4 sm:px-6 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3">
           {onToggleSidebar && (
             <button 
               type="button"
               onClick={onToggleSidebar}
-              className="p-1.5 text-slate-500 hover:text-[#C59B4E] hover:bg-slate-50 rounded-lg md:hidden transition-all cursor-pointer mr-0.5"
+              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md md:hidden transition-colors cursor-pointer mr-1"
               aria-label="Toggle Navigation Menu"
             >
-              <Menu size={18} />
+              <Menu size={20} />
             </button>
           )}
+
+          {/* Top Left Logo: WorldVest Capital homepage logo */}
+          <div 
+            onClick={() => onPageChange('Home')}
+            className="flex items-center cursor-pointer group py-0.5"
+            title="WorldVest Capital LTD / Return to Home"
+          >
+            <img 
+              src={logoheadImg || "/logohead.png"} 
+              alt="WorldVest Capital LTD" 
+              className="h-8 sm:h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+              referrerPolicy="no-referrer"
+            />
+          </div>
 
           {/* Backspace icon button on header when on any sub menu page */}
           {(activeSection !== 'dashboard' || paymentSession) && (
-            <button
-              type="button"
-              onClick={handleGoBack}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-[#C59B4E]/15 text-slate-700 hover:text-[#C59B4E] border border-slate-200 hover:border-[#C59B4E]/40 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs group"
-              title="Go back to previous page"
-              aria-label="Go back to previous page"
-            >
-              <Delete size={16} className="text-[#C59B4E] group-hover:-translate-x-0.5 transition-transform" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 ml-1">
+              <button
+                type="button"
+                onClick={handleGoBack}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-bold transition-colors cursor-pointer"
+                title="Go back to previous page"
+                aria-label="Go back to previous page"
+              >
+                <Delete size={14} className="text-slate-600" />
+                <span>Back</span>
+              </button>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden md:inline truncate max-w-[220px]">
+                / {getSectionTitle()}
+              </span>
+            </div>
           )}
-
-          <h2 className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-wider sm:tracking-widest leading-none truncate max-w-[200px] sm:max-w-none">
-            {getSectionTitle()}
-          </h2>
         </div>
         
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-          {/* Home Icon button on user dashboard to easily redirect to the homepage website */}
+        <div className="flex items-center gap-2 sm:gap-3.5">
+          {/* Home Icon button */}
           <button 
             type="button"
             onClick={() => onPageChange('Home')}
-            className="p-2 text-slate-600 hover:text-[#C59B4E] hover:bg-slate-50 border border-slate-200 hover:border-[#C59B4E]/40 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-xs group"
+            className="p-1.5 sm:px-2.5 sm:py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
             title="Go to Website Homepage"
             aria-label="Go to Website Homepage"
           >
-            <Home size={18} className="text-[#C59B4E] group-hover:scale-110 transition-transform" />
-            <span className="hidden md:inline text-xs font-bold text-slate-700 group-hover:text-[#C59B4E]">Home</span>
+            <Home size={15} className="text-slate-500" />
+            <span className="hidden sm:inline">Home</span>
           </button>
 
-          <div className="relative hidden sm:block">
-            <input 
-              type="text" 
-              placeholder="Search actions..." 
-              className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-md text-xs bg-slate-50 focus:outline-none focus:border-[#C59B4E] w-36 md:w-48"
-            />
-            <Search size={13} className="text-slate-400 absolute left-2.5 top-2.5" />
-          </div>
+          {/* User Account block matching exact screenshot */}
+          <div className="relative">
+            <div 
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-colors select-none"
+              title="User profile menu"
+            >
+              <div className="w-8 h-8 rounded-full bg-[#1677ff] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                <User size={16} className="text-white" />
+              </div>
 
-          {/* Static Notification Bell Icon */}
-          <button 
-            type="button"
-            className="p-2 text-slate-500 hover:text-[#C59B4E] hover:bg-slate-50 rounded-lg relative transition-colors cursor-pointer"
-            title="Notifications"
-          >
-            <Bell size={18} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple-600 border-2 border-white animate-pulse"></span>
-          </button>
-
-          {/* Static Profile Settings Icon */}
-          <button 
-            type="button"
-            onClick={() => onSectionSelect('edit-profile')}
-            className="p-2 text-slate-500 hover:text-[#C59B4E] hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-            title="Profile Settings"
-          >
-            <Settings size={18} />
-          </button>
-          
-          {/* Static User Account & Settings Profile Picture */}
-          <div 
-            onClick={() => onSectionSelect('edit-profile')}
-            className="flex items-center gap-2.5 border-l border-slate-200 pl-4 cursor-pointer hover:opacity-90 group transition-opacity"
-            title="Account Summary"
-          >
-            {/* Elegant high-fidelity profile picture */}
-            <div className="w-8.5 h-8.5 rounded-full border border-slate-200 overflow-hidden shrink-0 relative shadow-inner bg-slate-100">
-              <img 
-                src={user.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop"} 
-                alt="Profile Settings Avatar" 
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  // Fallback of initials inside image replacement if unsplash fails safely
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center font-bold text-[#C59B4E] text-xs bg-[#C59B4E]/10 uppercase">
-                {user.username.slice(0, 2).toUpperCase()}
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] text-emerald-500 font-bold leading-none">Verified</span>
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-0.5 mt-0.5 leading-tight">
+                  {user.username}
+                  <ChevronDown size={11} className="text-slate-400" />
+                </span>
               </div>
             </div>
 
-            <div className="hidden md:flex flex-col text-left">
-              <span className="text-xs font-black text-slate-800 leading-tight group-hover:text-[#C59B4E] transition-colors">{user.fullName || user.username}</span>
-              <span className="text-[9px] text-[#C59B4E] font-semibold leading-none uppercase tracking-wider">Investor Account</span>
-            </div>
+            {/* Dropdown Menu */}
+            {userMenuOpen && (
+              <div 
+                className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in duration-150"
+                onClick={() => setUserMenuOpen(false)}
+              >
+                <div className="px-3.5 py-2 border-b border-slate-100">
+                  <div className="text-xs font-black text-slate-800">{user.fullName || user.username}</div>
+                  <div className="text-[10px] text-slate-400 truncate">{user.email}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onSectionSelect('edit-profile')}
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <User size={14} className="text-slate-400" />
+                  <span>My Profile</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSectionSelect('security')}
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <ShieldCheck size={14} className="text-slate-400" />
+                  <span>Security</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSectionSelect('referrals')}
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <Share2 size={14} className="text-slate-400" />
+                  <span>Referrals</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -1172,224 +1214,126 @@ export default function DashboardView({
         {/* Dashboard index content view */}
         {activeSection === 'dashboard' && (
           <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-            {/* Quick action boxes grid of 8 cards matching screenshot 5 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              
-              {/* Box 1: Account Balance */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Account Balance</span>
-                  <span className="text-2xl font-black font-display text-slate-800">${user.accountBalance.toFixed(2)}</span>
-                  <span className="text-[9px] text-slate-400 flex items-center gap-1 mt-1 font-semibold">
-                    <Check size={10} className="text-[#C59B4E]" /> Verified Safe funds
-                  </span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/10 shrink-0">
-                  <Building size={20} />
-                </div>
+            {/* Welcome banner matching screenshot */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs sm:text-sm text-slate-400 font-normal">Welcome!</span>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display mt-0.5">
+                  {user.fullName || user.username}
+                </h1>
+                <p className="text-xs text-slate-400 font-normal mt-0.5">
+                  Here's a summary of your account. Have fun!
+                </p>
               </div>
 
-              {/* Box 2: Earned Total */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Earned Total</span>
-                  <span className="text-2xl font-black font-display text-slate-800">${user.earnedTotal.toFixed(2)}</span>
-                  <span className="text-[9px] text-[#C59B4E] flex items-center gap-1 mt-1 font-semibold">
-                    <TrendingUp size={10} /> +1.2% Daily increase
-                  </span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/10 shrink-0">
-                  <Coins size={20} />
-                </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onSectionSelect('make-deposit')}
+                  className="bg-[#232f3e] hover:bg-[#1a252f] active:scale-95 text-white font-bold text-xs px-4.5 py-2.5 rounded-md flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                >
+                  <span>Invest & Earn</span>
+                  <span className="text-sm leading-none">&rarr;</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSectionSelect('deposit-list')}
+                  className="bg-[#1677ff] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs px-4.5 py-2.5 rounded-md flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                >
+                  <span>Your Deposits</span>
+                  <span className="text-sm leading-none">&rarr;</span>
+                </button>
               </div>
-
-              {/* Box 3: Pending Withdrawal */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1 flex-1 min-w-0">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pending Withdrawal</span>
-                  <span className="text-2xl font-black font-display text-slate-800">${user.pendingWithdrawal.toFixed(2)}</span>
-                  <span className="text-[9px] text-slate-400 truncate mt-1 block">Usually available in 1-48h</span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/10 shrink-0">
-                  <Wallet size={20} />
-                </div>
-              </div>
-
-              {/* Box 4: Total Withdrew */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Withdrew</span>
-                  <span className="text-2xl font-black font-display text-slate-800">${user.totalWithdrew.toFixed(2)}</span>
-                  <span className="text-[9px] text-slate-400 mt-1">Processed successfully</span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-cyan-500 text-white flex items-center justify-center shadow-lg shadow-cyan-500/10 shrink-0">
-                  <ArrowUpRight size={20} />
-                </div>
-              </div>
-
-              {/* Box 5: Active Deposit */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Active Deposit</span>
-                  <span className="text-2xl font-black font-display text-[#9333ea]">${user.activeDeposit.toFixed(2)}</span>
-                  <span className="text-[9px] text-[#9333ea] font-semibold mt-1">Dynamic yield plans</span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-[#9333ea] text-white flex items-center justify-center shadow-lg shadow-purple-500/10 shrink-0">
-                  <CreditCard size={20} />
-                </div>
-              </div>
-
-              {/* Box 6: Last Deposit */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Last Deposit</span>
-                  <span className="text-2xl font-black font-display text-slate-800">${user.lastDeposit.toFixed(2)}</span>
-                  <span className="text-[9px] text-slate-400 mt-1">Wallet injection</span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-slate-500 text-white flex items-center justify-center shadow-lg shadow-slate-500/10 shrink-0">
-                  <FileCheck size={20} />
-                </div>
-              </div>
-
-              {/* Box 7: Total Deposit */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Deposit</span>
-                  <span className="text-2xl font-black font-display text-slate-800">${user.totalDeposit.toFixed(2)}</span>
-                  <span className="text-[9px] text-[#C59B4E] mt-1 font-semibold">Accumulated principal</span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-[#C59B4E] text-white flex items-center justify-center shadow-lg shadow-[#C59B4E]/10 shrink-0">
-                  <Calendar size={20} />
-                </div>
-              </div>
-
-              {/* Box 8: Last Withdrawal */}
-              <div className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-sm flex items-center justify-between hover:scale-[1.01] transition-transform">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Last Withdrawal</span>
-                  <span className="text-xl font-black font-display text-slate-600 truncate">
-                    {typeof user.lastWithdrawal === 'number'
-                      ? `$${user.lastWithdrawal.toFixed(2)}`
-                      : (user.lastWithdrawal && user.lastWithdrawal.toString().startsWith('$')
-                        ? user.lastWithdrawal
-                        : (Number(user.lastWithdrawal) > 0 ? `$${Number(user.lastWithdrawal).toFixed(2)}` : '$0.00'))}
-                  </span>
-                  <span className="text-[9px] text-slate-400 mt-1">
-                    {(!user.lastWithdrawal || user.lastWithdrawal === '$0.00' || user.lastWithdrawal === 'n/a' || user.lastWithdrawal === '0' || user.lastWithdrawal === 0)
-                      ? 'No withdrawal yet'
-                      : 'Latest dispatch'}
-                  </span>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/10 shrink-0">
-                  <RefreshCw size={20} />
-                </div>
-              </div>
-
             </div>
 
-            {/* Interactive SVG Graphs exactly matching screenshot 5 colors and layouts */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* Card 1: Account Balance Graph (Green Back) */}
-              <div className="bg-emerald-600 text-white rounded-2xl p-6 border border-emerald-700 shadow-lg relative flex flex-col justify-between h-72">
-                <div>
-                  <div className="text-xs uppercase font-extrabold tracking-widest text-[#C59B4E]">Account Balance</div>
-                  <div className="text-xs text-white/80 font-medium">↑ -% increase in today.</div>
+            {/* Three Stat Cards matching exact screenshot layout and colored bottom borders */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Card 1: Account Balance */}
+              <div className="bg-white rounded-lg p-5 border border-slate-200/80 border-b-4 border-b-[#1677ff] shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-600">Account Balance</span>
+                  <span className="w-4 h-4 rounded-full border border-slate-300 text-slate-400 flex items-center justify-center text-[10px] font-serif italic select-none">
+                    i
+                  </span>
                 </div>
-
-                {/* SVG trend line with nodes */}
-                <div className="w-full flex-grow my-4 flex items-end">
-                  <svg viewBox="0 0 300 100" className="w-full overflow-visible">
-                    <path 
-                      d="M 10 70 L 60 50 L 110 80 L 160 55 L 210 45 L 260 65 L 290 20" 
-                      fill="none" 
-                      stroke="#ffffff" 
-                      strokeWidth="3.5" 
-                      strokeLinecap="round" 
-                    />
-                    {/* Node points on path */}
-                    <circle cx="10" cy="70" r="4" fill="#C59B4E" stroke="#ffffff" strokeWidth="2" />
-                    <circle cx="60" cy="50" r="4" fill="#C59B4E" stroke="#ffffff" strokeWidth="2" />
-                    <circle cx="110" cy="80" r="4" fill="#C59B4E" stroke="#ffffff" strokeWidth="2" />
-                    <circle cx="160" cy="55" r="4" fill="#C59B4E" stroke="#ffffff" strokeWidth="2" />
-                    <circle cx="210" cy="45" r="4" fill="#C59B4E" stroke="#ffffff" strokeWidth="2" />
-                    <circle cx="260" cy="65" r="4" fill="#C59B4E" stroke="#ffffff" strokeWidth="2" />
-                    <circle cx="290" cy="20" r="5" fill="#ffffff" stroke="#C59B4E" strokeWidth="2" />
-                    {/* Dotted helper levels */}
-                    <line x1="0" y1="40" x2="300" y2="40" stroke="#ffffff" strokeOpacity="0.1" strokeDasharray="3,3" />
-                    <line x1="0" y1="20" x2="300" y2="20" stroke="#ffffff" strokeOpacity="0.1" strokeDasharray="3,3" />
-                  </svg>
+                <div className="my-4">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
+                    ${user.accountBalance.toFixed(2)}
+                  </span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
-
-                <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10 text-[10px] font-bold tracking-widest uppercase">
-                  <div className="flex justify-between w-full font-mono">
-                    <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-                  </div>
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EARNED TOTAL</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">${user.earnedTotal.toFixed(2)} USD</span>
                 </div>
-                <div className="text-[9px] text-white/50 text-right mt-1.5 font-sans">updated - minutes ago</div>
               </div>
 
-              {/* Card 2: Earned Total Graph (Orange Back) */}
-              <div className="bg-amber-500 text-white rounded-2xl p-6 border border-amber-600 shadow-lg relative flex flex-col justify-between h-72">
-                <div>
-                  <div className="text-xs uppercase font-extrabold tracking-widest text-slate-100">Earned Total</div>
-                  <div className="text-xs text-white/85 font-medium">Last Earned</div>
+              {/* Card 2: Total Deposit */}
+              <div className="bg-white rounded-lg p-5 border border-slate-200/80 border-b-4 border-b-[#232f3e] shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-600">Total Deposit</span>
+                  <span className="w-4 h-4 rounded-full border border-slate-300 text-slate-400 flex items-center justify-center text-[10px] font-serif italic select-none">
+                    i
+                  </span>
                 </div>
-
-                {/* SVG bar chart columns */}
-                <div className="w-full h-32 my-4 flex items-end justify-between px-2">
-                  {[20, 35, 15, 60, 40, 50, 25, 30, 45, 55, 65, 30].map((val, idx) => (
-                    <div key={idx} className="flex flex-col items-center w-3" style={{ height: '100%' }}>
-                      <div className="bg-slate-900/10 hover:bg-slate-900/30 w-full h-full rounded-md flex items-end relative overflow-hidden transition-all duration-300 pointer-events-none">
-                        <div className="bg-white w-full rounded-t-sm" style={{ height: `${val}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="my-4">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
+                    ${user.totalDeposit.toFixed(2)}
+                  </span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
-
-                <div className="flex justify-between items-center text-[9px] font-bold tracking-tight font-mono border-t border-white/10 pt-2 text-white/90">
-                  <span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span>S</span><span>O</span><span>N</span><span>D</span>
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ACTIVE DEPOSIT</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">${user.activeDeposit.toFixed(2)} USD</span>
                 </div>
-                <div className="text-[9px] text-white/50 text-right mt-1.5 font-sans">Your Earned Total</div>
               </div>
 
-              {/* Card 3: Total Withdrew Graph (Red Back) */}
-              <div className="bg-rose-500 text-white rounded-2xl p-6 border border-rose-600 shadow-lg relative flex flex-col justify-between h-72">
-                <div>
-                  <div className="text-xs uppercase font-extrabold tracking-widest text-orange-200">Total Withdrew</div>
-                  <div className="text-xs text-white/85 font-medium">Last Withdrew</div>
+              {/* Card 3: Total Withdraw */}
+              <div className="bg-white rounded-lg p-5 border border-slate-200/80 border-b-4 border-b-[#f59e0b] shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-600">Total Withdraw</span>
+                  <span className="w-4 h-4 rounded-full border border-slate-300 text-slate-400 flex items-center justify-center text-[10px] font-serif italic select-none">
+                    i
+                  </span>
                 </div>
-
-                {/* SVG trend area curve */}
-                <div className="w-full flex-grow my-4 flex items-end">
-                  <svg viewBox="0 0 300 100" className="w-full overflow-visible">
-                    <defs>
-                      <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <path 
-                      d="M 10 90 Q 40 40, 70 20 T 130 50 T 190 60 T 250 55 T 290 70 L 290 100 L 10 100 Z" 
-                      fill="url(#curveGrad)" 
-                    />
-                    <path 
-                      d="M 10 90 Q 40 40, 70 20 T 130 50 T 190 60 T 250 55 T 290 70" 
-                      fill="none" 
-                      stroke="#ffffff" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
-                    />
-                    <circle cx="70" cy="20" r="3.5" fill="#ffffff" />
-                  </svg>
+                <div className="my-4">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
+                    ${user.totalWithdrew.toFixed(2)}
+                  </span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
-
-                <div className="flex justify-between items-center text-[8px] font-bold font-mono border-t border-white/10 pt-2 text-white/75">
-                  <span>12p</span><span>3p</span><span>6p</span><span>9p</span><span>12p</span><span>3a</span><span>6a</span><span>9a</span>
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">PENDING WITHDRAWAL</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">${user.pendingWithdrawal.toFixed(2)} USD</span>
                 </div>
-                <div className="text-[9px] text-white/50 text-right mt-1.5 font-sans">Your Total Withdrew</div>
               </div>
+            </div>
 
+            {/* Refer Us & Earn Card matching screenshot */}
+            <div className="bg-white rounded-lg p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col gap-1">
+              <h3 className="text-base sm:text-lg font-bold text-slate-800 font-display">
+                Refer Us & Earn
+              </h3>
+              <p className="text-xs text-slate-400 font-normal">
+                Use the below link to invite your friends.
+              </p>
+
+              <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 border border-slate-200/80 rounded-md px-3.5 py-2.5">
+                <div className="flex items-center gap-2 min-w-0 text-slate-600 text-xs font-mono truncate">
+                  <span className="text-slate-400 font-sans text-sm select-none">@</span>
+                  <span className="truncate select-all text-slate-700 font-semibold" title={officialReferralLink}>
+                    {officialReferralLink}
+                  </span>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => handleCopyRefLink(officialReferralLink)}
+                  className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#1677ff] hover:text-blue-700 transition-colors cursor-pointer shrink-0"
+                >
+                  <Copy size={14} className="text-[#1677ff]" />
+                  <span>{copiedRef ? 'Copied!' : 'Copy Link'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Live Investment Performance Tracks */}
@@ -1607,6 +1551,78 @@ export default function DashboardView({
               >
                 Launch Make Deposit Section &gt;
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* OUR PLANS showcase sub-view */}
+        {activeSection === 'our-plans' && (
+          <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+            {renderBackButton()}
+            
+            <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="font-black text-slate-800 font-display text-xl sm:text-2xl">
+                  Investment Plans & Packages
+                </h3>
+                <p className="text-slate-500 text-xs mt-1">
+                  Choose a high-performing investment tier tailored to your financial goals. Principal returned upon maturity.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSectionSelect('make-deposit')}
+                className="bg-[#1677ff] hover:bg-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer shrink-0"
+              >
+                Deposit & Activate Plan &rarr;
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {depositPlans.map((pl) => (
+                <div 
+                  key={pl.id}
+                  className="bg-white rounded-xl border border-slate-200/80 shadow-xs hover:border-[#1677ff] transition-all p-5 flex flex-col justify-between"
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{pl.name}</span>
+                      <span className="text-xs font-bold text-[#1677ff] bg-blue-50 px-2 py-0.5 rounded-full">{pl.dailyRoi}% Daily</span>
+                    </div>
+                    <div className="mt-3 mb-1">
+                      <span className="text-2xl font-black text-slate-800 font-display">{pl.dailyRoi}%</span>
+                      <span className="text-xs text-slate-500 ml-1">/ day</span>
+                    </div>
+                    <div className="text-xs text-slate-500 mb-4">Duration: <strong className="text-slate-700">{pl.days} Days</strong></div>
+
+                    <div className="space-y-2 py-3 border-t border-b border-slate-100 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Min Deposit:</span>
+                        <span className="font-bold text-slate-700">${pl.min.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Max Deposit:</span>
+                        <span className="font-bold text-slate-700">${pl.max.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Total Return:</span>
+                        <span className="font-bold text-emerald-600">{(pl.dailyRoi * pl.days).toFixed(0)}% ROI</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivePlanSelected(pl.id);
+                      onSectionSelect('make-deposit');
+                    }}
+                    className="mt-4 w-full py-2.5 bg-[#232f3e] hover:bg-[#1677ff] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                  >
+                    Select & Invest
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -1953,7 +1969,7 @@ export default function DashboardView({
 
                   <button 
                     type="submit"
-                    className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl transition-transform shadow-md"
+                    className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl transition-transform shadow-md cursor-pointer"
                   >
                     Confirm & Submit Payout Request
                   </button>
@@ -2107,7 +2123,7 @@ export default function DashboardView({
               </div>
               <button 
                 onClick={() => onSectionSelect('withdraw')}
-                className="px-4 py-2 bg-violet-600 text-[10px] text-white font-black uppercase tracking-widest rounded-lg shadow-sm"
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-[10px] text-white font-black uppercase tracking-widest rounded-lg shadow-sm transition-colors cursor-pointer"
               >
                 + Request Cashout
               </button>
@@ -2409,8 +2425,156 @@ export default function DashboardView({
           </div>
         )}
 
+        {/* ===== REFERRALS & AFFILIATE LINKS VIEW ===== */}
+        {(activeSection === 'referrals' || activeSection === 'ref-links' || activeSection === 'tell-a-friend') && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              {renderBackButton()}
+              <div className="text-right">
+                <span className="text-xs font-semibold text-slate-400">Host Domain</span>
+                <p className="text-xs font-mono font-bold text-slate-700">www.worldvestcapital.ltd</p>
+              </div>
+            </div>
+
+            {/* Top Affiliate Overview Banner */}
+            <div className="bg-gradient-to-r from-[#071625] via-[#0d223a] to-[#071625] text-white rounded-2xl p-6 sm:p-8 border border-slate-800 shadow-xl relative overflow-hidden">
+              <div className="relative z-10 max-w-2xl">
+                <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#C59B4E]/20 text-[#C59B4E] border border-[#C59B4E]/30 mb-3">
+                  Affiliate Partnership Program
+                </span>
+                <h2 className="text-xl sm:text-2xl font-bold font-display text-white mb-2">
+                  Invite Investors & Earn Instant Commissions
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+                  Share your verified WorldVest Capital link. Whenever someone registers using your link and initiates an active deposit, your referral rewards are instantly credited to your available balance with 0% fees.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Metrics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Active Referrals
+                </span>
+                <div className="text-2xl font-extrabold text-slate-800 font-display">
+                  {user.referralsCount || 0}
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">Registered via your link</span>
+              </div>
+
+              <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs border-b-2 border-b-[#C59B4E]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Total Referral Yield
+                </span>
+                <div className="text-2xl font-extrabold text-[#C59B4E] font-display">
+                  ${Number(user.referralEarnings || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Available for instant withdrawal</span>
+              </div>
+
+              <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Affiliate Tier Level
+                </span>
+                <div className="text-2xl font-extrabold text-[#1677ff] font-display">
+                  Tier 1 (7%)
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">Multi-level: 7% - 2% - 1%</span>
+              </div>
+            </div>
+
+            {/* Primary Referral Link Copy Box */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 font-display">
+                  Your Personal Referral Link
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Hosted on official Namecheap cPanel domain: <code className="text-slate-700 font-bold bg-slate-100 px-1 py-0.5 rounded">www.worldvestcapital.ltd</code>
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 min-w-0 text-slate-700 text-xs sm:text-sm font-mono truncate">
+                  <span className="text-[#C59B4E] font-sans font-bold select-none text-base">@</span>
+                  <span className="truncate select-all font-semibold text-slate-800" title={officialReferralLink}>
+                    {officialReferralLink}
+                  </span>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => handleCopyRefLink(officialReferralLink)}
+                  className="px-4 py-2 bg-[#1677ff] hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                >
+                  <Copy size={14} />
+                  <span>{copiedRef ? 'Copied to Clipboard!' : 'Copy Referral Link'}</span>
+                </button>
+              </div>
+
+              {/* Quick Social Sharing Links */}
+              <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500 mr-1">Share link directly:</span>
+                <a 
+                  href={`https://wa.me/?text=${encodeURIComponent(`Join me on WorldVest Capital LTD and earn daily yields! Register here: ${officialReferralLink}`)}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  WhatsApp
+                </a>
+                <a 
+                  href={`https://t.me/share/url?url=${encodeURIComponent(officialReferralLink)}&text=${encodeURIComponent('Invest with WorldVest Capital LTD — certified returns & daily compounding.')}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  Telegram
+                </a>
+                <a 
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Earn certified crypto and capital yields on WorldVest Capital LTD! ${officialReferralLink}`)}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  Twitter / X
+                </a>
+                <a 
+                  href={`mailto:?subject=${encodeURIComponent('Invitation to WorldVest Capital LTD')}&body=${encodeURIComponent(`Hello,\n\nI recommend joining WorldVest Capital LTD for secure investment management:\n${officialReferralLink}\n\nBest regards,\n${user.username}`)}`}
+                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  Email Invite
+                </a>
+              </div>
+            </div>
+
+            {/* HTML Banner Code Snippet */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-3">
+              <h3 className="text-sm font-bold text-slate-800 font-display">
+                HTML Embed Code for Blogs & Forums
+              </h3>
+              <p className="text-xs text-slate-500">
+                Copy and paste this HTML code into your website or signature to display a clickable banner:
+              </p>
+              <div className="bg-slate-900 text-slate-200 rounded-xl p-3.5 font-mono text-xs overflow-x-auto border border-slate-800 flex items-center justify-between gap-3">
+                <code className="select-all text-[11px] text-amber-300">
+                  {`<a href="${officialReferralLink}" target="_blank"><img src="https://www.worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => handleCopyRefLink(`<a href="${officialReferralLink}" target="_blank"><img src="https://www.worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`)}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-[11px] font-bold shrink-0 cursor-pointer"
+                >
+                  Copy Code
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ===== FALLBACK FOR UNFINISHED SIDEBAR OPTIONS ===== */}
         {activeSection !== 'dashboard' && 
+         activeSection !== 'our-plans' && 
          activeSection !== 'make-deposit' && 
          activeSection !== 'deposit-to-account' && 
          activeSection !== 'deposit-list' && 
@@ -2419,7 +2583,10 @@ export default function DashboardView({
          activeSection !== 'withdraw' && 
          activeSection !== 'withdrawals-history' && 
          activeSection !== 'admin-controls' && 
-         activeSection !== 'edit-profile' && (
+         activeSection !== 'edit-profile' && 
+         activeSection !== 'referrals' && 
+         activeSection !== 'ref-links' && 
+         activeSection !== 'tell-a-friend' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center flex flex-col items-center gap-4 animate-in fade-in max-w-lg mx-auto mt-12">
             <div className="w-full flex justify-start">
               {renderBackButton()}

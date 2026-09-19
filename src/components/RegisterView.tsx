@@ -33,7 +33,13 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
   const [secQuestion, setSecQuestion] = useState('');
   const [secAnswer, setSecAnswer] = useState('');
   const [agree, setAgree] = useState(false);
-  const [referredByInput, setReferredByInput] = useState('');
+  const [referredByInput, setReferredByInput] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('ref') || '';
+    } catch {
+      return '';
+    }
+  });
   
   // Login States
   const [loginUsername, setLoginUsername] = useState('aa'); // defaults to match screenshot 5 "Welcome aa"
