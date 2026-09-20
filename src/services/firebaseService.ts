@@ -17,11 +17,12 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  deleteDoc
+  deleteDoc,
+  runTransaction
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { UserState, Deposit, Withdrawal, Transaction, InvestmentPlan } from '../types';
+import { UserState, Deposit, Withdrawal, Transaction, InvestmentPlan, LedgerAdjustmentParams, LedgerAdjustmentResult } from '../types';
 
 export const isFirebaseReady = !!(firebaseConfig.apiKey && firebaseConfig.apiKey !== 'placeholder-api-key');
 
@@ -51,6 +52,10 @@ export async function lookupEmailByUsername(username: string): Promise<string | 
  * Creates/saves a standard user profile in Firestore
  */
 export async function dbSaveUserProfile(uid: string, profile: UserState): Promise<void> {
+  try {
+    localStorage.setItem(`user_profile_${uid}`, JSON.stringify(profile));
+  } catch {}
+
   if (!isFirebaseReady) return;
   const path = `users/${uid}`;
 
@@ -61,6 +66,7 @@ export async function dbSaveUserProfile(uid: string, profile: UserState): Promis
       username: profile.username || '',
       fullName: profile.fullName || '',
       email: profile.email || '',
+      mainAccountBalance: Number(profile.mainAccountBalance !== undefined ? profile.mainAccountBalance : profile.accountBalance) || 0,
       accountBalance: Number(profile.accountBalance) || 0,
       earnedTotal: Number(profile.earnedTotal) || 0,
       pendingWithdrawal: Number(profile.pendingWithdrawal) || 0,
@@ -118,6 +124,7 @@ export async function dbFetchUserProfile(uid: string): Promise<UserState | null>
           ethereum: data.ethereum || '',
           usdtErc20: data.usdtErc20 || ''
         },
+        mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
         accountBalance: Number(data.accountBalance) || 0,
         earnedTotal: Number(data.earnedTotal) || 0,
         pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
@@ -192,6 +199,7 @@ export function subscribeToUserProfile(
             ethereum: data.ethereum || '',
             usdtErc20: data.usdtErc20 || ''
           },
+          mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
           accountBalance: Number(data.accountBalance) || 0,
           earnedTotal: Number(data.earnedTotal) || 0,
           pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
@@ -548,12 +556,20 @@ export function subscribeToUserTransactions(
       });
     });
     list.sort((a, b) => b.timestamp - a.timestamp);
+    try {
+      localStorage.setItem(`transactions_${uid}`, JSON.stringify(list));
+    } catch {}
     onNext(list);
   }, (err) => {
+    handleFirestoreError(err, OperationType.GET, path);
     try {
-      handleFirestoreError(err, OperationType.GET, path);
-    } catch (finalErr: any) {
-      onError(finalErr);
+      const cached = localStorage.getItem(`transactions_${uid}`);
+      if (cached) {
+        onNext(JSON.parse(cached));
+      }
+    } catch {}
+    if (onError && err instanceof Error) {
+      onError(err);
     }
   });
 }
@@ -653,15 +669,22 @@ export function subscribeToSystemSettings(
 
   return onSnapshot(docRef, (snapshot) => {
     if (snapshot.exists()) {
-      onNext(snapshot.data());
+      const data = snapshot.data();
+      try {
+        localStorage.setItem('system_settings', JSON.stringify(data));
+      } catch {}
+      onNext(data);
     } else {
       onNext(null);
     }
   }, (err) => {
+    handleFirestoreError(err, OperationType.GET, path);
     try {
-      handleFirestoreError(err, OperationType.GET, path);
-    } catch (finalErr: any) {
-      onError(finalErr);
+      const cached = localStorage.getItem('system_settings');
+      if (cached) onNext(JSON.parse(cached));
+    } catch {}
+    if (onError && err instanceof Error) {
+      onError(err);
     }
   });
 }
@@ -692,6 +715,7 @@ export function subscribeToAllUsers(
           ethereum: data.ethereum || '',
           usdtErc20: data.usdtErc20 || ''
         },
+        mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
         accountBalance: Number(data.accountBalance) || 0,
         earnedTotal: Number(data.earnedTotal) || 0,
         pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
@@ -704,12 +728,18 @@ export function subscribeToAllUsers(
         suspended: !!data.suspended
       });
     });
+    try {
+      localStorage.setItem('all_users_cache', JSON.stringify(list));
+    } catch {}
     onNext(list);
   }, (err) => {
+    handleFirestoreError(err, OperationType.GET, path);
     try {
-      handleFirestoreError(err, OperationType.GET, path);
-    } catch (finalErr: any) {
-      onError(finalErr);
+      const cached = localStorage.getItem('all_users_cache');
+      if (cached) onNext(JSON.parse(cached));
+    } catch {}
+    if (onError && err instanceof Error) {
+      onError(err);
     }
   });
 }
@@ -750,12 +780,18 @@ export function subscribeToAllTransactions(
       });
     });
     list.sort((a, b) => b.timestamp - a.timestamp);
+    try {
+      localStorage.setItem('all_transactions_cache', JSON.stringify(list));
+    } catch {}
     onNext(list);
   }, (err) => {
+    handleFirestoreError(err, OperationType.GET, path);
     try {
-      handleFirestoreError(err, OperationType.GET, path);
-    } catch (finalErr: any) {
-      onError(finalErr);
+      const cached = localStorage.getItem('all_transactions_cache');
+      if (cached) onNext(JSON.parse(cached));
+    } catch {}
+    if (onError && err instanceof Error) {
+      onError(err);
     }
   });
 }
@@ -894,4 +930,330 @@ export async function dbIsUserBlacklisted(uid: string, username?: string, email?
     console.warn("Error querying blacklist status:", err);
   }
   return false;
+}
+
+/**
+ * Executes an atomic ledger balance adjustment.
+ *
+ * EXACT ACCOUNTING RULES:
+ * - ADD_DEPOSIT: balance = balance + amount, totalDeposit = totalDeposit + amount (cumulative)
+ * - ADD_PROFIT:  balance = balance + amount, totalDeposit = totalDeposit (strictly unchanged)
+ * - AWARD_BONUS: balance = balance + amount, totalDeposit = totalDeposit (strictly unchanged)
+ * - REDUCE_BAL:  balance = balance - amount, totalDeposit = totalDeposit (strictly unchanged)
+ *
+ * Writes user profile updates and ledger transaction atomically inside Firestore runTransaction.
+ */
+export async function dbExecuteLedgerAdjustment(params: LedgerAdjustmentParams): Promise<LedgerAdjustmentResult> {
+  const { targetUid, operationType, amount, processor = 'USDT TRC20', createdBy = 'Admin' } = params;
+
+  if (!targetUid || typeof targetUid !== 'string') {
+    throw new Error("Invalid target user ID.");
+  }
+  if (!['ADD_DEPOSIT', 'ADD_PROFIT', 'AWARD_BONUS', 'REDUCE_BAL', 'WITHDRAWAL'].includes(operationType)) {
+    throw new Error(`Invalid operation type: ${operationType}`);
+  }
+  const numericAmount = Number(amount);
+  if (isNaN(numericAmount) || numericAmount <= 0) {
+    throw new Error("Transaction amount must be a positive number.");
+  }
+
+  const path = `users/${targetUid}`;
+
+  if (isFirebaseReady) {
+    try {
+      const result = await runTransaction(db, async (transaction) => {
+        const userRef = doc(db, 'users', targetUid);
+        const userSnap = await transaction.get(userRef);
+        if (!userSnap.exists()) {
+          throw new Error(`User profile not found in database for UID: ${targetUid}`);
+        }
+
+        const userData = userSnap.data();
+        const currentMainAccountBalance = Number(userData.mainAccountBalance !== undefined ? userData.mainAccountBalance : userData.accountBalance) || 0;
+        const currentAccountBalance = Number(userData.accountBalance) || 0;
+        const currentTotalDeposit = Number(userData.totalDeposit) || 0;
+
+        let newMainAccountBalance = currentMainAccountBalance;
+        let newAccountBalance = currentAccountBalance;
+        let newTotalDeposit = currentTotalDeposit;
+        let txType: Transaction['type'] = 'Deposit';
+
+        // ACCOUNTING RULES ENFORCEMENT:
+        // A. ADD_DEPOSIT: Affects all 3 values (Main Account Balance, Account Balance, Total Deposit)
+        // B. ADD_PROFIT: Affects Main Account Balance & Account Balance ONLY. Total Deposit strictly UNCHANGED.
+        // C. AWARD_BONUS: Affects Main Account Balance & Account Balance ONLY. Total Deposit strictly UNCHANGED.
+        // D. REDUCE_BAL: Affects Main Account Balance & Account Balance ONLY. Total Deposit strictly UNCHANGED.
+        // E. WITHDRAWAL: Affects Main Account Balance & Account Balance ONLY. Total Deposit strictly UNCHANGED.
+        if (operationType === 'ADD_DEPOSIT') {
+          newMainAccountBalance = currentMainAccountBalance + numericAmount;
+          newAccountBalance = currentAccountBalance + numericAmount;
+          newTotalDeposit = currentTotalDeposit + numericAmount;
+          txType = 'Deposit';
+        } else if (operationType === 'ADD_PROFIT') {
+          newMainAccountBalance = currentMainAccountBalance + numericAmount;
+          newAccountBalance = currentAccountBalance + numericAmount;
+          newTotalDeposit = currentTotalDeposit;
+          txType = 'Profit';
+        } else if (operationType === 'AWARD_BONUS') {
+          newMainAccountBalance = currentMainAccountBalance + numericAmount;
+          newAccountBalance = currentAccountBalance + numericAmount;
+          newTotalDeposit = currentTotalDeposit;
+          txType = 'Bonus';
+        } else if (operationType === 'REDUCE_BAL') {
+          newMainAccountBalance = Math.max(0, currentMainAccountBalance - numericAmount);
+          newAccountBalance = Math.max(0, currentAccountBalance - numericAmount);
+          newTotalDeposit = currentTotalDeposit;
+          txType = 'Withdrawal';
+        } else if (operationType === 'WITHDRAWAL') {
+          newMainAccountBalance = Math.max(0, currentMainAccountBalance - numericAmount);
+          newAccountBalance = Math.max(0, currentAccountBalance - numericAmount);
+          newTotalDeposit = currentTotalDeposit;
+          txType = 'Withdrawal';
+        }
+
+        // Prepare user updates
+        const userUpdates: Record<string, any> = {
+          mainAccountBalance: newMainAccountBalance,
+          accountBalance: newAccountBalance,
+          totalDeposit: newTotalDeposit,
+        };
+
+        if (operationType === 'ADD_DEPOSIT') {
+          userUpdates.lastDeposit = numericAmount;
+        } else if (operationType === 'ADD_PROFIT' || operationType === 'AWARD_BONUS') {
+          userUpdates.earnedTotal = (Number(userData.earnedTotal) || 0) + numericAmount;
+        } else if (operationType === 'WITHDRAWAL') {
+          userUpdates.totalWithdrew = (Number(userData.totalWithdrew) || 0) + numericAmount;
+          if (userData.pendingWithdrawal) {
+            userUpdates.pendingWithdrawal = Math.max(0, (Number(userData.pendingWithdrawal) || 0) - numericAmount);
+          }
+        }
+
+        // Prepare Transaction doc inside the atomic transaction
+        const now = Date.now();
+        const txId = `tx_${operationType.toLowerCase()}_${now}_${Math.random().toString(36).substring(2, 7)}`;
+        const txRef = doc(db, 'transactions', txId);
+
+        const txData: Transaction = {
+          id: txId,
+          userId: targetUid,
+          username: userData.username || '',
+          type: txType,
+          amount: numericAmount,
+          date: new Date().toLocaleDateString(),
+          timestamp: now,
+          status: 'Approved',
+          processor: processor || 'USDT TRC20',
+          createdAt: now,
+          approvedAt: now,
+          operationType,
+          previousMainAccountBalance: currentMainAccountBalance,
+          newMainAccountBalance: newMainAccountBalance,
+          previousAccountBalance: currentAccountBalance,
+          newAccountBalance: newAccountBalance,
+          previousBalance: currentAccountBalance,
+          newBalance: newAccountBalance,
+          previousTotalDeposit: currentTotalDeposit,
+          newTotalDeposit: newTotalDeposit,
+          createdBy
+        };
+
+        // Atomically commit user updates and transaction
+        transaction.update(userRef, userUpdates);
+        transaction.set(txRef, txData);
+
+        // If ADD_DEPOSIT, also record in deposits collection for historical consistency
+        if (operationType === 'ADD_DEPOSIT') {
+          const depRef = doc(db, 'deposits', txId);
+          transaction.set(depRef, {
+            id: txId,
+            userId: targetUid,
+            username: userData.username || '',
+            amount: numericAmount,
+            date: new Date().toLocaleDateString(),
+            processor: processor || 'USDT TRC20',
+            planId: 'p1',
+            planName: 'Admin Direct Credit',
+            timestamp: now,
+            roi: 100,
+            term: 1
+          });
+        }
+
+        return {
+          success: true,
+          targetUid,
+          operationType,
+          amount: numericAmount,
+          previousMainAccountBalance: currentMainAccountBalance,
+          newMainAccountBalance: newMainAccountBalance,
+          previousAccountBalance: currentAccountBalance,
+          newAccountBalance: newAccountBalance,
+          previousBalance: currentAccountBalance,
+          newBalance: newAccountBalance,
+          previousTotalDeposit: currentTotalDeposit,
+          newTotalDeposit,
+          transactionId: txId,
+          updatedUser: {
+            ...userData,
+            ...userUpdates,
+            uid: targetUid
+          } as UserState,
+          transactionRecord: txData
+        };
+      });
+
+      // Synchronize local cache with the newly committed database values
+      try {
+        if (result?.updatedUser) {
+          localStorage.setItem(`user_profile_${targetUid}`, JSON.stringify(result.updatedUser));
+        }
+        if (result?.transactionRecord) {
+          const cachedTxs = JSON.parse(localStorage.getItem(`transactions_${targetUid}`) || '[]');
+          cachedTxs.unshift(result.transactionRecord);
+          localStorage.setItem(`transactions_${targetUid}`, JSON.stringify(cachedTxs));
+        }
+      } catch (e) {
+        console.warn("Post-ledger local cache sync note:", e);
+      }
+
+      return result;
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+      const errMsg = error?.message || String(error);
+      const isOfflineOrUnavailable =
+        error?.code === 'unavailable' ||
+        errMsg.includes('unavailable') ||
+        errMsg.includes('offline') ||
+        errMsg.includes('Could not reach Cloud Firestore backend') ||
+        errMsg.includes('failed to connect');
+
+      if (!isOfflineOrUnavailable) {
+        throw error;
+      }
+      console.warn("Firestore backend is currently offline or unreachable. Executing resilient local ledger fallback:", errMsg);
+    }
+  }
+
+  // Resilient Local / Offline ledger adjustment fallback with identical atomic accounting logic
+  const cachedProfileStr = localStorage.getItem(`user_profile_${targetUid}`);
+  let userData: any = {};
+  if (cachedProfileStr) {
+    try { userData = JSON.parse(cachedProfileStr); } catch { userData = {}; }
+  }
+  const currentMainAccountBalance = Number(userData.mainAccountBalance !== undefined ? userData.mainAccountBalance : userData.accountBalance) || 0;
+  const currentAccountBalance = Number(userData.accountBalance) || 0;
+  const currentTotalDeposit = Number(userData.totalDeposit) || 0;
+
+  let newMainAccountBalance = currentMainAccountBalance;
+  let newAccountBalance = currentAccountBalance;
+  let newTotalDeposit = currentTotalDeposit;
+  let txType: Transaction['type'] = 'Deposit';
+
+  if (operationType === 'ADD_DEPOSIT') {
+    newMainAccountBalance = currentMainAccountBalance + numericAmount;
+    newAccountBalance = currentAccountBalance + numericAmount;
+    newTotalDeposit = currentTotalDeposit + numericAmount;
+    txType = 'Deposit';
+  } else if (operationType === 'ADD_PROFIT') {
+    newMainAccountBalance = currentMainAccountBalance + numericAmount;
+    newAccountBalance = currentAccountBalance + numericAmount;
+    newTotalDeposit = currentTotalDeposit;
+    txType = 'Profit';
+  } else if (operationType === 'AWARD_BONUS') {
+    newMainAccountBalance = currentMainAccountBalance + numericAmount;
+    newAccountBalance = currentAccountBalance + numericAmount;
+    newTotalDeposit = currentTotalDeposit;
+    txType = 'Bonus';
+  } else if (operationType === 'REDUCE_BAL') {
+    newMainAccountBalance = Math.max(0, currentMainAccountBalance - numericAmount);
+    newAccountBalance = Math.max(0, currentAccountBalance - numericAmount);
+    newTotalDeposit = currentTotalDeposit;
+    txType = 'Withdrawal';
+  } else if (operationType === 'WITHDRAWAL') {
+    newMainAccountBalance = Math.max(0, currentMainAccountBalance - numericAmount);
+    newAccountBalance = Math.max(0, currentAccountBalance - numericAmount);
+    newTotalDeposit = currentTotalDeposit;
+    txType = 'Withdrawal';
+  }
+
+  const updatedUser: UserState = {
+    ...userData,
+    mainAccountBalance: newMainAccountBalance,
+    accountBalance: newAccountBalance,
+    totalDeposit: newTotalDeposit,
+    ...(operationType === 'ADD_DEPOSIT' ? { lastDeposit: numericAmount } : {}),
+    ...(operationType === 'ADD_PROFIT' || operationType === 'AWARD_BONUS' ? { earnedTotal: (Number(userData.earnedTotal) || 0) + numericAmount } : {}),
+    ...(operationType === 'WITHDRAWAL' ? { 
+      totalWithdrew: (Number(userData.totalWithdrew) || 0) + numericAmount,
+      pendingWithdrawal: Math.max(0, (Number(userData.pendingWithdrawal) || 0) - numericAmount)
+    } : {})
+  };
+
+  const now = Date.now();
+  const txId = `tx_${operationType.toLowerCase()}_${now}_${Math.random().toString(36).substring(2, 7)}`;
+  const txData: Transaction = {
+    id: txId,
+    userId: targetUid,
+    username: userData.username || '',
+    type: txType,
+    amount: numericAmount,
+    date: new Date().toLocaleDateString(),
+    timestamp: now,
+    status: 'Approved',
+    processor: processor || 'USDT TRC20',
+    createdAt: now,
+    approvedAt: now,
+    operationType,
+    previousMainAccountBalance: currentMainAccountBalance,
+    newMainAccountBalance: newMainAccountBalance,
+    previousAccountBalance: currentAccountBalance,
+    newAccountBalance: newAccountBalance,
+    previousBalance: currentAccountBalance,
+    newBalance: newAccountBalance,
+    previousTotalDeposit: currentTotalDeposit,
+    newTotalDeposit: newTotalDeposit,
+    createdBy
+  };
+
+  localStorage.setItem(`user_profile_${targetUid}`, JSON.stringify(updatedUser));
+  const cachedTxs = JSON.parse(localStorage.getItem(`transactions_${targetUid}`) || '[]');
+  cachedTxs.unshift(txData);
+  localStorage.setItem(`transactions_${targetUid}`, JSON.stringify(cachedTxs));
+
+  if (operationType === 'ADD_DEPOSIT') {
+    const cachedDeps = JSON.parse(localStorage.getItem(`deposits_${targetUid}`) || '[]');
+    cachedDeps.unshift({
+      id: txId,
+      userId: targetUid,
+      username: userData.username || '',
+      amount: numericAmount,
+      date: new Date().toLocaleDateString(),
+      processor: processor || 'USDT TRC20',
+      planId: 'p1',
+      planName: 'Admin Direct Credit',
+      timestamp: now,
+      roi: 100,
+      term: 1
+    });
+    localStorage.setItem(`deposits_${targetUid}`, JSON.stringify(cachedDeps));
+  }
+
+  return {
+    success: true,
+    targetUid,
+    operationType,
+    amount: numericAmount,
+    previousMainAccountBalance: currentMainAccountBalance,
+    newMainAccountBalance: newMainAccountBalance,
+    previousAccountBalance: currentAccountBalance,
+    newAccountBalance: newAccountBalance,
+    previousBalance: currentAccountBalance,
+    newBalance: newAccountBalance,
+    previousTotalDeposit: currentTotalDeposit,
+    newTotalDeposit,
+    transactionId: txId,
+    updatedUser,
+    transactionRecord: txData
+  };
 }

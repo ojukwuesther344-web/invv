@@ -33,6 +33,7 @@ interface SidebarProps {
   onClose?: () => void;
   isAdmin?: boolean;
   onPageChange?: (page: any) => void;
+  mainAccountBalance?: number;
   accountBalance?: number;
 }
 
@@ -45,7 +46,8 @@ export default function DashboardSidebar({
   onClose, 
   isAdmin = false, 
   onPageChange,
-  accountBalance = 306.3
+  mainAccountBalance,
+  accountBalance = 0
 }: SidebarProps) {
 
   // Primary menu matching screenshot exactly
@@ -135,7 +137,7 @@ export default function DashboardSidebar({
           </span>
           <div className="mt-1 flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-[#0B2545] tracking-tight">
-              ${Number(accountBalance).toFixed(2)}
+              ${Number(mainAccountBalance !== undefined ? mainAccountBalance : accountBalance).toFixed(2)}
             </span>
             <span className="text-xs font-semibold text-slate-400">
               USD

@@ -21,8 +21,10 @@ import {
   dbDeleteInvestmentPlan,
   dbDeleteUserProfile,
   dbAddUserToBlacklist,
-  dbIsUserBlacklisted
+  dbIsUserBlacklisted,
+  dbExecuteLedgerAdjustment
 } from './firebaseService';
+import { LedgerAdjustmentParams, LedgerAdjustmentResult } from '../types';
 
 export { isFirebaseReady, subscribeToAllUsers, subscribeToAllTransactions, subscribeToUserProfile, dbIsUserBlacklisted as isUserBlacklisted };
 
@@ -40,6 +42,7 @@ export const getDefaultUserMetrics = (userEmail: string, username: string, fullN
     ethereum: customWallets?.ethereum || '',
     usdtErc20: customWallets?.usdtErc20 || ''
   },
+  mainAccountBalance: 0,
   accountBalance: 0,
   earnedTotal: 0,
   pendingWithdrawal: 0,
@@ -411,12 +414,31 @@ export async function getSystemSettings(): Promise<any> {
 }
 
 /**
- * Keep placeholders for admin fallback/compilation compatibility
+ * Fallback helpers for admin and compilation compatibility
  */
 export async function getAllTransactions(): Promise<Transaction[]> {
+  try {
+    const cached = localStorage.getItem('all_transactions_cache');
+    if (cached) return JSON.parse(cached);
+  } catch {}
   return [];
 }
 export async function getAllUsers(): Promise<UserState[]> {
+  try {
+    const cached = localStorage.getItem('all_users_cache');
+    if (cached) return JSON.parse(cached);
+    const users: UserState[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('user_profile_')) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          try { users.push(JSON.parse(val)); } catch {}
+        }
+      }
+    }
+    if (users.length > 0) return users;
+  } catch {}
   return [];
 }
 
@@ -488,4 +510,17 @@ export async function deleteUserProfile(uid: string, username?: string, email?: 
   localStorage.removeItem(`withdrawals_${uid}`);
   localStorage.removeItem(`transactions_${uid}`);
 }
+
+/**
+ * Centrally executes an atomic ledger adjustment via Firestore runTransaction.
+ * Enforces:
+ * - ADD_DEPOSIT: balance = balance + amount, totalDeposit = totalDeposit + amount (cumulative)
+ * - ADD_PROFIT:  balance = balance + amount, totalDeposit = totalDeposit (strictly unchanged)
+ * - AWARD_BONUS: balance = balance + amount, totalDeposit = totalDeposit (strictly unchanged)
+ * - REDUCE_BAL:  balance = balance - amount, totalDeposit = totalDeposit (strictly unchanged)
+ */
+export async function executeLedgerAdjustment(params: LedgerAdjustmentParams): Promise<LedgerAdjustmentResult> {
+  return dbExecuteLedgerAdjustment(params);
+}
+
 

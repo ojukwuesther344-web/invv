@@ -24,10 +24,11 @@
 
 html, body, #root {
   font-family: 'Inter', sans-serif;
-  min-width: 1200px;
-  width: 1200px;
-  margin: 0 auto;
-  overflow-x: hidden;
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  max-width: none;
 }
 
 body {
@@ -35,6 +36,9 @@ body {
   background-color: #fcfdfe;
   color: #1a2530;
   overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 button, input, select, textarea {

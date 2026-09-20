@@ -74,7 +74,13 @@
         "planName": { "type": "string" },
         "term": { "type": "number" },
         "roi": { "type": "number" },
-        "referenceId": { "type": "string" }
+        "referenceId": { "type": "string" },
+        "operationType": { "type": "string" },
+        "previousBalance": { "type": "number" },
+        "newBalance": { "type": "number" },
+        "previousTotalDeposit": { "type": "number" },
+        "newTotalDeposit": { "type": "number" },
+        "createdBy": { "type": "string" }
       },
       "required": ["id", "userId", "username", "type", "amount", "date", "timestamp", "status", "processor"]
     },

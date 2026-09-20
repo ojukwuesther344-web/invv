@@ -27,16 +27,18 @@ export interface Withdrawal {
   approvedAt?: number | null;
 }
 
+export type LedgerOperationType = 'ADD_DEPOSIT' | 'ADD_PROFIT' | 'AWARD_BONUS' | 'REDUCE_BAL' | 'WITHDRAWAL';
+
 export interface Transaction {
   id: string;
   userId: string;
   username: string;
-  type: 'Deposit' | 'Investment' | 'Profit' | 'Withdrawal' | 'Bonus';
+  type: 'Deposit' | 'Investment' | 'Profit' | 'Withdrawal' | 'Bonus' | 'DEPOSIT' | 'PROFIT' | 'BONUS' | 'BALANCE_REDUCTION' | string;
   amount: number;
   date: string;
   timestamp: number;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Completed';
-  processor: 'USDT TRC20' | 'Bitcoin' | 'Ethereum' | 'USDT ERC20' | 'Dogecoin' | 'Perfect Money' | 'Tron' | 'XRP' | 'Account Balance';
+  processor: 'USDT TRC20' | 'Bitcoin' | 'Ethereum' | 'USDT ERC20' | 'Dogecoin' | 'Perfect Money' | 'Tron' | 'XRP' | 'Account Balance' | string;
   planId?: string;
   planName?: string;
   term?: number;
@@ -46,6 +48,43 @@ export interface Transaction {
   approvedAt?: number | null;
   txHash?: string;
   paymentProof?: string;
+  // Audit Ledger fields:
+  operationType?: LedgerOperationType | string;
+  previousMainAccountBalance?: number;
+  newMainAccountBalance?: number;
+  previousAccountBalance?: number;
+  newAccountBalance?: number;
+  previousBalance?: number;
+  newBalance?: number;
+  previousTotalDeposit?: number;
+  newTotalDeposit?: number;
+  createdBy?: string;
+}
+
+export interface LedgerAdjustmentParams {
+  targetUid: string;
+  operationType: LedgerOperationType;
+  amount: number;
+  processor?: 'USDT TRC20' | 'Bitcoin' | 'Ethereum' | 'USDT ERC20' | 'Dogecoin' | 'Perfect Money' | 'Tron' | 'XRP' | 'Account Balance' | string;
+  createdBy?: string;
+}
+
+export interface LedgerAdjustmentResult {
+  success: boolean;
+  targetUid: string;
+  operationType: LedgerOperationType;
+  amount: number;
+  previousMainAccountBalance: number;
+  newMainAccountBalance: number;
+  previousAccountBalance: number;
+  newAccountBalance: number;
+  previousBalance: number;
+  newBalance: number;
+  previousTotalDeposit: number;
+  newTotalDeposit: number;
+  transactionId: string;
+  updatedUser?: UserState;
+  transactionRecord?: Transaction;
 }
 
 export interface InvestmentPlan {
@@ -85,6 +124,7 @@ export interface UserState {
     ethereum: string;
     usdtErc20: string;
   };
+  mainAccountBalance: number;
   accountBalance: number;
   earnedTotal: number;
   pendingWithdrawal: number;

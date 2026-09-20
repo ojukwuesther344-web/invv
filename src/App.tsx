@@ -113,6 +113,7 @@ export default function App() {
       ethereum: '',
       usdtErc20: ''
     },
+    mainAccountBalance: 0,
     accountBalance: 0,
     earnedTotal: 0,
     pendingWithdrawal: 0,
@@ -463,17 +464,25 @@ export default function App() {
       });
     });
 
-    const calculatedFallbackBalance = totalDeposits + liveEarnedTotal + totalBonuses - activeInvestments - approvedWithdrawals;
+    const finalMainAccountBalance = typeof user.mainAccountBalance === 'number' && !isNaN(user.mainAccountBalance)
+      ? user.mainAccountBalance
+      : (typeof user.accountBalance === 'number' && !isNaN(user.accountBalance) ? user.accountBalance : 0);
+
     const finalAccountBalance = typeof user.accountBalance === 'number' && !isNaN(user.accountBalance)
       ? user.accountBalance
-      : Number(Math.max(0, calculatedFallbackBalance).toFixed(2));
+      : 0;
+
+    const finalTotalDeposit = typeof user.totalDeposit === 'number' && !isNaN(user.totalDeposit)
+      ? user.totalDeposit
+      : 0;
 
     const liveUser: UserState = {
       ...user,
+      mainAccountBalance: finalMainAccountBalance,
       accountBalance: finalAccountBalance,
+      totalDeposit: finalTotalDeposit,
       earnedTotal: user.earnedTotal > 0 ? user.earnedTotal : Number(liveEarnedTotal.toFixed(4)),
       activeDeposit: user.activeDeposit > 0 ? user.activeDeposit : Number(activeInvestments.toFixed(2)),
-      totalDeposit: user.totalDeposit > 0 ? user.totalDeposit : Number(totalDeposits.toFixed(2)),
       lastDeposit: user.lastDeposit > 0 ? user.lastDeposit : Number(lastDeposit.toFixed(2)),
       pendingWithdrawal: Number(pendingWithdrawalVals.toFixed(2)),
       totalWithdrew: user.totalWithdrew > 0 ? user.totalWithdrew : Number(approvedWithdrawals.toFixed(2)),
@@ -638,23 +647,25 @@ export default function App() {
 
     const handleResize = () => {
       const width = window.innerWidth;
-      const isDashboardContainer = currentPage === 'Dashboard' || currentPage === 'Deposit';
+      const isDashboardOrAdmin = currentPage === 'Admin' || currentPage === 'Dashboard' || currentPage === 'Deposit';
 
-      if (isDashboardContainer) {
-        // Full screen dashboard: Stretch to 100% of browser window, disable rigid 1200px lock
+      if (isDashboardOrAdmin) {
+        // Full screen dashboard / admin: Stretch to 100% of browser window, disable rigid 1200px lock
         htmlEl.style.zoom = '1';
         htmlEl.style.width = '100%';
         htmlEl.style.minWidth = 'unset';
-        htmlEl.style.maxWidth = '100%';
+        htmlEl.style.maxWidth = 'none';
         htmlEl.style.margin = '0';
         
         bodyEl.style.width = '100%';
         bodyEl.style.minWidth = 'unset';
+        bodyEl.style.maxWidth = 'none';
         bodyEl.style.margin = '0';
 
         if (rootEl) {
           rootEl.style.width = '100%';
           rootEl.style.minWidth = 'unset';
+          rootEl.style.maxWidth = 'none';
           rootEl.style.margin = '0';
         }
       } else {
@@ -666,18 +677,21 @@ export default function App() {
           htmlEl.style.zoom = '1';
         }
         
-        htmlEl.style.width = '1200px';
-        htmlEl.style.minWidth = '1200px';
-        htmlEl.style.margin = '0 auto';
+        htmlEl.style.width = '100%';
+        htmlEl.style.minWidth = 'unset';
+        htmlEl.style.maxWidth = 'none';
+        htmlEl.style.margin = '0';
         
-        bodyEl.style.width = '1200px';
-        bodyEl.style.minWidth = '1200px';
-        bodyEl.style.margin = '0 auto';
+        bodyEl.style.width = '100%';
+        bodyEl.style.minWidth = 'unset';
+        bodyEl.style.maxWidth = 'none';
+        bodyEl.style.margin = '0';
 
         if (rootEl) {
-          rootEl.style.width = '1200px';
-          rootEl.style.minWidth = '1200px';
-          rootEl.style.margin = '0 auto';
+          rootEl.style.width = '100%';
+          rootEl.style.minWidth = 'unset';
+          rootEl.style.maxWidth = 'none';
+          rootEl.style.margin = '0';
         }
       }
     };
@@ -790,6 +804,7 @@ export default function App() {
           onClose={() => setIsSidebarOpen(false)}
           isAdmin={liveUser.email === 'blessingubah38@gmail.com'}
           onPageChange={handlePageChange}
+          mainAccountBalance={liveUser.mainAccountBalance}
           accountBalance={liveUser.accountBalance}
         />
         <DashboardView 

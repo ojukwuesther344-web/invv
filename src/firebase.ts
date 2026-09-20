@@ -1,16 +1,40 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-// Initialize the Firebase configuration
-const app = initializeApp(firebaseConfig);
+// Initialize or reuse Firebase App instance
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Use initializeFirestore with experimentalForceLongPolling to prevent WebSocket proxy blockages in container preview environments
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-}, firebaseConfig.firestoreDatabaseId || '(default)');
+// Target database ID
+const databaseId = firebaseConfig.firestoreDatabaseId || '(default)';
+
+// Initialize Firestore with resilient offline persistent caching and auto-detected long polling
+let firestoreDb: any;
+try {
+  firestoreDb = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    }),
+    experimentalAutoDetectLongPolling: true
+  }, databaseId);
+} catch {
+  try {
+    firestoreDb = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true
+    }, databaseId);
+  } catch {
+    firestoreDb = getFirestore(app, databaseId);
+  }
+}
+
+export const db = firestoreDb;
 
 // Operational types for structured permission error messages
 export enum OperationType {
