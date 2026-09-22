@@ -1055,15 +1055,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       return;
     }
 
+    const termNum = Number(planTerm) || 1;
+    const roiNum = Number(planRoi) || 100;
+    const profit = roiNum > 100 ? roiNum - 100 : roiNum;
+    const dailyRoiCalc = Number((profit / termNum).toFixed(1)) || 2;
+
     const newPlan: InvestmentPlan = {
       id: editingPlan?.id || `plan_${Date.now()}`,
       name: planName,
       min: Number(planMin),
       max: Number(planMax),
-      roi: Number(planRoi),
-      term: Number(planTerm),
-      dailyRateText: planRateText || `${((planRoi - 100) / (planTerm * 24)).toFixed(3)}% HOURLY`,
-      hourlyRateText: 'Every Hour'
+      roi: roiNum,
+      term: termNum,
+      days: termNum,
+      dailyRoi: dailyRoiCalc,
+      dailyRateText: planRateText || `${dailyRoiCalc}% 24 Hours`,
+      hourlyRateText: 'Every 24 Hours'
     };
 
     try {
@@ -3137,7 +3144,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         </div>
                         <div>
                           <div className="text-[10px] text-slate-500 uppercase">Max Principal</div>
-                          <div className="text-white font-bold font-mono mt-0.5">{formatCurrency(p.max)}</div>
+                          <div className="text-white font-bold font-mono mt-0.5">{p.max >= 1000000 ? 'Unlimited' : formatCurrency(p.max)}</div>
                         </div>
                       </div>
                     </div>

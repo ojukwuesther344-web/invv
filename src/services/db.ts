@@ -313,46 +313,91 @@ export async function updateTransactionStatus(transactionId: string, status: 'Pe
 /**
  * Fetch all dynamic investment plans (Authoritative source)
  */
+export const DEFAULT_INVESTMENT_PLANS: InvestmentPlan[] = [
+  {
+    id: 'starter_plan',
+    name: 'Starter Plan',
+    min: 500,
+    max: 10000000,
+    roi: 114,
+    term: 7,
+    days: 7,
+    dailyRoi: 2,
+    dailyRateText: '2% 24 Hours',
+    hourlyRateText: 'Every 24 Hours'
+  },
+  {
+    id: 'garden_plan',
+    name: 'Garden Plan',
+    min: 5000,
+    max: 10000000,
+    roi: 142,
+    term: 21,
+    days: 21,
+    dailyRoi: 2,
+    dailyRateText: '2% 24 Hours',
+    hourlyRateText: 'Every 24 Hours'
+  },
+  {
+    id: 'harvest_plan',
+    name: 'Harvest Plan',
+    min: 25000,
+    max: 10000000,
+    roi: 163,
+    term: 21,
+    days: 21,
+    dailyRoi: 3,
+    dailyRateText: '3% 24 Hours',
+    hourlyRateText: 'Every 24 Hours'
+  },
+  {
+    id: 'golden_plan',
+    name: 'Golden Plan',
+    min: 100000,
+    max: 10000000,
+    roi: 190,
+    term: 30,
+    days: 30,
+    dailyRoi: 3,
+    dailyRateText: '3% 24 Hours',
+    hourlyRateText: 'Every 24 Hours'
+  }
+];
+
 export async function getInvestmentPlans(): Promise<InvestmentPlan[]> {
-  const defaultPlans: InvestmentPlan[] = [
-    {
-      id: 'plan_84h',
-      name: 'EVERY HOUR FOR 84H',
-      min: 10,
-      max: 500,
-      roi: 101.2,
-      term: 3.5,
-      dailyRateText: '1.2% HOURLY',
-      hourlyRateText: 'Every Hour'
-    },
-    {
-      id: 'plan_66h',
-      name: 'EVERY HOUR FOR 66H',
-      min: 100,
-      max: 500,
-      roi: 102.2,
-      term: 2.75,
-      dailyRateText: '2.2% HOURLY',
-      hourlyRateText: 'Every Hour'
-    },
-    {
-      id: 'plan_44h',
-      name: 'EVERY HOUR FOR 44H',
-      min: 100,
-      max: 1000,
-      roi: 104.2,
-      term: 1.83,
-      dailyRateText: '4.2% HOURLY',
-      hourlyRateText: 'Every Hour'
-    }
-  ];
+  const defaultPlans = DEFAULT_INVESTMENT_PLANS;
 
   if (isFirebaseReady) {
     try {
       const records = await dbFetchInvestmentPlans();
-      if (records && records.length > 0) {
-        localStorage.setItem('investment_plans', JSON.stringify(records));
-        return records;
+      const validRecords = records.filter(r => ['starter_plan', 'garden_plan', 'harvest_plan', 'golden_plan'].includes(r.id));
+      if (validRecords.length === 4) {
+        // Sort in order of definition and ensure all fields are populated
+        const sorted = defaultPlans.map(dp => {
+          const vr = validRecords.find(r => r.id === dp.id);
+          if (!vr) return dp;
+          const term = Number(vr.term || vr.days) || dp.term;
+          const dailyRoi = Number(vr.dailyRoi) || dp.dailyRoi;
+          const roi = Number(vr.roi) > 0 ? Number(vr.roi) : dp.roi;
+          return {
+            ...dp,
+            ...vr,
+            roi,
+            term,
+            days: term,
+            dailyRoi,
+            dailyRateText: vr.dailyRateText || dp.dailyRateText
+          };
+        });
+        localStorage.setItem('investment_plans', JSON.stringify(sorted));
+        return sorted;
+      } else {
+        // Sync default 4 plans to Firestore
+        for (const dp of defaultPlans) {
+          await dbSaveInvestmentPlan(dp).catch(() => {});
+        }
+        localStorage.setItem('investment_plans', JSON.stringify(defaultPlans));
+        return defaultPlans;
       }
     } catch (error) {
       console.warn("Failed retrieving investment plans from Firebase:", error);
@@ -363,9 +408,29 @@ export async function getInvestmentPlans(): Promise<InvestmentPlan[]> {
   if (cachedStr) {
     try {
       const plans = JSON.parse(cachedStr);
-      if (plans && plans.length > 0) return plans;
+      if (Array.isArray(plans) && plans.length === 4 && plans.some(p => p.id === 'starter_plan')) {
+        const normalized = defaultPlans.map(dp => {
+          const cp = plans.find((p: any) => p.id === dp.id);
+          if (!cp) return dp;
+          const term = Number(cp.term || cp.days) || dp.term;
+          const dailyRoi = Number(cp.dailyRoi) || dp.dailyRoi;
+          const roi = Number(cp.roi) > 0 ? Number(cp.roi) : dp.roi;
+          return {
+            ...dp,
+            ...cp,
+            roi,
+            term,
+            days: term,
+            dailyRoi,
+            dailyRateText: cp.dailyRateText || dp.dailyRateText
+          };
+        });
+        return normalized;
+      }
     } catch (e) {}
   }
+
+  localStorage.setItem('investment_plans', JSON.stringify(defaultPlans));
   return defaultPlans;
 }
 

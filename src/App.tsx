@@ -301,8 +301,12 @@ export default function App() {
         const isMatured = elapsed >= termMs;
         
         // Calculate dynamic deserved profit
-        let rate = 0.06;
+        let rate = 0.02;
         switch (inv.planId) {
+          case 'starter_plan': rate = 0.02; break;
+          case 'garden_plan': rate = 0.02; break;
+          case 'harvest_plan': rate = 0.03; break;
+          case 'golden_plan': rate = 0.03; break;
           case 'p1': rate = 0.06; break;
           case 'p2': rate = 0.40; break;
           case 'p3': rate = 0.08; break;
@@ -415,8 +419,12 @@ export default function App() {
       const termDays = inv.term || 10;
       const termMs = termDays * 24 * 3600 * 1000;
 
-      let rate = 0.06;
+      let rate = 0.02;
       switch (inv.planId) {
+        case 'starter_plan': rate = 0.02; break;
+        case 'garden_plan': rate = 0.02; break;
+        case 'harvest_plan': rate = 0.03; break;
+        case 'golden_plan': rate = 0.03; break;
         case 'p1': rate = 0.06; break;
         case 'p2': rate = 0.40; break;
         case 'p3': rate = 0.08; break;
@@ -745,7 +753,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [liveUser.uid, liveUser.isLoggedIn]);
 
-  const [activePlanSelectionId, setActivePlanSelectionId] = useState<string>('plan_84h');
+  const [activePlanSelectionId, setActivePlanSelectionId] = useState<string>('starter_plan');
 
   // Renders Admin Panel View
   if (currentPage === 'Admin') {

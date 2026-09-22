@@ -619,15 +619,23 @@ export async function dbFetchInvestmentPlans(): Promise<InvestmentPlan[]> {
     const records: InvestmentPlan[] = [];
     snap.forEach((docSnap) => {
       const data = docSnap.data();
+      const pId = data.id || docSnap.id;
+      const term = Number(data.term || data.days) || (pId === 'starter_plan' ? 7 : pId === 'golden_plan' ? 30 : 21);
+      const dailyRoi = Number(data.dailyRoi) || (pId === 'harvest_plan' || pId === 'golden_plan' ? 3 : 2);
+      const fallbackRoi = pId === 'starter_plan' ? 114 : pId === 'garden_plan' ? 142 : pId === 'harvest_plan' ? 163 : pId === 'golden_plan' ? 190 : (100 + (dailyRoi * term));
+      const roi = Number(data.roi) > 0 ? Number(data.roi) : fallbackRoi;
+
       records.push({
-        id: data.id || docSnap.id,
-        name: data.name || '',
-        min: Number(data.min) || 0,
-        max: Number(data.max) || 0,
-        roi: Number(data.roi) || 0,
-        term: Number(data.term) || 0,
-        dailyRateText: data.dailyRateText || '',
-        hourlyRateText: data.hourlyRateText || ''
+        id: pId,
+        name: data.name || (pId === 'starter_plan' ? 'Starter Plan' : pId === 'garden_plan' ? 'Garden Plan' : pId === 'harvest_plan' ? 'Harvest Plan' : pId === 'golden_plan' ? 'Golden Plan' : ''),
+        min: Number(data.min) || (pId === 'starter_plan' ? 500 : pId === 'garden_plan' ? 5000 : pId === 'harvest_plan' ? 25000 : pId === 'golden_plan' ? 100000 : 500),
+        max: Number(data.max) || 10000000,
+        roi: roi,
+        term: term,
+        days: term,
+        dailyRoi: dailyRoi,
+        dailyRateText: data.dailyRateText || `${dailyRoi}% 24 Hours`,
+        hourlyRateText: data.hourlyRateText || 'Every 24 Hours'
       });
     });
     return records;
@@ -824,15 +832,22 @@ export async function dbSaveInvestmentPlan(plan: InvestmentPlan): Promise<void> 
 
   try {
     const docRef = doc(db, 'plans', planId);
+    const termNum = Number(plan.term) || (plan.id === 'starter_plan' ? 7 : plan.id === 'golden_plan' ? 30 : 21);
+    const dailyRoiNum = Number(plan.dailyRoi) || (plan.id === 'harvest_plan' || plan.id === 'golden_plan' ? 3 : 2);
+    const fallbackRoi = plan.id === 'starter_plan' ? 114 : plan.id === 'garden_plan' ? 142 : plan.id === 'harvest_plan' ? 163 : plan.id === 'golden_plan' ? 190 : (100 + (dailyRoiNum * termNum));
+    const roiNum = Number(plan.roi) > 0 ? Number(plan.roi) : fallbackRoi;
+
     await setDoc(docRef, {
       id: planId,
       name: plan.name,
       min: Number(plan.min),
       max: Number(plan.max),
-      roi: Number(plan.roi),
-      term: Number(plan.term),
-      dailyRateText: plan.dailyRateText || '',
-      hourlyRateText: plan.hourlyRateText || 'Every Hour'
+      roi: roiNum,
+      term: termNum,
+      days: termNum,
+      dailyRoi: dailyRoiNum,
+      dailyRateText: plan.dailyRateText || `${dailyRoiNum}% 24 Hours`,
+      hourlyRateText: plan.hourlyRateText || 'Every 24 Hours'
     });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);

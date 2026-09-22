@@ -92,16 +92,19 @@ export interface InvestmentPlan {
   name: string;
   min: number;
   max: number;
-  roi: number; // in percentage
-  term: number; // in days
+  roi: number; // in percentage, e.g. 114, 142, 163, 190
+  term: number; // in days, e.g. 7, 21, 21, 30
   dailyRateText: string;
   hourlyRateText?: string;
+  dailyRoi?: number; // percentage per 24 hours, e.g. 2, 3
+  days?: number; // duration in days
 }
 
 export interface FAQItem {
   id: string;
   question: string;
   answer: string;
+  category?: string;
 }
 
 export interface ReviewItem {

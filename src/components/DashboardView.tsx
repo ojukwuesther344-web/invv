@@ -77,10 +77,10 @@ export default function DashboardView({
   reloadDeposits
 }: DashboardViewProps) {
   const [securityNoteOpen, setSecurityNoteOpen] = useState(true);
-  const [depositAmount, setDepositAmount] = useState('100.00');
-  const [selectedPlanId, setSelectedPlanId] = useState('p1');
+  const [depositAmount, setDepositAmount] = useState('500.00');
+  const [selectedPlanId, setSelectedPlanId] = useState('starter_plan');
   const [selectedSpendSource, setSelectedSpendSource] = useState('usdt_trc20');
-  const [activePlanSelected, setActivePlanSelected] = useState('p1');
+  const [activePlanSelected, setActivePlanSelected] = useState('starter_plan');
   const [fundingAmount, setFundingAmount] = useState('500.00');
   const [withdrawAmount, setWithdrawAmount] = useState('100.00');
   const [selectedFundingMethod, setSelectedFundingMethod] = useState('usdt_trc20');
@@ -404,16 +404,12 @@ export default function DashboardView({
     alert('Your profile settings have been updated and synchronized successfully!');
   };
 
-  // Interactive Plans matching Screenshot 6
+  // Interactive Plans
   const defaultPlans = [
-    { id: 'p1', name: '10 DAYS 6% DAILY', min: 25, max: 100000, roi: 160, term: 10 },
-    { id: 'p2', name: 'AFTER 1 DAYS', min: 2000, max: 100000, roi: 140, term: 1 },
-    { id: 'p3', name: 'AFTER 5 DAYS', min: 500, max: 100000, roi: 140, term: 5 },
-    { id: 'p4', name: '100 DAYS 2.5% DAILY', min: 25, max: 3500, roi: 250, term: 100 },
-    { id: 'p5', name: '120 DAYS 4% DAILY', min: 3501, max: 6000, roi: 480, term: 120 },
-    { id: 'p6', name: '140 DAYS 5% DAILY', min: 6001, max: 100000, roi: 700, term: 140 },
-    { id: 'p7', name: '20 DAYS 10% DAILY', min: 25, max: 100000, roi: 200, term: 20 },
-    { id: 'p8', name: 'AFTER 10 DAYS', min: 100, max: 100000, roi: 150, term: 10 },
+    { id: 'starter_plan', name: 'Starter Plan', min: 500, max: 10000000, roi: 114, term: 7, days: 7, dailyRoi: 2, dailyRateText: '2% 24 Hours' },
+    { id: 'garden_plan', name: 'Garden Plan', min: 5000, max: 10000000, roi: 142, term: 21, days: 21, dailyRoi: 2, dailyRateText: '2% 24 Hours' },
+    { id: 'harvest_plan', name: 'Harvest Plan', min: 25000, max: 10000000, roi: 163, term: 21, days: 21, dailyRoi: 3, dailyRateText: '3% 24 Hours' },
+    { id: 'golden_plan', name: 'Golden Plan', min: 100000, max: 10000000, roi: 190, term: 30, days: 30, dailyRoi: 3, dailyRateText: '3% 24 Hours' },
   ];
 
   const [depositPlans, setDepositPlans] = useState<any[]>(defaultPlans);
@@ -421,14 +417,22 @@ export default function DashboardView({
   // Dynamic plans sync
   React.useEffect(() => {
     getInvestmentPlans().then((plans) => {
-      const formatted = plans.map(p => ({
-        id: p.id,
-        name: p.name,
-        min: p.min,
-        max: p.max,
-        roi: p.roi,
-        term: p.term
-      }));
+      const formatted = plans.map(p => {
+        const dailyRoi = p.dailyRoi || (p.id === 'harvest_plan' || p.id === 'golden_plan' ? 3 : 2);
+        const term = p.term || p.days || (p.id === 'starter_plan' ? 7 : p.id === 'golden_plan' ? 30 : 21);
+        const roi = p.roi || (p.id === 'starter_plan' ? 114 : p.id === 'garden_plan' ? 142 : p.id === 'harvest_plan' ? 163 : p.id === 'golden_plan' ? 190 : (100 + dailyRoi * term));
+        return {
+          id: p.id,
+          name: p.name,
+          min: p.min,
+          max: p.max,
+          roi: roi,
+          term: term,
+          days: term,
+          dailyRoi: dailyRoi,
+          dailyRateText: p.dailyRateText || `${dailyRoi}% 24 Hours`
+        };
+      });
       setDepositPlans(formatted);
       if (formatted.length > 0) {
         setActivePlanSelected(formatted[0].id);
@@ -457,8 +461,13 @@ export default function DashboardView({
       return;
     }
 
-    if (amountNum < activePlanObj.min || amountNum > activePlanObj.max) {
-      alert(`For the chosen plan "${activePlanObj.name}", your amount must be between $${activePlanObj.min} and $${activePlanObj.max}.`);
+    if (amountNum < activePlanObj.min) {
+      alert(`For the chosen plan "${activePlanObj.name}", the minimum deposit is $${activePlanObj.min}.`);
+      return;
+    }
+
+    if (activePlanObj.max < 10000000 && amountNum > activePlanObj.max) {
+      alert(`For the chosen plan "${activePlanObj.name}", your amount must not exceed $${activePlanObj.max}.`);
       return;
     }
 
@@ -1580,50 +1589,81 @@ export default function DashboardView({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {depositPlans.map((pl) => (
-                <div 
-                  key={pl.id}
-                  className="bg-white rounded-xl border border-slate-200/80 shadow-xs hover:border-[#1677ff] transition-all p-5 flex flex-col justify-between"
-                >
-                  <div className="flex flex-col">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{pl.name}</span>
-                      <span className="text-xs font-bold text-[#1677ff] bg-blue-50 px-2 py-0.5 rounded-full">{pl.dailyRoi}% Daily</span>
-                    </div>
-                    <div className="mt-3 mb-1">
-                      <span className="text-2xl font-black text-slate-800 font-display">{pl.dailyRoi}%</span>
-                      <span className="text-xs text-slate-500 ml-1">/ day</span>
-                    </div>
-                    <div className="text-xs text-slate-500 mb-4">Duration: <strong className="text-slate-700">{pl.days} Days</strong></div>
+              {depositPlans.map((pl, index) => {
+                const dailyRoiVal = pl.dailyRoi || (pl.id === 'harvest_plan' || pl.id === 'golden_plan' ? 3 : 2);
+                const durationDays = pl.days || pl.term || (pl.id === 'starter_plan' ? 7 : pl.id === 'golden_plan' ? 30 : 21);
+                const totalRoiText = pl.roi ? `${pl.roi}% ROI` : (
+                  pl.id === 'starter_plan' ? '114% ROI' :
+                  pl.id === 'garden_plan' ? '142% ROI' :
+                  pl.id === 'harvest_plan' ? '163% ROI' :
+                  pl.id === 'golden_plan' ? '190% ROI' : '114% ROI'
+                );
 
-                    <div className="space-y-2 py-3 border-t border-b border-slate-100 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Min Deposit:</span>
-                        <span className="font-bold text-slate-700">{formatCurrency(pl.min)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Max Deposit:</span>
-                        <span className="font-bold text-slate-700">{formatCurrency(pl.max)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Total Return:</span>
-                        <span className="font-bold text-emerald-600">{(pl.dailyRoi * pl.days).toFixed(0)}% ROI</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActivePlanSelected(pl.id);
-                      onSectionSelect('make-deposit');
-                    }}
-                    className="mt-4 w-full py-2.5 bg-[#232f3e] hover:bg-[#1677ff] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                return (
+                  <div 
+                    key={pl.id}
+                    className="bg-white rounded-xl border border-slate-200/80 shadow-xs hover:border-[#1677ff] transition-all p-5 flex flex-col justify-between"
                   >
-                    Select & Invest
-                  </button>
-                </div>
-              ))}
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{pl.name}</span>
+                        <span className="text-xs font-bold text-[#1677ff] bg-blue-50 px-2 py-0.5 rounded-full">
+                          {dailyRoiVal}% Daily
+                        </span>
+                      </div>
+                      <div className="mt-3 mb-1">
+                        <span className="text-2xl font-black text-slate-800 font-display">
+                          {dailyRoiVal}%
+                        </span>
+                        <span className="text-xs text-slate-500 ml-1">/ 24 Hours</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mb-4">
+                        Duration: <strong className="text-slate-700">{durationDays} Days</strong>
+                      </div>
+
+                      <div className="space-y-2 py-3 border-t border-b border-slate-100 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Min Deposit:</span>
+                          <span className="font-bold text-slate-700">{formatCurrency(pl.min)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Max Deposit:</span>
+                          <span className="font-bold text-slate-700">{pl.max >= 1000000 ? 'Unlimited' : formatCurrency(pl.max)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Earnings:</span>
+                          <span className="font-bold text-emerald-600">{pl.dailyRateText || `${dailyRoiVal}% 24 Hours`}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Investment Duration:</span>
+                          <span className="font-bold text-slate-700">{durationDays} Days</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400 font-semibold">Total Return:</span>
+                          <span className="font-black text-[#C59B4E] font-mono text-sm">
+                            {totalRoiText}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Payouts:</span>
+                          <span className="font-medium text-slate-600">Instant Withdrawals</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActivePlanSelected(pl.id);
+                        onSectionSelect('make-deposit');
+                      }}
+                      className="mt-4 w-full py-2.5 bg-[#232f3e] hover:bg-[#1677ff] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer uppercase tracking-wider"
+                    >
+                      Select & Invest
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1675,7 +1715,7 @@ export default function DashboardView({
                       </div>
                       <div className="flex justify-between">
                         <span>MAX :</span>
-                        <span className="text-slate-800">${pl.max}</span>
+                        <span className="text-slate-800">{pl.max >= 1000000 ? 'UNLIMITED' : `$${pl.max}`}</span>
                       </div>
                       <div className="flex justify-between text-[#C59B4E]">
                         <span>ROI :</span>
@@ -1683,7 +1723,9 @@ export default function DashboardView({
                       </div>
                       <div className="flex justify-between">
                         <span>TERM :</span>
-                        <span className="text-[#9333ea]">{pl.term} DAYS</span>
+                        <span className="text-[#9333ea]">
+                          {pl.id.startsWith('plan_') ? `${Math.round(pl.term * 24)} HOURS` : `${pl.term} DAYS`}
+                        </span>
                       </div>
                     </div>
                   </button>
