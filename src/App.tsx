@@ -15,6 +15,7 @@ import RegisterView from './components/RegisterView';
 import AdminView from './components/AdminView';
 import LiveChatWidget from './components/LiveChatWidget';
 import { Page, UserState, Deposit, Withdrawal, Transaction } from './types';
+import { formatCurrency } from './utils/formatters';
 import { 
   saveUserProfile, 
   fetchUserProfile, 
@@ -402,7 +403,7 @@ export default function App() {
       .sort((a, b) => b.timestamp - a.timestamp);
     const lastDeposit = approvedDeposits.length > 0 ? approvedDeposits[0].amount : 0;
 
-    const lastWithdrawalStr = `$${(lastApprovedWithdrawal || 0).toFixed(2)}`;
+    const lastWithdrawalStr = formatCurrency(lastApprovedWithdrawal || 0);
 
     const activeTracks: any[] = [];
     let liveEarnedTotal = 0;

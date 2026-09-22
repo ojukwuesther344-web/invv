@@ -25,6 +25,7 @@ import {
   X
 } from 'lucide-react';
 import { UserState, Transaction, InvestmentPlan, Page } from '../types';
+import { formatCurrency } from '../utils/formatters';
 import { 
   subscribeToAllUsers, 
   subscribeToAllTransactions, 
@@ -587,7 +588,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
         createdBy: 'Admin'
       });
 
-      alert(`Successfully deducted $${val.toFixed(2)} from ${target.username}'s active balance.\nNew Balance: $${res.newBalance.toFixed(2)}\nTotal Deposit (unchanged): $${res.newTotalDeposit.toFixed(2)}`);
+      alert(`Successfully deducted ${formatCurrency(val)} from ${target.username}'s active balance.\nNew Balance: ${formatCurrency(res.newBalance)}\nTotal Deposit (unchanged): ${formatCurrency(res.newTotalDeposit)}`);
       setDeductAmount('');
     } catch (err: any) {
       alert("Failed executing deduction: " + (err?.message || err));
@@ -871,7 +872,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       setBonusAmount('');
       setBonusModalOpen(false);
-      alert(`Successfully dispensed $${val.toFixed(2)} bonus dividend to ${target.username}!\nNew Balance: $${res.newBalance.toFixed(2)}\nTotal Deposit (unchanged): $${res.newTotalDeposit.toFixed(2)}`);
+      alert(`Successfully dispensed ${formatCurrency(val)} bonus dividend to ${target.username}!\nNew Balance: ${formatCurrency(res.newBalance)}\nTotal Deposit (unchanged): ${formatCurrency(res.newTotalDeposit)}`);
     } catch (err: any) {
       alert("Dispensing error: " + (err?.message || err));
     }
@@ -915,11 +916,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       });
 
       if (operationType === 'ADD_DEPOSIT') {
-        alert(`Successfully added $${val.toFixed(2)} Deposit directly for ${target.username}!\nNew Balance: $${res.newBalance.toFixed(2)}\nNew Total Deposit: $${res.newTotalDeposit.toFixed(2)}`);
+        alert(`Successfully added ${formatCurrency(val)} Deposit directly for ${target.username}!\nNew Balance: ${formatCurrency(res.newBalance)}\nNew Total Deposit: ${formatCurrency(res.newTotalDeposit)}`);
       } else if (operationType === 'ADD_PROFIT') {
-        alert(`Successfully added $${val.toFixed(2)} Profits directly for ${target.username}!\nNew Balance: $${res.newBalance.toFixed(2)}\nTotal Deposit (unchanged): $${res.newTotalDeposit.toFixed(2)}`);
+        alert(`Successfully added ${formatCurrency(val)} Profits directly for ${target.username}!\nNew Balance: ${formatCurrency(res.newBalance)}\nTotal Deposit (unchanged): ${formatCurrency(res.newTotalDeposit)}`);
       } else if (operationType === 'REDUCE_BAL') {
-        alert(`Successfully reduced ${target.username}'s balance by $${val.toFixed(2)}!\nNew Balance: $${res.newBalance.toFixed(2)}\nTotal Deposit (unchanged): $${res.newTotalDeposit.toFixed(2)}`);
+        alert(`Successfully reduced ${target.username}'s balance by ${formatCurrency(val)}!\nNew Balance: ${formatCurrency(res.newBalance)}\nTotal Deposit (unchanged): ${formatCurrency(res.newTotalDeposit)}`);
       }
 
       setAddMoneyAmount('');
@@ -1465,31 +1466,31 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             
             <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
               <div className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Total User Balances</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">${totalBalances.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(totalBalances)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Aggregate liability holding</div>
             </div>
 
             <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
               <div className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Total Deposited</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">${totalDeposited.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(totalDeposited)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Accumulated cash volume</div>
             </div>
 
             <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
               <div className="text-[10px] text-[#C59B4E] font-bold uppercase tracking-wider">Active Deposits</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">${activeDepositsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(activeDepositsTotal)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Sum active packages yielding</div>
             </div>
 
             <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
               <div className="text-[10px] text-orange-400 font-bold uppercase tracking-wider">Pending Withdrawals</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">${pendingWithdrawalsTotal.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(pendingWithdrawalsTotal)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Pending approval processing</div>
             </div>
 
             <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl sm:col-span-2 lg:col-span-1">
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Withdrawn</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">${totalWithdrawn.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(totalWithdrawn)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Total completed payouts</div>
             </div>
 
@@ -1576,7 +1577,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               <td className="p-3 font-bold text-[#C59B4E]">{u.username || "Guest"}</td>
                               <td className="p-3 text-white font-sans font-semibold">{u.fullName || "Unspecified"}</td>
                               <td className="p-3 text-slate-400">{u.email}</td>
-                              <td className="p-3 text-green-400 font-black">${u.accountBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td className="p-3 text-green-400 font-black">{formatCurrency(u.accountBalance)}</td>
                               <td className="p-3">
                                 {u.suspended ? (
                                   <span className="bg-red-950/40 border border-red-500/30 text-red-400 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold uppercase">Blocked</span>
@@ -1612,7 +1613,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <tr key={tx.id} className="hover:bg-slate-900/20 transition-all font-mono">
                               <td className="p-3 text-slate-400 font-bold">{tx.id}</td>
                               <td className="p-3 text-[#D4A856] font-sans font-semibold">{tx.username}</td>
-                              <td className="p-3 text-green-400 font-black">${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td className="p-3 text-green-400 font-black">{formatCurrency(tx.amount)}</td>
                               <td className="p-3 text-slate-300">{tx.processor || "Unknown Token"}</td>
                               <td className="p-3 text-slate-500">{tx.date}</td>
                             </tr>
@@ -1648,7 +1649,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <tr key={tx.id} className="hover:bg-slate-900/20 transition-all font-mono">
                               <td className="p-3 text-slate-400 font-bold">{tx.id}</td>
                               <td className="p-3 text-[#D4A856] font-sans font-semibold">{tx.username}</td>
-                              <td className="p-3 text-amber-500 font-black">${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td className="p-3 text-amber-500 font-black">{formatCurrency(tx.amount)}</td>
                               <td className="p-3 text-slate-300">{tx.processor || "Unknown Network"}</td>
                               <td className="p-3 text-slate-500">{tx.date}</td>
                             </tr>
@@ -1684,7 +1685,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               <td className="p-3 font-bold text-slate-250">{u.username}</td>
                               <td className="p-3 font-semibold text-slate-400">{u.referredBy || "None (Organic Signup)"}</td>
                               <td className="p-3 font-indigo-400 text-slate-300 text-left font-bold">{u.referralsCount || 0} users</td>
-                              <td className="p-3 text-purple-400 font-black">${(u.referralEarnings || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td className="p-3 text-purple-400 font-black">{formatCurrency(u.referralEarnings || 0)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1793,7 +1794,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               <td className="p-2.5 text-red-400 font-bold">{u.username}</td>
                               <td className="p-2.5 text-slate-300 font-sans">{u.fullName}</td>
                               <td className="p-2.5 text-slate-450">{u.email}</td>
-                              <td className="p-2.5 text-slate-350">${u.accountBalance.toLocaleString()}</td>
+                              <td className="p-2.5 text-slate-350">{formatCurrency(u.accountBalance)}</td>
                               <td className="p-2.5">
                                 <button 
                                   onClick={async () => {
@@ -1906,7 +1907,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               <td className="p-2.5 font-bold text-[#C59B4E]">{u.username}</td>
                               <td className="p-2.5 text-slate-400 font-sans font-semibold">{u.referredBy || "Unsponsored"}</td>
                               <td className="p-2.5 text-center text-slate-200 font-bold">{u.referralsCount || 0} clicks</td>
-                              <td className="p-2.5 text-right text-purple-400 font-black">${(u.referralEarnings || 0).toLocaleString()}</td>
+                              <td className="p-2.5 text-right text-purple-400 font-black">{formatCurrency(u.referralEarnings || 0)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1938,7 +1939,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         <tr key={tx.id} className="hover:bg-slate-900/20 transition-all font-mono">
                           <td className="p-3 font-bold text-slate-400">{tx.id}</td>
                           <td className="p-3 text-[#D4A856] font-sans font-semibold">{tx.username}</td>
-                          <td className="p-3 text-orange-400 font-black">${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                          <td className="p-3 text-orange-400 font-black">{formatCurrency(tx.amount)}</td>
                           <td className="p-3 text-slate-300">
                             {tx.processor}
                             {/* Display potential receiving keys */}
@@ -1995,7 +1996,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         <tr key={tx.id} className="hover:bg-slate-900/20 transition-all">
                           <td className="p-3 text-slate-400 font-semibold">{tx.id}</td>
                           <td className="p-3 text-[#D4A856] font-sans font-bold">{tx.username}</td>
-                          <td className="p-3 text-green-400 font-black">${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                          <td className="p-3 text-green-400 font-black">{formatCurrency(tx.amount)}</td>
                           <td className="p-3 text-slate-200">{tx.processor}</td>
                           <td className="p-3 text-slate-400 text-[10px]">
                             {tx.proofImg ? (
@@ -2055,7 +2056,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       >
                         <option value="">-- Choose Account --</option>
                         {users.map(u => (
-                          <option key={u.uid} value={u.uid}>{u.username} (${u.accountBalance.toLocaleString()} bal)</option>
+                          <option key={u.uid} value={u.uid}>{u.username} ({formatCurrency(u.accountBalance)} bal)</option>
                         ))}
                       </select>
                     </div>
@@ -2638,11 +2639,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               <div className="text-[10px] text-slate-500 truncate max-w-xs mt-0.5 font-mono">{u.email}</div>
                               <div className="text-[10px] text-slate-400 max-w-xs mt-0.5 capitalize">{u.fullName}</div>
                             </td>
-                            <td className="p-4 font-mono font-bold text-yellow-500">${u.accountBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td className="p-4 font-mono text-[#C59B4E]">${u.activeDeposit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td className="p-4 font-mono text-orange-400">${u.pendingWithdrawal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td className="p-4 font-mono text-green-400 font-bold">${u.earnedTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td className="p-4 font-mono font-medium text-slate-400">${u.totalDeposit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td className="p-4 font-mono font-bold text-yellow-500">{formatCurrency(u.accountBalance)}</td>
+                            <td className="p-4 font-mono text-[#C59B4E]">{formatCurrency(u.activeDeposit)}</td>
+                            <td className="p-4 font-mono text-orange-400">{formatCurrency(u.pendingWithdrawal)}</td>
+                            <td className="p-4 font-mono text-green-400 font-bold">{formatCurrency(u.earnedTotal)}</td>
+                            <td className="p-4 font-mono font-medium text-slate-400">{formatCurrency(u.totalDeposit)}</td>
                             <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-1.5 flex-wrap">
                                 <button 
@@ -2733,7 +2734,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           {/* Main Balance Highlight */}
                           <div className="text-right shrink-0">
                             <span className="text-[9px] text-slate-500 uppercase font-black block tracking-wider">Balance</span>
-                            <span className="text-sm font-mono font-black text-yellow-500">${u.accountBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="text-sm font-mono font-black text-yellow-500">{formatCurrency(u.accountBalance)}</span>
                           </div>
                         </div>
 
@@ -2741,19 +2742,19 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         <div className="grid grid-cols-2 gap-2 bg-[#06101c]/55 p-3 rounded-lg border border-[#112a4a] text-[11px] font-semibold text-slate-300">
                           <div>
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Active Deposit</span>
-                            <span className="text-[#C59B4E] font-mono font-bold">${u.activeDeposit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="text-[#C59B4E] font-mono font-bold">{formatCurrency(u.activeDeposit)}</span>
                           </div>
                           <div>
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Pending Withdraw</span>
-                            <span className="text-orange-400 font-mono font-bold">${u.pendingWithdrawal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="text-orange-400 font-mono font-bold">{formatCurrency(u.pendingWithdrawal)}</span>
                           </div>
                           <div className="mt-1">
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Earned Total</span>
-                            <span className="text-green-400 font-mono font-bold">${u.earnedTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="text-green-400 font-mono font-bold">{formatCurrency(u.earnedTotal)}</span>
                           </div>
                           <div className="mt-1">
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Total Deposit</span>
-                            <span className="text-slate-400 font-mono font-bold">${u.totalDeposit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="text-slate-400 font-mono font-bold">{formatCurrency(u.totalDeposit)}</span>
                           </div>
                         </div>
 
@@ -2930,7 +2931,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   {tx.type}
                                 </span>
                               </td>
-                              <td className="p-4 font-mono font-bold text-white">${tx.amount.toFixed(2)}</td>
+                              <td className="p-4 font-mono font-bold text-white">{formatCurrency(tx.amount)}</td>
                               <td className="p-4 font-mono text-xs">{tx.processor}</td>
                               <td className="p-4">
                                 <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold ${
@@ -3013,7 +3014,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           <div className="flex justify-between items-center text-xs bg-[#06101c]/55 p-2.5 rounded-lg border border-[#112a4a]">
                             <div>
                               <span className="text-slate-500 text-[9px] uppercase font-bold block">Asset Amount</span>
-                              <span className="font-mono font-black text-white text-sm">${tx.amount.toFixed(2)} <span className="text-[10px] text-slate-500 font-normal">via {tx.processor}</span></span>
+                              <span className="font-mono font-black text-white text-sm">{formatCurrency(tx.amount)} <span className="text-[10px] text-slate-500 font-normal">via {tx.processor}</span></span>
                             </div>
                             <div className="text-right">
                               <span className="text-slate-500 text-[9px] uppercase font-bold block">Log Status</span>
@@ -3132,11 +3133,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       <div className="grid grid-cols-2 gap-4 mt-4 py-3 border-y border-[#122842] text-xs font-semibold">
                         <div>
                           <div className="text-[10px] text-slate-500 uppercase">Min Principal</div>
-                          <div className="text-white font-bold font-mono mt-0.5">${p.min.toLocaleString()}</div>
+                          <div className="text-white font-bold font-mono mt-0.5">{formatCurrency(p.min)}</div>
                         </div>
                         <div>
                           <div className="text-[10px] text-slate-500 uppercase">Max Principal</div>
-                          <div className="text-white font-bold font-mono mt-0.5">${p.max.toLocaleString()}</div>
+                          <div className="text-white font-bold font-mono mt-0.5">{formatCurrency(p.max)}</div>
                         </div>
                       </div>
                     </div>
@@ -3412,7 +3413,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   >
                     <option value="">-- Choose Account --</option>
                     {users.map(u => (
-                      <option key={u.uid} value={u.uid}>{u.username} (${u.accountBalance.toFixed(2)})</option>
+                      <option key={u.uid} value={u.uid}>{u.username} ({formatCurrency(u.accountBalance)})</option>
                     ))}
                   </select>
                 )}
@@ -3511,7 +3512,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   >
                     <option value="">-- Choose Account --</option>
                     {users.map(u => (
-                      <option key={u.uid} value={u.uid}>{u.username} (${u.accountBalance.toFixed(2)})</option>
+                      <option key={u.uid} value={u.uid}>{u.username} ({formatCurrency(u.accountBalance)})</option>
                     ))}
                   </select>
                 )}

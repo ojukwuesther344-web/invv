@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Page, UserState, Transaction, Withdrawal } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
+import { formatCurrency, formatAmount } from '../utils/formatters';
 import { 
   addDepositRecord, 
   addWithdrawalRecord, 
@@ -509,7 +510,7 @@ export default function DashboardView({
         await reloadDeposits(uid);
         await reloadTransactions(uid);
 
-        alert(`Successfully activated plan "${activePlanObj.name}" with $${amountNum.toFixed(2)} deposit! View metrics updated in your central dashboard.`);
+        alert(`Successfully activated plan "${activePlanObj.name}" with ${formatCurrency(amountNum)} deposit! View metrics updated in your central dashboard.`);
         onSectionSelect('dashboard');
       } else {
         // Spawn cryptographic payment gateway session
@@ -694,7 +695,7 @@ export default function DashboardView({
       return;
     }
     if (user.accountBalance < amount) {
-      alert(`Insufficient account balance. Your maximum withdrawable amount is $${user.accountBalance.toFixed(2)}.`);
+      alert(`Insufficient account balance. Your maximum withdrawable amount is ${formatCurrency(user.accountBalance)}.`);
       return;
     }
     const uid = user.uid || `user_${user.username}`;
@@ -722,7 +723,7 @@ export default function DashboardView({
         referenceId: txId
       });
       await reloadTransactions(uid);
-      alert(`Withdrawal request of $${amount.toFixed(2)} submitted successfully! It is currently pending approval.`);
+      alert(`Withdrawal request of ${formatCurrency(amount)} submitted successfully! It is currently pending approval.`);
       onSectionSelect('withdrawals-history');
     } catch(err) {
       console.error(err);
@@ -928,7 +929,7 @@ export default function DashboardView({
                 <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-[11px] font-mono text-left max-w-md w-full space-y-2 text-slate-300">
                   <div className="flex justify-between">
                     <span className="text-slate-500">PAYMENT TOTAL:</span>
-                    <span className="text-white font-bold">${paymentSession.amount.toFixed(2)} USD</span>
+                    <span className="text-white font-bold">{formatCurrency(paymentSession.amount)} USD</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">COIN PROCESSOR:</span>
@@ -971,7 +972,7 @@ export default function DashboardView({
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-[10px] text-slate-500 block uppercase tracking-wider font-semibold">Total Amount Due</span>
-                        <span className="text-xl md:text-2xl font-black font-mono text-white tracking-tight">${paymentSession.amount.toFixed(2)} <span className="text-xs text-slate-400 font-sans font-normal">USD</span></span>
+                        <span className="text-xl md:text-2xl font-black font-mono text-white tracking-tight">{formatCurrency(paymentSession.amount)} <span className="text-xs text-slate-400 font-sans font-normal">USD</span></span>
                       </div>
                       
                       {paymentSession.planName && (
@@ -1027,7 +1028,7 @@ export default function DashboardView({
 
                     <div className="p-4 bg-amber-500/5 rounded-xl border border-amber-500/10 text-[10px] md:text-[11px] leading-relaxed text-amber-200/80 font-medium space-y-1">
                       <p className="font-extrabold text-amber-400 uppercase tracking-wider text-[10px] mb-1">🚨 Transfer Instructions:</p>
-                      <p>• Transmit exactly <strong className="text-white font-mono">${paymentSession.amount.toFixed(2)} USD value</strong> in <strong>{COMPANY_WALLET_ADDRESSES[paymentSession.sourceId]?.fullName || paymentSession.processor}</strong> to the secure address above.</p>
+                      <p>• Transmit exactly <strong className="text-white font-mono">{formatCurrency(paymentSession.amount)} USD value</strong> in <strong>{COMPANY_WALLET_ADDRESSES[paymentSession.sourceId]?.fullName || paymentSession.processor}</strong> to the secure address above.</p>
                       <p>• Double check the asset network: <span className="underline decoration-dotted text-white font-bold">{COMPANY_WALLET_ADDRESSES[paymentSession.sourceId]?.network || 'Specific blockchain'}</span>. Mismatched blockchain transfers lead to irreversible asset loss.</p>
                     </div>
                   </div>
@@ -1258,13 +1259,13 @@ export default function DashboardView({
                 </div>
                 <div className="my-4">
                   <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
-                    ${user.accountBalance.toFixed(2)}
+                    {formatCurrency(user.accountBalance)}
                   </span>
                   <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EARNED TOTAL</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">${user.earnedTotal.toFixed(2)} USD</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">{formatCurrency(user.earnedTotal)} USD</span>
                 </div>
               </div>
 
@@ -1278,13 +1279,13 @@ export default function DashboardView({
                 </div>
                 <div className="my-4">
                   <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
-                    ${user.totalDeposit.toFixed(2)}
+                    {formatCurrency(user.totalDeposit)}
                   </span>
                   <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ACTIVE DEPOSIT</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">${user.activeDeposit.toFixed(2)} USD</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">{formatCurrency(user.activeDeposit)} USD</span>
                 </div>
               </div>
 
@@ -1298,13 +1299,13 @@ export default function DashboardView({
                 </div>
                 <div className="my-4">
                   <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
-                    ${user.totalWithdrew.toFixed(2)}
+                    {formatCurrency(user.totalWithdrew)}
                   </span>
                   <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">PENDING WITHDRAWAL</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">${user.pendingWithdrawal.toFixed(2)} USD</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">{formatCurrency(user.pendingWithdrawal)} USD</span>
                 </div>
               </div>
             </div>
@@ -1398,7 +1399,7 @@ export default function DashboardView({
                         <div className="grid grid-cols-2 gap-2 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100/50 font-mono">
                           <div>
                             <span className="text-[8px] text-slate-400 block uppercase tracking-wider font-semibold">Active Capital</span>
-                            <span className="text-sm font-black text-slate-800">${track.amount.toFixed(2)}</span>
+                            <span className="text-sm font-black text-slate-800">{formatCurrency(track.amount)}</span>
                             <span className="text-[8px] text-slate-400 block uppercase font-medium mt-0.5">{track.processor}</span>
                           </div>
                           <div className="text-right">
@@ -1506,7 +1507,7 @@ export default function DashboardView({
                               {t.type === 'Investment' ? (t.planName || 'Investment Plan') : t.processor}
                             </td>
                             <td className={`py-3.5 px-3 text-right font-black ${amountColor}`}>
-                              {sign}${t.amount.toFixed(2)}
+                              {sign}{formatCurrency(t.amount)}
                             </td>
                             <td className="py-3.5 px-4 text-right text-[10px] text-slate-400 font-sans">
                               {new Date(t.timestamp).toLocaleString()}
@@ -1598,11 +1599,11 @@ export default function DashboardView({
                     <div className="space-y-2 py-3 border-t border-b border-slate-100 text-xs">
                       <div className="flex justify-between">
                         <span className="text-slate-400">Min Deposit:</span>
-                        <span className="font-bold text-slate-700">${pl.min.toLocaleString()}</span>
+                        <span className="font-bold text-slate-700">{formatCurrency(pl.min)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Max Deposit:</span>
-                        <span className="font-bold text-slate-700">${pl.max.toLocaleString()}</span>
+                        <span className="font-bold text-slate-700">{formatCurrency(pl.max)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Total Return:</span>
@@ -1703,7 +1704,7 @@ export default function DashboardView({
                 {/* Purple header row exact: Account Balance panel */}
                 <div className="bg-[#9333ea] text-white rounded-xl p-5.5 shadow-md flex justify-between items-center text-xs md:text-sm font-black tracking-wide leading-none">
                   <span>ACCOUNT BALANCE</span>
-                  <span>${user.accountBalance.toFixed(2)} USD</span>
+                  <span>{formatCurrency(user.accountBalance)} USD</span>
                 </div>
 
                 {/* Sub amount input block */}
@@ -1726,7 +1727,7 @@ export default function DashboardView({
                   </div>
 
                   {[
-                    { id: 'balance', label: `Spend funds from Account Balance USDT TRC20 ($${user.accountBalance.toFixed(2)})` },
+                    { id: 'balance', label: `Spend funds from Account Balance USDT TRC20 (${formatCurrency(user.accountBalance)})` },
                     { id: 'usdt_trc20', label: 'Spend funds from USDT TRC20' },
                     { id: 'btc', label: 'Spend funds from BITCOIN' },
                     { id: 'eth', label: 'Spend funds from ETHEREUM' },
@@ -1773,7 +1774,7 @@ export default function DashboardView({
                       </div>
                       <div className="flex justify-between border-b border-[#122845] pb-2">
                         <span className="text-slate-500">Selected Capital:</span>
-                        <span className="text-[#C59B4E] font-black font-mono">${parseFloat(depositAmount || '0').toFixed(2)}</span>
+                        <span className="text-[#C59B4E] font-black font-mono">{formatCurrency(parseFloat(depositAmount || '0'))}</span>
                       </div>
                       <div className="flex justify-between border-b border-[#122845] pb-2">
                         <span className="text-slate-500">Expected ROI:</span>
@@ -1828,7 +1829,7 @@ export default function DashboardView({
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current Balance</div>
-                  <div className="text-xl font-black font-mono text-white">${user.accountBalance.toFixed(2)}</div>
+                  <div className="text-xl font-black font-mono text-white">{formatCurrency(user.accountBalance)}</div>
                 </div>
               </div>
 
@@ -1922,7 +1923,7 @@ export default function DashboardView({
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Available Balance</div>
-                  <div className="text-xl font-black font-mono text-[#C59B4E]">${user.accountBalance.toFixed(2)}</div>
+                  <div className="text-xl font-black font-mono text-[#C59B4E]">{formatCurrency(user.accountBalance)}</div>
                 </div>
               </div>
 
@@ -1947,7 +1948,7 @@ export default function DashboardView({
                     <div className="text-[11px] text-slate-400 font-semibold mt-1.5 flex justify-between">
                       <span>Minimum payout: $2.00</span>
                       <span className="text-emerald-500 cursor-pointer hover:underline" onClick={() => setWithdrawAmount(user.accountBalance.toFixed(2))}>
-                        Set Maximum Available (${user.accountBalance.toFixed(2)})
+                        Set Maximum Available ({formatCurrency(user.accountBalance)})
                       </span>
                     </div>
                   </div>
@@ -2030,7 +2031,7 @@ export default function DashboardView({
                             {t.planName || 'N/A'}
                           </td>
                           <td className="py-4.5 px-3">{t.processor}</td>
-                          <td className="py-4.5 px-3 text-right font-black text-slate-950">${t.amount.toFixed(2)}</td>
+                          <td className="py-4.5 px-3 text-right font-black text-slate-950">{formatCurrency(t.amount)}</td>
                           <td className="py-4.5 px-6 text-right text-[10px] text-slate-400">
                             {new Date(t.timestamp).toLocaleString()}
                           </td>
@@ -2154,7 +2155,7 @@ export default function DashboardView({
                         <tr key={t.id} className="hover:bg-slate-50/50">
                           <td className="py-4.5 px-6 font-bold text-slate-900">{t.id}</td>
                           <td className="py-4.5 px-3 uppercase text-slate-800">{t.processor}</td>
-                          <td className="py-4.5 px-3 text-right font-black text-rose-600">-${t.amount.toFixed(2)}</td>
+                          <td className="py-4.5 px-3 text-right font-black text-rose-600">-{formatCurrency(t.amount)}</td>
                           <td className="py-4.5 px-6 text-right text-[10px] text-slate-400">
                             {new Date(t.timestamp).toLocaleString()}
                           </td>
@@ -2468,7 +2469,7 @@ export default function DashboardView({
                   Total Referral Yield
                 </span>
                 <div className="text-2xl font-extrabold text-[#C59B4E] font-display">
-                  ${Number(user.referralEarnings || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(user.referralEarnings || 0)}
                 </div>
                 <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Available for instant withdrawal</span>
               </div>

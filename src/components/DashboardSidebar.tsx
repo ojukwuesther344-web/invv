@@ -1,5 +1,6 @@
 import React from 'react';
 import logoheadImg from '../assets/images/logohead.png';
+import { formatCurrency } from '../utils/formatters';
 import { 
   LayoutDashboard, 
   Wallet, 
@@ -137,7 +138,7 @@ export default function DashboardSidebar({
           </span>
           <div className="mt-1 flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-[#0B2545] tracking-tight">
-              ${Number(mainAccountBalance !== undefined ? mainAccountBalance : accountBalance).toFixed(2)}
+              {formatCurrency(mainAccountBalance !== undefined ? mainAccountBalance : accountBalance)}
             </span>
             <span className="text-xs font-semibold text-slate-400">
               USD
