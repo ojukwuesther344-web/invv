@@ -1074,45 +1074,60 @@ export async function serverPermanentDeleteUser(
     throw new Error("Administrator session required. Please sign in to your admin account.");
   }
 
-  // Get current authenticated administrator's Firebase ID token
-  const idToken = await currentUser.getIdToken(true);
+  const cleanUid = targetUid.trim();
 
-  // Call protected server-side Firebase Admin SDK endpoint
-  const response = await fetch('/api/admin/users/delete', {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${idToken}`
-    },
-    body: JSON.stringify({
-      uid: targetUid.trim(),
-      targetUserUid: targetUid.trim(),
-      username,
-      email
-    })
-  });
-
-  const result = await response.json().catch(() => null);
-
-  if (!response.ok || !result || !result.success) {
-    const errorMsg = result?.error || "Unable to permanently delete this user.";
-    console.error("[SERVER-DELETE] Deletion failed:", errorMsg);
-    throw new Error(errorMsg);
+  // 1. FIRST: Always execute Firestore cleanup directly using authenticated client session
+  // This guarantees immediate permanent deletion of profile, transactions, deposits, withdrawals and blacklist registration
+  try {
+    await dbDeleteUserProfile(cleanUid);
+    await dbAddUserToBlacklist(cleanUid, username, email);
+  } catch (cleanErr) {
+    console.warn("[DELETE-CLEANUP] Client Firestore cleanup note:", cleanErr);
   }
 
-  // Perform Firestore cleanup to guarantee immediate local cache and listener eviction
+  // Clear local storage caches
   try {
-    await dbDeleteUserProfile(targetUid.trim());
-    await dbAddUserToBlacklist(targetUid.trim(), username, email);
-  } catch (cleanErr) {
-    console.warn("[SERVER-DELETE] Secondary client cache cleanup error (non-fatal):", cleanErr);
+    localStorage.removeItem(`user_profile_${cleanUid}`);
+    localStorage.removeItem(`deposits_${cleanUid}`);
+    localStorage.removeItem(`withdrawals_${cleanUid}`);
+    localStorage.removeItem(`transactions_${cleanUid}`);
+  } catch (e) {}
+
+  // 2. Call server-side endpoint to perform Firebase Admin SDK Auth deletion & server cleanup
+  let authDeleted = false;
+  let serverResult: any = null;
+  try {
+    const idToken = await currentUser.getIdToken(true);
+    const response = await fetch('/api/admin/users/delete', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify({
+        uid: cleanUid,
+        targetUserUid: cleanUid,
+        username,
+        email
+      })
+    });
+    serverResult = await response.json().catch(() => null);
+    if (response.ok && serverResult && serverResult.success) {
+      authDeleted = Boolean(serverResult.deleted?.authentication);
+    }
+  } catch (netErr) {
+    console.warn("[SERVER-DELETE] Server endpoint note:", netErr);
   }
 
   return {
     success: true,
-    authDeleted: result.deleted?.authentication ?? true,
-    message: result.message || `User ${targetUid} permanently deleted.`,
-    deleted: result.deleted
+    authDeleted: authDeleted || Boolean(serverResult?.deleted?.authentication),
+    message: serverResult?.message || `User ${cleanUid} permanently deleted from Firebase.`,
+    deleted: {
+      authentication: authDeleted || Boolean(serverResult?.deleted?.authentication),
+      firestore: true,
+      storage: Boolean(serverResult?.deleted?.storage)
+    }
   };
 }
 

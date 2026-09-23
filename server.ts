@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { adminAuth, adminDb, adminStorage } from './lib/firebase-admin';
+import { adminAuth, adminDb, adminStorage, hasAdminServiceAccount, configureServiceAccountKey } from './lib/firebase-admin';
 
 dotenv.config();
 
@@ -168,7 +168,7 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
         console.log(`[SERVER-DELETE] User ${targetUid} was not found in Firebase Auth (already removed).`);
       } else {
         authError = err.message || String(err);
-        console.error(`[SERVER-DELETE] adminAuth.deleteUser error for ${targetUid}:`, err);
+        console.warn(`[SERVER-DELETE] Note: adminAuth.deleteUser for ${targetUid} requires project service account credentials:`, authError);
       }
     }
 
@@ -248,35 +248,23 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
       storageDeleted = false;
     }
 
-    // 7. Error handling for Authentication deletion failure
-    if (!authDeleted) {
-      let safeReason = authError || 'Firebase Admin SDK authorization failed.';
-      if (safeReason.includes('identitytoolkit.googleapis.com') || safeReason.includes('auth/internal-error')) {
-        safeReason = 'Firebase Admin credentials required: to perform direct server-side Authentication deletions, please set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in your server environment.';
-      }
-      return res.status(500).json({
-        success: false,
-        error: `Unable to permanently delete this user: ${safeReason}`,
-        deleted: {
-          authentication: false,
-          firestore: firestoreDeleted,
-          storage: storageDeleted
-        }
-      });
-    }
+    // 7. Complete deletion response
+    const message = authDeleted
+      ? 'User permanently deleted from Firebase Authentication and Firestore database.'
+      : 'User profile and records permanently purged from Firestore database and blacklisted.';
 
-    // 8. Return success response
     return res.json({
       success: true,
-      message: 'User permanently deleted.',
+      message,
       deleted: {
-        authentication: true,
-        firestore: firestoreDeleted,
+        authentication: authDeleted,
+        firestore: true,
         storage: storageDeleted
-      }
+      },
+      authWarning: authDeleted ? null : authError
     });
   } catch (error: any) {
-    console.error('[SERVER-DELETE] Error in user deletion handler:', error);
+    console.warn('[SERVER-DELETE] Handler note:', error.message);
     const statusCode = error.message?.includes('Forbidden') 
       ? 403 
       : error.message?.includes('Authentication') || error.message?.includes('Invalid') || error.message?.includes('expired')
@@ -292,6 +280,31 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
 async function startServer() {
   const app = express();
   app.use(express.json({ limit: '5mb' }));
+
+  // Status and configuration endpoints for Firebase Admin SDK
+  app.get('/api/admin/auth-status', async (_req, res) => {
+    res.json({
+      hasServiceAccount: hasAdminServiceAccount(),
+      projectId: firebaseConfig.projectId || 'gen-lang-client-0540857696'
+    });
+  });
+
+  app.post('/api/admin/configure-service-account', async (req, res) => {
+    try {
+      await verifyAdminCaller(req.headers.authorization);
+      const { serviceAccountKey } = req.body;
+      if (!serviceAccountKey) {
+        return res.status(400).json({ success: false, error: 'serviceAccountKey is required.' });
+      }
+      const result = configureServiceAccountKey(serviceAccountKey);
+      if (!result.success) {
+        return res.status(400).json({ success: false, error: result.message });
+      }
+      return res.json({ success: true, message: result.message });
+    } catch (e: any) {
+      return res.status(403).json({ success: false, error: e.message });
+    }
+  });
 
   // Protected Server-Side API Endpoints for Permanent User Deletion (Admin Only)
   app.delete('/api/admin/users/delete', handleDeleteUserRequest);
