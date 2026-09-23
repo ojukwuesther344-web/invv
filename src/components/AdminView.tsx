@@ -22,10 +22,21 @@ import {
   Lock,
   Mail,
   Menu,
-  X
+  X,
+  Key,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  LogOut,
+  RefreshCw,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import { UserState, Transaction, InvestmentPlan, Page } from '../types';
 import { formatCurrency } from '../utils/formatters';
+
+export const FIREBASE_AUTH_CONSOLE_URL = 'https://console.firebase.google.com/project/gen-lang-client-0540857696/authentication/users';
 import { 
   subscribeToAllUsers, 
   subscribeToAllTransactions, 
@@ -44,7 +55,19 @@ import {
   deleteUserProfile,
   executeLedgerAdjustment
 } from '../services/db';
-import { authLogin, authRegister } from '../services/firebaseService';
+import { 
+  authLogin, 
+  authLogout, 
+  subscribeToAuth, 
+  adminChangePassword, 
+  adminSendPasswordReset,
+  serverPermanentDeleteUser
+} from '../services/firebaseService';
+
+export const AUTHORIZED_ADMIN_EMAILS = [
+  'blessingubah38@gmail.com',
+  'sheilawalshsheila@gmail.com'
+];
 
 interface AdminViewProps {
   onPageChange: (page: Page) => void;
@@ -59,98 +82,124 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [localAdminAuthenticated, setLocalAdminAuthenticated] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const search = window.location.search.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (search.includes('direct') || search.includes('preview') || hash.includes('direct') || hash.includes('preview')) {
-        localStorage.setItem('admin_session_active', 'true');
-        return true;
-      }
-    }
-    return localStorage.getItem('admin_session_active') === 'true' || currentUser.email === 'blessingubah38@gmail.com';
+  const [resetStatus, setResetStatus] = useState<string | null>(null);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
+  // Admin Authorization State: Strictly verified via Firebase Authentication
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(() => {
+    return Boolean(
+      currentUser && 
+      currentUser.isLoggedIn && 
+      currentUser.email && 
+      AUTHORIZED_ADMIN_EMAILS.includes(currentUser.email.toLowerCase())
+    );
   });
 
-  // Authorization Check
-  const isAuthorized = localAdminAuthenticated || currentUser.email === 'blessingubah38@gmail.com';
+  // Password & Security Management State
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordUpdateStatus, setPasswordUpdateStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Subscribe to real-time Firebase Auth session state for route protection
+  useEffect(() => {
+    const unsubscribe = subscribeToAuth((firebaseUser) => {
+      if (firebaseUser && firebaseUser.email && AUTHORIZED_ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase())) {
+        setIsAuthorized(true);
+      } else {
+        setIsAuthorized(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleAdminSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
     setAuthSuccess(null);
+    setResetStatus(null);
     setIsAuthenticating(true);
 
-    if (!adminEmail || !adminPassword) {
-      setAuthError('Please enter both your Admin Email and Password.');
+    const cleanEmail = adminEmail.trim().toLowerCase();
+    const cleanPassword = adminPassword;
+
+    if (!cleanEmail || !cleanPassword) {
+      setAuthError('Incorrect password. Please try again.');
+      setIsAuthenticating(false);
+      return;
+    }
+
+    if (!AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
+      setAuthError('Incorrect password. Please try again.');
       setIsAuthenticating(false);
       return;
     }
 
     try {
-      let uid = `user_${adminEmail.split('@')[0]}`;
-      if (isFirebaseReady) {
-        try {
-          uid = await authLogin(adminEmail, adminPassword);
-        } catch (signInErr: any) {
-          if (
-            signInErr?.code === 'auth/invalid-credential' || 
-            signInErr?.code === 'auth/user-not-found' || 
-            signInErr?.code === 'auth/wrong-password' ||
-            signInErr?.message?.includes('invalid-credential') ||
-            signInErr?.message?.includes('user-not-found') ||
-            signInErr?.message?.includes('wrong-password')
-          ) {
-            try {
-              // High-fidelity fallback: register silently on-the-fly to support instant dashboard preview for admin
-              uid = await authRegister(adminEmail, adminPassword);
-            } catch (signUpErr: any) {
-              console.warn("Silent admin registration failed, attempting unique variations:", signUpErr);
-              try {
-                const randSuffix = Math.random().toString(36).substring(2, 7);
-                const uniqueAdminEmail = `admin_${randSuffix}@admin.com`;
-                uid = await authRegister(uniqueAdminEmail, adminPassword);
-              } catch (retryErr: any) {
-                console.error("Silent retry admin registration failed:", retryErr);
-                throw signInErr;
-              }
-            }
-          } else {
-            throw signInErr;
-          }
-        }
-      } else {
-        // Fallback for simulation testing
-        if (adminPassword !== 'admin123' && adminPassword !== '12345678') {
-          throw new Error("Invalid admin password. Default demo passwords are 'admin123' or '12345678'.");
-        }
-      }
+      const uid = await authLogin(cleanEmail, cleanPassword);
 
       let adminProfile = await fetchUserProfile(uid);
       if (!adminProfile) {
-        adminProfile = getDefaultUserMetrics(adminEmail, 'admin', 'System Administrator');
+        adminProfile = getDefaultUserMetrics(cleanEmail, 'admin', 'System Administrator');
         await saveUserProfile(uid, adminProfile);
       }
 
-      setAuthSuccess('Access Granted! Opening Admin Operations Dashboard...');
-      localStorage.setItem('admin_session_active', 'true');
-      setLocalAdminAuthenticated(true);
+      setAuthSuccess('Authentication successful! Access granted.');
+      setIsAuthorized(true);
 
-      setTimeout(() => {
-        if (onLoginSuccess) {
-          onLoginSuccess({
-            ...adminProfile!,
-            uid,
-            isLoggedIn: true
-          });
-        }
-        setIsAuthenticating(false);
-      }, 500);
+      if (onLoginSuccess && adminProfile) {
+        onLoginSuccess({
+          ...adminProfile,
+          uid,
+          isLoggedIn: true
+        });
+      }
+    } catch (signInErr: any) {
+      console.error("Admin sign-in authentication error:", signInErr);
+      const code = signInErr?.code || '';
+      const msg = signInErr?.message || '';
 
-    } catch (err: any) {
-      console.error(err);
-      setAuthError(err.message || 'Authentication failed. Please verify your credentials.');
+      if (code === 'auth/too-many-requests' || msg.includes('too-many-requests') || msg.includes('TOO_MANY_ATTEMPTS')) {
+        setAuthError('Access temporarily restricted due to multiple failed attempts. Please try again shortly or use the password reset link below.');
+      } else {
+        // Enforce exact requirement:
+        // "When the password is incorrect, display: 'Incorrect password. Please try again.'"
+        setAuthError('Incorrect password. Please try again.');
+      }
+    } finally {
       setIsAuthenticating(false);
     }
+  };
+
+  const handleSendPasswordReset = async () => {
+    const cleanEmail = adminEmail.trim().toLowerCase();
+    if (!cleanEmail) {
+      setAuthError('Please enter your administrator email first.');
+      return;
+    }
+    setIsSendingReset(true);
+    setAuthError(null);
+    setResetStatus(null);
+    try {
+      await adminSendPasswordReset(cleanEmail);
+      setResetStatus(`Password reset email sent to ${cleanEmail}. Please check your inbox.`);
+    } catch (err: any) {
+      console.error("Reset email error:", err);
+      setAuthError('Unable to send password reset email. Please try again later.');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  const handleAdminSignOut = async () => {
+    try {
+      await authLogout();
+    } catch (e) {
+      console.error("Error signing out admin:", e);
+    }
+    localStorage.removeItem('admin_session_active');
+    setIsAuthorized(false);
   };
 
   const [activeTab, setActiveTab] = useState<
@@ -165,7 +214,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     'ip_check' |
     'newsletter' |
     'plans' |
-    'settings'
+    'settings' |
+    'password_security'
   >('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
@@ -255,6 +305,16 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   const [editUserETH, setEditUserETH] = useState('');
   const [editUserUSDT_ERC20, setEditUserUSDT_ERC20] = useState('');
   const [editUserSuspended, setEditUserSuspended] = useState(false);
+
+  // User deletion & Firebase Auth Sync states
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserState | null>(null);
+  const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
+  const [deletionError, setDeletionError] = useState<string | null>(null);
+  const [deletedUserModalInfo, setDeletedUserModalInfo] = useState<{ uid: string; email: string; username: string } | null>(null);
+  const [copiedDeletedUid, setCopiedDeletedUid] = useState(false);
+  const [copiedUid, setCopiedUid] = useState<string | null>(null);
+  const [showConsoleGuideModal, setShowConsoleGuideModal] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   // States for Adding New User manually
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
@@ -348,6 +408,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 {authSuccess}
               </div>
             )}
+            {resetStatus && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-lg text-xs text-emerald-400 font-semibold text-center leading-relaxed">
+                {resetStatus}
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Admin Email Address</label>
@@ -359,7 +424,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   type="email"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="admin@chibuike.com"
+                  placeholder="blessingubah38@gmail.com"
                   required
                   className="w-full bg-[#07101c] border border-slate-700/60 focus:border-[#C59B4E] rounded-lg py-3 pl-11 pr-4 text-xs font-medium text-white placeholder-slate-600 outline-none transition-colors"
                 />
@@ -367,7 +432,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Administrator Password</label>
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Administrator Password</label>
+                <button
+                  type="button"
+                  onClick={handleSendPasswordReset}
+                  disabled={isSendingReset}
+                  className="text-[11px] text-[#C59B4E] hover:underline font-semibold cursor-pointer"
+                >
+                  {isSendingReset ? 'Sending Reset...' : 'Forgot Password?'}
+                </button>
+              </div>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
                   <Lock size={16} />
@@ -382,15 +457,6 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 />
               </div>
             </div>
-
-            {!isFirebaseReady && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 p-2.5 rounded-lg text-left text-[11px] text-yellow-400 font-medium leading-normal flex items-start gap-2">
-                <Info size={14} className="shrink-0 mt-0.5" />
-                <span>
-                  Demo Mode is active. For local simulation, feel free to use password <strong className="underline text-yellow-300">admin123</strong>.
-                </span>
-              </div>
-            )}
 
             <button 
               type="submit"
@@ -408,18 +474,6 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <span>Authenticate Session</span>
                 </>
               )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.setItem('admin_session_active', 'true');
-                setLocalAdminAuthenticated(true);
-              }}
-              className="w-full py-2.5 px-3 bg-purple-900/30 hover:bg-purple-900/50 border border-purple-500/30 hover:border-purple-400 text-purple-300 font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-            >
-              <ShieldAlert size={14} className="text-purple-400" />
-              <span>⚡ Direct Preview Access (1-Click)</span>
             </button>
           </form>
 
@@ -1031,19 +1085,69 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     }
   };
 
-  // Manage User: Delete user profile
+  // Initiates permanent deletion confirmation dialog
+  const handleInitiateDeleteUser = (target: UserState) => {
+    setDeletionError(null);
+    setDeleteConfirmUser(target);
+  };
+
+  // Manage User: Fallback bridge to deletion confirmation modal
   const handleRemoveUser = async (uid: string) => {
-    const confirmDelete = window.confirm("Are you absolutely sure you want to permanently delete this user profile? All wallet settings and transaction metrics will be deleted. This action cannot be undone!");
-    if (!confirmDelete) return;
+    const targetUser = users.find(usr => usr.uid === uid) || selectedManageUser;
+    if (targetUser) {
+      handleInitiateDeleteUser(targetUser);
+    }
+  };
+
+  // Master Execution: Permanently delete Firebase Auth account & Firestore records
+  const handleExecutePermanentDeletion = async () => {
+    if (!deleteConfirmUser || !deleteConfirmUser.uid) {
+      setDeletionError("No target client selected for deletion.");
+      return;
+    }
+
+    const target = deleteConfirmUser;
+    setIsPermanentlyDeleting(true);
+    setDeletionError(null);
 
     try {
-      const u = users.find(usr => usr.uid === uid);
-      await deleteUserProfile(uid, u?.username, u?.email);
+      console.log(`[ADMIN-UI] Requesting permanent Firebase Auth deletion for UID: ${target.uid}`);
+      
+      // Call secure server-side Firebase Admin SDK endpoint
+      const result = await serverPermanentDeleteUser(
+        target.uid, 
+        target.username, 
+        target.email
+      );
+
+      if (!result.success || !result.authDeleted) {
+        throw new Error(result.message || "Unable to permanently delete this user. The Firebase account was not deleted.");
+      }
+
+      // Immediately purge user from React UI state
+      setUsers(prev => prev.filter(u => u.uid !== target.uid));
+      
+      // Close confirmation and management modals
+      setDeleteConfirmUser(null);
       setManageUserModalOpen(false);
       setSelectedManageUser(null);
-      alert("User profile successfully deleted and blacklisted.");
-    } catch (err) {
-      alert("Error deleting user: " + err);
+
+      // Copy UID to clipboard for easy verification
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(target.uid).catch(() => {});
+      }
+
+      // Display permanent deletion verification modal
+      setDeletedUserModalInfo({
+        uid: target.uid,
+        email: target.email || 'N/A',
+        username: target.username || 'Client'
+      });
+    } catch (err: any) {
+      console.error("[ADMIN-UI] Permanent deletion error:", err);
+      setDeletionError(err?.message || "Unable to permanently delete this user. The Firebase account was not deleted.");
+    } finally {
+      setIsPermanentlyDeleting(false);
     }
   };
 
@@ -1106,6 +1210,78 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       alert("Platform settings successfully synchronized!");
     } catch (err) {
       alert("Error updating database properties: " + err);
+    }
+  };
+
+  // Handle Administrator Password Change via Firebase Authentication
+  const handleChangeAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordUpdateStatus(null);
+
+    if (!currentPasswordInput) {
+      setPasswordUpdateStatus({
+        type: 'error',
+        message: 'Current password is required.'
+      });
+      return;
+    }
+
+    if (!newPasswordInput) {
+      setPasswordUpdateStatus({
+        type: 'error',
+        message: 'New password is required.'
+      });
+      return;
+    }
+
+    if (newPasswordInput.length < 6) {
+      setPasswordUpdateStatus({
+        type: 'error',
+        message: 'New password must be at least 6 characters long.'
+      });
+      return;
+    }
+
+    if (newPasswordInput !== confirmNewPasswordInput) {
+      setPasswordUpdateStatus({
+        type: 'error',
+        message: 'New password and confirmation do not match.'
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await adminChangePassword(currentPasswordInput, newPasswordInput);
+      setCurrentPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmNewPasswordInput('');
+      setPasswordUpdateStatus({
+        type: 'success',
+        message: 'Password changed successfully.'
+      });
+    } catch (err: any) {
+      console.error("Password update error:", err);
+      const msg = err?.message || '';
+      if (
+        msg.includes('Incorrect current password') || 
+        msg.includes('wrong-password') || 
+        msg.includes('invalid-credential') ||
+        err?.code === 'auth/wrong-password' ||
+        err?.code === 'auth/invalid-credential'
+      ) {
+        setPasswordUpdateStatus({
+          type: 'error',
+          message: 'Incorrect password. Please try again.'
+        });
+      } else {
+        setPasswordUpdateStatus({
+          type: 'error',
+          message: msg || 'Failed to update administrator password.'
+        });
+      }
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -1363,19 +1539,40 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             <Settings size={14} className="text-slate-400" />
             <span>System Settings</span>
           </button>
+
+          <button 
+            onClick={() => {
+              setActiveTab('password_security');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
+              activeTab === 'password_security' ? 'bg-[#9333ea] text-white shadow-md font-extrabold ring-1 ring-[#C59B4E]/60' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+            }`}
+          >
+            <ShieldCheck size={14} className="text-[#C59B4E]" />
+            <span>Password & Security</span>
+          </button>
         </nav>
 
         {/* Foot exit link */}
-        <div className="pt-4 border-t border-[#152e4f]">
+        <div className="pt-4 border-t border-[#152e4f] flex flex-col gap-2">
           <button 
             onClick={() => {
               onPageChange('Dashboard');
               setMobileMenuOpen(false);
             }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg text-[#C59B4E] hover:text-white hover:bg-[#C59B4E]/10 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-[#C59B4E] hover:text-white hover:bg-[#C59B4E]/10 transition-colors cursor-pointer"
           >
             <ArrowLeft size={15} />
             <span>Back to Dashboard</span>
+          </button>
+
+          <button 
+            onClick={handleAdminSignOut}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
+          >
+            <LogOut size={15} />
+            <span>Lock / Sign Out Admin</span>
           </button>
         </div>
       </aside>
@@ -1399,6 +1596,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               {activeTab === 'newsletter' && "Send a Newsletter"}
               {activeTab === 'plans' && "Dynamic Investment Packages"}
               {activeTab === 'settings' && "Global Platform Configuration"}
+              {activeTab === 'password_security' && "Password & Security"}
             </h1>
             <p className="text-xs text-slate-400 mt-1">
               Active Session sync connected safely via Web SDK. Real-time updates active.
@@ -1768,7 +1966,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             if (target) {
                               if (confirm(`BE CAREFUL: Are you certain you want to permanently delete user ${target.username} from Firestore databases?`)) {
                                 await deleteUserProfile(target.uid, target.username, target.email);
-                                alert(`${target.username} permanently removed and blacklisted.`);
+                                if (navigator.clipboard) {
+                                  navigator.clipboard.writeText(target.uid).catch(() => {});
+                                }
+                                setDeletedUserModalInfo({
+                                  uid: target.uid,
+                                  email: target.email || 'N/A',
+                                  username: target.username || 'Client'
+                                });
                                 setBlacklistUserQuery('');
                               }
                             }
@@ -2586,18 +2791,37 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             {activeTab === 'users' && (
               <div className="bg-[#091527] border border-[#112a47] rounded-xl flex flex-col w-full">
                 {/* Search Bar section */}
-                <div className="p-4 border-b border-[#142f50] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between w-full">
+                <div className="p-4 border-b border-[#142f50] flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between w-full">
                   <div className="relative flex-1">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
                     <input 
                       type="text" 
-                      placeholder="Search accounts by username, email, full name..." 
+                      placeholder="Search accounts by username, email, full name, UID..." 
                       value={userQuery}
                       onChange={(e) => setUserQuery(e.target.value)}
                       className="w-full bg-[#06101c] text-xs py-3 pl-10 pr-4 rounded-lg text-slate-100 placeholder-slate-500 border border-[#163356] focus:border-[#C59B4E] hover:border-[#1e436f] focus:outline-hidden transition-all font-semibold"
                     />
                   </div>
-                  <div className="flex gap-2.5 items-center justify-between md:justify-end">
+                  <div className="flex gap-2 items-center justify-between xl:justify-end flex-wrap">
+                    <a
+                      href={FIREBASE_AUTH_CONSOLE_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bg-purple-950/70 hover:bg-purple-900 border border-purple-500/40 text-purple-200 text-[10px] font-bold uppercase tracking-wider px-3 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 whitespace-nowrap"
+                      title="Open Firebase Authentication Users console directly"
+                    >
+                      <ExternalLink size={13} className="text-purple-400" />
+                      <span>Firebase Auth Console</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setShowConsoleGuideModal(true)}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold uppercase tracking-wider px-3 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 whitespace-nowrap"
+                      title="Learn how user deletion works and how to sync with Firebase console"
+                    >
+                      <Info size={13} className="text-[#C59B4E]" />
+                      <span>Sync Guide</span>
+                    </button>
                     <button
                       onClick={() => setAddUserModalOpen(true)}
                       className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-[10px] font-black uppercase tracking-wider px-4 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 whitespace-nowrap"
@@ -2645,6 +2869,26 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               </div>
                               <div className="text-[10px] text-slate-500 truncate max-w-xs mt-0.5 font-mono">{u.email}</div>
                               <div className="text-[10px] text-slate-400 max-w-xs mt-0.5 capitalize">{u.fullName}</div>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="text-[9px] font-mono text-slate-500 bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-800">
+                                  UID: {u.uid ? `${u.uid.slice(0, 10)}...` : 'N/A'}
+                                </span>
+                                {u.uid && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(u.uid);
+                                      setCopiedUid(u.uid);
+                                      setTimeout(() => setCopiedUid(null), 2000);
+                                    }}
+                                    className="text-[9px] text-[#C59B4E] hover:underline font-mono inline-flex items-center gap-0.5 cursor-pointer"
+                                    title="Copy complete Firebase UID to search in console"
+                                  >
+                                    {copiedUid === u.uid ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                                    <span>{copiedUid === u.uid ? 'Copied' : 'Copy UID'}</span>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                             <td className="p-4 font-mono font-bold text-yellow-500">{formatCurrency(u.accountBalance)}</td>
                             <td className="p-4 font-mono text-[#C59B4E]">{formatCurrency(u.activeDeposit)}</td>
@@ -2710,6 +2954,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   <Edit size={11} />
                                   <span>Correct Performance</span>
                                 </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => handleInitiateDeleteUser(u)}
+                                  className="inline-flex items-center gap-1 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                                  title={`Permanently delete ${u.username} from Firebase Authentication and database`}
+                                >
+                                  <Trash2 size={11} className="text-red-400" />
+                                  <span>Delete User</span>
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -2737,6 +2990,25 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             )}
                             <span className="text-[10px] text-slate-500 font-mono block mt-1.5 truncate">{u.email}</span>
                             <span className="text-[10px] text-slate-400 block capitalize mt-0.5 truncate">{u.fullName}</span>
+                            {u.uid && (
+                              <div className="flex items-center gap-1.5 mt-1.5">
+                                <span className="text-[9px] font-mono text-slate-500 bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-800">
+                                  UID: {u.uid.slice(0, 10)}...
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(u.uid);
+                                    setCopiedUid(u.uid);
+                                    setTimeout(() => setCopiedUid(null), 2000);
+                                  }}
+                                  className="text-[9px] text-[#C59B4E] hover:underline font-mono inline-flex items-center gap-0.5 cursor-pointer"
+                                >
+                                  {copiedUid === u.uid ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                                  <span>{copiedUid === u.uid ? 'Copied' : 'Copy'}</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                           {/* Main Balance Highlight */}
                           <div className="text-right shrink-0">
@@ -2829,6 +3101,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               <span>Correct Perf</span>
                             </button>
                           </div>
+
+                          <button 
+                            type="button"
+                            onClick={() => handleInitiateDeleteUser(u)}
+                            className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={12} className="text-red-400" />
+                            <span>Delete User Permanently</span>
+                          </button>
                         </div>
                       </div>
                     ))
@@ -3243,6 +3524,124 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     </button>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {/* 5. PASSWORD & SECURITY SUBMENU */}
+            {activeTab === 'password_security' && (
+              <div className="flex flex-col gap-6 w-full max-w-2xl animate-in fade-in duration-300">
+                <div className="bg-[#091527] border border-[#1a385e] rounded-2xl p-6 sm:p-8 shadow-xl">
+                  <div className="pb-4 border-b border-[#142d4a] mb-6">
+                    <h2 className="text-base font-black text-white uppercase font-display tracking-wider flex items-center gap-2">
+                      <ShieldCheck size={18} className="text-[#C59B4E]" />
+                      <span>Change Password</span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Verify your current password to update your administrator credentials. The updated password will become the only valid password.
+                    </p>
+                  </div>
+
+                  {passwordUpdateStatus && (
+                    <div className={`p-4 rounded-xl text-xs font-medium mb-6 flex items-start gap-2.5 ${
+                      passwordUpdateStatus.type === 'success' 
+                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' 
+                        : 'bg-red-500/10 border border-red-500/30 text-red-300'
+                    }`}>
+                      {passwordUpdateStatus.type === 'success' ? (
+                        <CheckCircle size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                      )}
+                      <span>{passwordUpdateStatus.message}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleChangeAdminPassword} className="space-y-5">
+                    {/* CURRENT PASSWORD */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        CURRENT PASSWORD <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                          <Lock size={15} />
+                        </span>
+                        <input 
+                          type="password"
+                          value={currentPasswordInput}
+                          onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                          placeholder="Enter current administrator password"
+                          required
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-3 pl-11 pr-4 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {/* NEW PASSWORD */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        NEW PASSWORD <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                          <Key size={15} />
+                        </span>
+                        <input 
+                          type="password"
+                          value={newPasswordInput}
+                          onChange={(e) => setNewPasswordInput(e.target.value)}
+                          placeholder="Enter new administrator password"
+                          required
+                          minLength={6}
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-3 pl-11 pr-4 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {/* CONFIRM NEW PASSWORD */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        CONFIRM NEW PASSWORD <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                          <CheckCircle size={15} />
+                        </span>
+                        <input 
+                          type="password"
+                          value={confirmNewPasswordInput}
+                          onChange={(e) => setConfirmNewPasswordInput(e.target.value)}
+                          placeholder="Confirm new administrator password"
+                          required
+                          minLength={6}
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-3 pl-11 pr-4 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                        <Info size={13} className="text-[#C59B4E] shrink-0" />
+                        <span>The old password immediately stops working once updated.</span>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isUpdatingPassword}
+                        className="w-full sm:w-auto bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 text-white font-bold py-3 px-7 rounded-xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      >
+                        {isUpdatingPassword ? (
+                          <>
+                            <Activity size={14} className="animate-spin" />
+                            <span>Updating Password...</span>
+                          </>
+                        ) : (
+                          <span>CHANGE PASSWORD</span>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
 
@@ -3716,6 +4115,39 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             <form onSubmit={handleUpdateManagedProfile} className="space-y-4 overflow-y-auto pr-1 max-h-[70vh] text-xs font-semibold">
               
+              {/* User UID & Firebase Console Link */}
+              <div className="bg-[#050e18] border border-[#142d4a] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] uppercase font-mono font-bold text-slate-500 block">Firebase User UID:</span>
+                  <span className="text-[11px] font-mono text-[#C59B4E] block truncate select-all">{selectedManageUser.uid}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedManageUser.uid);
+                      setCopiedUid(selectedManageUser.uid);
+                      setTimeout(() => setCopiedUid(null), 2000);
+                    }}
+                    className="p-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-[10px] font-mono cursor-pointer flex items-center gap-1"
+                    title="Copy full UID"
+                  >
+                    {copiedUid === selectedManageUser.uid ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                    <span>{copiedUid === selectedManageUser.uid ? 'Copied' : 'Copy UID'}</span>
+                  </button>
+                  <a
+                    href={FIREBASE_AUTH_CONSOLE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-1.5 px-2 bg-purple-950/80 hover:bg-purple-900 border border-purple-800/40 text-purple-300 rounded-md text-[10px] cursor-pointer flex items-center gap-1"
+                    title="View in Firebase Authentication Console"
+                  >
+                    <ExternalLink size={11} />
+                    <span>Console</span>
+                  </a>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Username</label>
@@ -3819,11 +4251,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               <div className="flex flex-col-reverse sm:flex-row gap-2 justify-between pt-3 border-t border-[#142d4a]">
                 <button 
                   type="button"
-                  onClick={() => handleRemoveUser(selectedManageUser.uid || '')}
-                  className="bg-red-950/70 text-red-400 hover:bg-red-900/60 text-xs font-bold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-red-500/20"
+                  disabled={isPermanentlyDeleting}
+                  onClick={() => handleInitiateDeleteUser(selectedManageUser)}
+                  className="bg-red-950/70 text-red-400 hover:bg-red-900/60 text-xs font-bold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-red-500/20 disabled:opacity-50"
+                  title="Permanently remove this user from Firebase Authentication and database"
                 >
                   <Trash2 size={13} />
-                  <span>Delete Client Account</span>
+                  <span>{isPermanentlyDeleting ? "Deleting User..." : "Delete User Permanently"}</span>
                 </button>
 
                 <div className="flex gap-2 justify-end">
@@ -3970,6 +4404,324 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MASTER MODAL: DELETE USER PERMANENTLY CONFIRMATION DIALOG */}
+      {deleteConfirmUser && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-[#091527] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+            
+            <div className="flex items-center gap-3 border-b border-red-500/20 pb-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="text-red-400" size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white uppercase tracking-wider">
+                  Delete User Permanently?
+                </h3>
+                <span className="text-[11px] text-red-400 font-semibold block">
+                  Irreversible Administrative Operation
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Are you sure you want to permanently delete:
+            </p>
+
+            <div className="bg-[#050e18] border border-[#142d4a] rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-semibold">User Name:</span>
+                <span className="text-white font-bold font-mono">@{deleteConfirmUser.username}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-semibold">User Email:</span>
+                <span className="text-slate-200 font-mono">{deleteConfirmUser.email || 'N/A'}</span>
+              </div>
+              <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-800">
+                <span className="text-[10px] text-slate-400 font-mono uppercase font-bold">Firebase Auth UID:</span>
+                <span className="text-[11px] text-[#C59B4E] font-mono break-all select-all font-semibold">
+                  {deleteConfirmUser.uid}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-red-950/20 rounded-xl border border-red-500/20 text-[11px] text-red-300 leading-relaxed font-sans">
+              This action will permanently remove the user's account from <strong>Firebase Authentication (Identity Platform)</strong> and cannot be undone.
+            </div>
+
+            {deletionError && (
+              <div className="p-3.5 bg-red-950/60 rounded-xl border border-red-500/60 text-xs text-red-200 flex items-start gap-2.5">
+                <XCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="font-bold text-red-300 block">Unable to permanently delete this user.</span>
+                  <span className="text-[11px] text-red-200 block leading-tight font-sans">
+                    {deletionError.startsWith('Unable to permanently delete this user:')
+                      ? deletionError.replace('Unable to permanently delete this user:', '').trim()
+                      : deletionError}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#142d4a]">
+              <button
+                type="button"
+                disabled={isPermanentlyDeleting}
+                onClick={() => {
+                  setDeleteConfirmUser(null);
+                  setDeletionError(null);
+                }}
+                className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPermanentlyDeleting}
+                onClick={handleExecutePermanentDeletion}
+                className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer transition-colors shadow-lg shadow-red-950/50 flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isPermanentlyDeleting ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" />
+                    <span>Deleting Firebase Auth Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={13} />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: USER DELETED & FIREBASE AUTH CONSOLE SYNC MODAL */}
+      {deletedUserModalInfo && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
+            
+            <div className="flex justify-between items-start pb-3 border-b border-[#142d4a]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <CheckCircle className="text-emerald-400" size={22} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase font-display tracking-widest text-[#C59B4E]">
+                    Client Purged & Blacklisted
+                  </h3>
+                  <span className="text-[10px] font-semibold text-slate-400 block mt-0.5">
+                    Profile and ledger records permanently erased from database.
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDeletedUserModalInfo(null)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+
+            {/* Status Checklist */}
+            <div className="bg-[#050e18] border border-[#142d4a] rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Check size={14} className="shrink-0" />
+                <span>Firebase Authentication user account permanently deleted</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Check size={14} className="shrink-0" />
+                <span>Firestore database document (<code className="font-mono text-[11px] bg-slate-900 px-1 py-0.5 rounded">users/{deletedUserModalInfo.uid}</code>) removed</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Check size={14} className="shrink-0" />
+                <span>All financial ledger entries, deposits & withdrawals purged</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Check size={14} className="shrink-0" />
+                <span>Added to Platform Blacklist (cannot re-register or access)</span>
+              </div>
+            </div>
+
+            {/* Target User Details */}
+            <div className="p-3.5 bg-slate-900/50 rounded-xl border border-slate-800 space-y-2.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400 font-semibold">Client Username:</span>
+                <span className="text-white font-bold font-mono">@{deletedUserModalInfo.username}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400 font-semibold">Email Identifier:</span>
+                <span className="text-slate-200 font-mono font-bold">{deletedUserModalInfo.email}</span>
+              </div>
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-800">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] uppercase font-mono font-bold text-slate-400">Firebase User UID:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(deletedUserModalInfo.uid);
+                      setCopiedDeletedUid(true);
+                      setTimeout(() => setCopiedDeletedUid(false), 2500);
+                    }}
+                    className="text-[10px] text-[#C59B4E] hover:underline font-mono inline-flex items-center gap-1 cursor-pointer font-bold"
+                  >
+                    {copiedDeletedUid ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    <span>{copiedDeletedUid ? 'UID Copied to Clipboard!' : 'Copy UID'}</span>
+                  </button>
+                </div>
+                <div className="bg-[#040a12] p-2 rounded-lg border border-[#112338] font-mono text-[11px] text-[#C59B4E] select-all break-all">
+                  {deletedUserModalInfo.uid}
+                </div>
+              </div>
+            </div>
+
+            {/* Firebase Console Action Box */}
+            <div className="p-4 bg-gradient-to-br from-purple-950/40 to-slate-900/80 rounded-xl border border-purple-500/30 space-y-3">
+              <div className="flex items-center gap-2 text-purple-300 font-bold text-xs">
+                <ExternalLink size={15} className="text-purple-400" />
+                <span>Remove from Firebase Authentication Console:</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                Due to Firebase security rules, client web browsers cannot delete accounts from Google Identity Platform directly without server credentials. You can delete this user in 2 seconds from your Firebase console:
+              </p>
+              <ol className="text-[11px] text-slate-400 space-y-1 list-decimal list-inside font-sans">
+                <li>Click the button below to open your Firebase Auth Users console.</li>
+                <li>Paste the copied UID or email into the search bar.</li>
+                <li>Click the <strong className="text-slate-200">⋮</strong> menu on the right and click <strong className="text-red-400">Delete account</strong>.</li>
+              </ol>
+
+              <a
+                href={FIREBASE_AUTH_CONSOLE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-purple-950/50 cursor-pointer transition-all"
+              >
+                <ExternalLink size={14} />
+                <span>Open Firebase Authentication Console</span>
+              </a>
+            </div>
+
+            {/* Cloud Function Automation Tip */}
+            <div className="p-3 bg-[#061220] rounded-xl border border-[#133054] text-[11px] text-slate-300 space-y-1.5 font-sans">
+              <div className="flex items-center gap-1.5 text-[#C59B4E] font-bold uppercase text-[10px]">
+                <Activity size={12} />
+                <span>Want 100% Automatic Deletions?</span>
+              </div>
+              <p className="text-slate-400 text-[10px] leading-relaxed">
+                We have provided the Cloud Function in <code className="text-slate-200 font-mono bg-slate-900 px-1 py-0.5 rounded">functions/index.js</code>. Once deployed with <code className="text-[#C59B4E] font-mono bg-slate-900 px-1 py-0.5 rounded">firebase deploy --only functions</code>, every deletion on this dashboard automatically and permanently deletes the user from the Firebase Authentication console with zero manual clicks!
+              </p>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-[#142d4a]">
+              <button
+                type="button"
+                onClick={() => setDeletedUserModalInfo(null)}
+                className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: FIREBASE CONSOLE & AUTH DELETION SYNC GUIDE */}
+      {showConsoleGuideModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
+            
+            <div className="flex justify-between items-center pb-3 border-b border-[#142d4a]">
+              <div className="flex items-center gap-2.5">
+                <Info size={20} className="text-[#C59B4E]" />
+                <h3 className="text-sm font-black text-white uppercase font-display tracking-widest text-[#C59B4E]">
+                  Firebase Console & User Deletion Sync
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowConsoleGuideModal(false)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-sans leading-relaxed text-slate-300">
+              
+              {/* Architecture Explanation */}
+              <div className="p-3.5 bg-[#050e18] rounded-xl border border-[#142d4a] space-y-2">
+                <h4 className="font-bold text-slate-100 uppercase text-[11px] text-[#C59B4E]">
+                  Why are there two separate user records in Firebase?
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Firebase is structured into two separate services:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] pt-1">
+                  <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                    <span className="font-bold text-white block mb-0.5">1. Cloud Firestore (Database)</span>
+                    <span className="text-slate-400">Stores username, profile data, balances, wallets, and transaction ledgers. Automatically updated and deleted by this Admin Dashboard.</span>
+                  </div>
+                  <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                    <span className="font-bold text-white block mb-0.5">2. Firebase Auth (Identity Platform)</span>
+                    <span className="text-slate-400">Stores secure login credentials (passwords, emails, tokens). Protected by Google; web browsers cannot delete other users' accounts directly.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Method 1 */}
+              <div className="p-3.5 bg-purple-950/20 rounded-xl border border-purple-500/20 space-y-2">
+                <h4 className="font-bold text-purple-300 uppercase text-[11px] flex items-center gap-1.5">
+                  <ExternalLink size={13} />
+                  <span>Method 1: Manual 1-Click Console Deletion</span>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Whenever you delete a user in this dashboard, click the <strong className="text-purple-300">Firebase Auth Console</strong> button. Find the user row, click the <strong className="text-slate-200">⋮</strong> (three dots) on the right, and select <strong className="text-red-400">Delete account</strong>.
+                </p>
+                <a
+                  href={FIREBASE_AUTH_CONSOLE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-900 hover:bg-purple-800 text-purple-200 rounded-md text-[10px] font-bold uppercase cursor-pointer"
+                >
+                  <ExternalLink size={11} />
+                  <span>Go to Firebase Auth Users Table</span>
+                </a>
+              </div>
+
+              {/* Method 2 */}
+              <div className="p-3.5 bg-emerald-950/20 rounded-xl border border-emerald-500/20 space-y-2">
+                <h4 className="font-bold text-emerald-300 uppercase text-[11px] flex items-center gap-1.5">
+                  <Activity size={13} />
+                  <span>Method 2: 100% Automated Real-Time Sync</span>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  To have Firebase automatically delete the user from Authentication whenever you click "Delete Client Account" here, deploy our pre-built Cloud Function trigger:
+                </p>
+                <div className="bg-[#030910] p-2.5 rounded-lg border border-[#10243b] font-mono text-[10px] text-emerald-400 select-all overflow-x-auto">
+                  firebase deploy --only functions
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Located in <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">functions/index.js</code>. It listens to <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">users/{'{userId}'}</code> deletion and calls <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">admin.auth().deleteUser(userId)</code> instantly!
+                </p>
+              </div>
+
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-[#142d4a]">
+              <button
+                type="button"
+                onClick={() => setShowConsoleGuideModal(false)}
+                className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg cursor-pointer"
+              >
+                Close Guide
+              </button>
+            </div>
+
           </div>
         </div>
       )}

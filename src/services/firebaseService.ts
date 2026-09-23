@@ -3,6 +3,10 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  sendPasswordResetEmail,
   User as FirebaseUser
 } from 'firebase/auth';
 import { 
@@ -278,6 +282,58 @@ export async function authLogout(): Promise<void> {
  */
 export function subscribeToAuth(callback: (user: FirebaseUser | null) => void) {
   return onAuthStateChanged(auth, callback);
+}
+
+/**
+ * Changes administrator password securely via Firebase Authentication.
+ * 1. Re-authenticates with current password to ensure validity.
+ * 2. Updates password using Firebase Auth updatePassword.
+ * 3. The old password immediately stops working.
+ */
+export async function adminChangePassword(currentPassword: string, newPassword: string): Promise<void> {
+  if (!isFirebaseReady) {
+    throw new Error("Firebase is not initialized or configured.");
+  }
+  const user = auth.currentUser;
+  if (!user || !user.email) {
+    throw new Error("No active administrator session found. Please log in first.");
+  }
+
+  // 1. Re-authenticate with current credentials
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  try {
+    await reauthenticateWithCredential(user, credential);
+  } catch (err: any) {
+    const code = err?.code || '';
+    const msg = err?.message || '';
+    if (
+      code === 'auth/wrong-password' || 
+      code === 'auth/invalid-credential' || 
+      msg.includes('wrong-password') || 
+      msg.includes('invalid-credential')
+    ) {
+      throw new Error("Incorrect current password. Please try again.");
+    }
+    throw err;
+  }
+
+  // 2. Validate new password length
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("New password must be at least 6 characters long.");
+  }
+
+  // 3. Update password in Firebase Auth
+  await updatePassword(user, newPassword);
+}
+
+/**
+ * Sends a password reset email to the administrator via Firebase Authentication.
+ */
+export async function adminSendPasswordReset(email: string): Promise<void> {
+  if (!isFirebaseReady) {
+    throw new Error("Firebase is not initialized or configured.");
+  }
+  await sendPasswordResetEmail(auth, email.trim());
 }
 
 /**
@@ -807,6 +863,79 @@ export function subscribeToAllTransactions(
 /**
  * Saves/updates global site configurations (Admin only)
  */
+export const DEFAULT_ADMIN_KEY = 'WV-ADMIN-2026-KEY';
+
+/**
+ * Fetch the master admin password key from Firestore settings
+ */
+export async function dbGetAdminPasswordKey(): Promise<string> {
+  if (!isFirebaseReady) {
+    return localStorage.getItem('wv_admin_password_key') || DEFAULT_ADMIN_KEY;
+  }
+
+  const path = 'settings/security';
+  try {
+    const docRef = doc(db, 'settings', 'security');
+    const snap = await getDoc(docRef);
+    if (snap.exists() && snap.data()?.adminPasswordKey) {
+      const key = String(snap.data().adminPasswordKey).trim();
+      localStorage.setItem('wv_admin_password_key', key);
+      return key;
+    }
+
+    // Check settings/site as well
+    const siteDocRef = doc(db, 'settings', 'site');
+    const siteSnap = await getDoc(siteDocRef);
+    if (siteSnap.exists() && siteSnap.data()?.admin_password_key) {
+      const key = String(siteSnap.data().admin_password_key).trim();
+      localStorage.setItem('wv_admin_password_key', key);
+      return key;
+    }
+
+    // Initialize in Firestore if not existing yet
+    await setDoc(docRef, {
+      adminPasswordKey: DEFAULT_ADMIN_KEY,
+      updatedAt: Date.now()
+    }, { merge: true });
+    localStorage.setItem('wv_admin_password_key', DEFAULT_ADMIN_KEY);
+    return DEFAULT_ADMIN_KEY;
+  } catch (err) {
+    console.warn("Firebase get admin password key fallback:", err);
+    return localStorage.getItem('wv_admin_password_key') || DEFAULT_ADMIN_KEY;
+  }
+}
+
+/**
+ * Updates the master admin password key in Firestore database
+ */
+export async function dbUpdateAdminPasswordKey(newKey: string): Promise<void> {
+  const sanitized = newKey.trim();
+  if (!sanitized) throw new Error("Admin password key cannot be empty.");
+  
+  localStorage.setItem('wv_admin_password_key', sanitized);
+
+  if (!isFirebaseReady) return;
+  const path = 'settings/security';
+
+  try {
+    const docRef = doc(db, 'settings', 'security');
+    await setDoc(docRef, {
+      adminPasswordKey: sanitized,
+      updatedAt: Date.now()
+    }, { merge: true });
+
+    // Also sync to settings/site
+    const siteDocRef = doc(db, 'settings', 'site');
+    await setDoc(siteDocRef, {
+      admin_password_key: sanitized,
+      updatedAt: Date.now()
+    }, { merge: true });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+    throw err;
+  }
+}
+
 export async function dbSaveSystemSettings(settings: any): Promise<void> {
   if (!isFirebaseReady) return;
   const path = 'settings/site';
@@ -870,7 +999,7 @@ export async function dbDeleteInvestmentPlan(planId: string): Promise<void> {
 }
 
 /**
- * Deletes user profile document (Admin only)
+ * Deletes user profile document and purges related records (Admin only)
  */
 export async function dbDeleteUserProfile(uid: string): Promise<void> {
   if (!isFirebaseReady) return;
@@ -879,9 +1008,112 @@ export async function dbDeleteUserProfile(uid: string): Promise<void> {
   try {
     const docRef = doc(db, 'users', uid);
     await deleteDoc(docRef);
+
+    // Clean up related user transaction records
+    try {
+      const txSnap = await getDocs(query(collection(db, 'transactions'), where('userId', '==', uid)));
+      for (const d of txSnap.docs) {
+        await deleteDoc(d.ref).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Error cleaning user transactions:", e);
+    }
+
+    // Clean up related deposit records
+    try {
+      const depSnap = await getDocs(query(collection(db, 'deposits'), where('userId', '==', uid)));
+      for (const d of depSnap.docs) {
+        await deleteDoc(d.ref).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Error cleaning user deposits:", e);
+    }
+
+    // Clean up related withdrawal records
+    try {
+      const wdSnap = await getDocs(query(collection(db, 'withdrawals'), where('userId', '==', uid)));
+      for (const d of wdSnap.docs) {
+        await deleteDoc(d.ref).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Error cleaning user withdrawals:", e);
+    }
+
+    // Log in deleted_accounts for auditing and Cloud Function triggers
+    try {
+      await setDoc(doc(db, 'deleted_accounts', uid), {
+        uid,
+        deletedAt: Date.now(),
+        status: 'DELETED'
+      });
+    } catch (e) {
+      console.warn("Error logging deleted account:", e);
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
+}
+
+/**
+ * Permanently deletes a user from Firebase Authentication using the secure server-side Firebase Admin SDK.
+ * Uses the authenticated administrator's Firebase ID token to authorize the delete-user operation.
+ * The server-side function executes: admin.auth().deleteUser(targetUserUid).
+ * Followed by complete Firestore database and ledger purging.
+ */
+export async function serverPermanentDeleteUser(
+  targetUid: string,
+  username?: string,
+  email?: string
+): Promise<{ success: boolean; authDeleted: boolean; message: string; deleted?: { authentication: boolean; firestore: boolean; storage: boolean } }> {
+  if (!targetUid || typeof targetUid !== 'string' || targetUid.trim() === '') {
+    throw new Error("Invalid operation: Target user UID is required.");
+  }
+
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Administrator session required. Please sign in to your admin account.");
+  }
+
+  // Get current authenticated administrator's Firebase ID token
+  const idToken = await currentUser.getIdToken(true);
+
+  // Call protected server-side Firebase Admin SDK endpoint
+  const response = await fetch('/api/admin/users/delete', {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify({
+      uid: targetUid.trim(),
+      targetUserUid: targetUid.trim(),
+      username,
+      email
+    })
+  });
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok || !result || !result.success) {
+    const errorMsg = result?.error || "Unable to permanently delete this user.";
+    console.error("[SERVER-DELETE] Deletion failed:", errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  // Perform Firestore cleanup to guarantee immediate local cache and listener eviction
+  try {
+    await dbDeleteUserProfile(targetUid.trim());
+    await dbAddUserToBlacklist(targetUid.trim(), username, email);
+  } catch (cleanErr) {
+    console.warn("[SERVER-DELETE] Secondary client cache cleanup error (non-fatal):", cleanErr);
+  }
+
+  return {
+    success: true,
+    authDeleted: result.deleted?.authentication ?? true,
+    message: result.message || `User ${targetUid} permanently deleted.`,
+    deleted: result.deleted
+  };
 }
 
 /**

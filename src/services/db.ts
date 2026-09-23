@@ -22,11 +22,29 @@ import {
   dbDeleteUserProfile,
   dbAddUserToBlacklist,
   dbIsUserBlacklisted,
-  dbExecuteLedgerAdjustment
+  dbExecuteLedgerAdjustment,
+  DEFAULT_ADMIN_KEY,
+  dbGetAdminPasswordKey,
+  dbUpdateAdminPasswordKey
 } from './firebaseService';
 import { LedgerAdjustmentParams, LedgerAdjustmentResult } from '../types';
 
-export { isFirebaseReady, subscribeToAllUsers, subscribeToAllTransactions, subscribeToUserProfile, dbIsUserBlacklisted as isUserBlacklisted };
+export { 
+  isFirebaseReady, 
+  subscribeToAllUsers, 
+  subscribeToAllTransactions, 
+  subscribeToUserProfile, 
+  dbIsUserBlacklisted as isUserBlacklisted,
+  DEFAULT_ADMIN_KEY
+};
+
+export async function getAdminPasswordKey(): Promise<string> {
+  return await dbGetAdminPasswordKey();
+}
+
+export async function updateAdminPasswordKey(newKey: string): Promise<void> {
+  await dbUpdateAdminPasswordKey(newKey);
+}
 
 /**
  * Creates default mockup state for fresh user profiles

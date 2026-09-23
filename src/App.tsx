@@ -77,12 +77,14 @@ const ASSETS_IMAGES = {
 };
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>(() => {
+  const resolvePageFromLocation = (): Page => {
+    if (typeof window === 'undefined') return 'Home';
     const path = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
-    if (path.includes('/admin') || hash.includes('admin')) {
+    const search = window.location.search.toLowerCase();
+    if (path.includes('/admin') || hash.includes('admin') || search.includes('admin')) {
       return 'Admin';
-    } else if (path.includes('/dashboard') || hash.includes('dashboard')) {
+    } else if (path.includes('/dashboard') || hash.includes('dashboard') || search.includes('dashboard')) {
       return 'Dashboard';
     } else if (path.includes('/deposit') || hash.includes('deposit')) {
       return 'Deposit';
@@ -96,7 +98,23 @@ export default function App() {
       return 'Register';
     }
     return 'Home';
-  });
+  };
+
+  const [currentPage, setCurrentPage] = useState<Page>(resolvePageFromLocation);
+
+  // Sync route on hash/popstate navigation changes
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const page = resolvePageFromLocation();
+      setCurrentPage(page);
+    };
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, []);
   const [dashboardSection, setDashboardSection] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
