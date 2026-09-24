@@ -153,7 +153,15 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
 
     console.log(`[SERVER-DELETE] Authorized Admin "${caller.email}" initiated permanent deletion of user UID: "${targetUid}"`);
 
-    // 4. Delete user from Firebase Authentication using Firebase Admin SDK
+    // 4. Invalidate and revoke all existing sessions / refresh tokens
+    try {
+      await adminAuth.revokeRefreshTokens(targetUid);
+      console.log(`[SERVER-DELETE] Successfully revoked refresh tokens for user UID: "${targetUid}"`);
+    } catch (revokeErr) {
+      // non-fatal if token revocation not available
+    }
+
+    // 5. Delete user from Firebase Authentication using Firebase Admin SDK
     let authDeleted = false;
     let authError: string | null = null;
 
@@ -172,7 +180,7 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
       }
     }
 
-    // 5. Clean up user's Firestore data and related subcollections
+    // 6. Clean up user's Firestore data and related subcollections
     let firestoreDeleted = false;
     try {
       // a. Delete user profile document
@@ -206,21 +214,39 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
         }
       }
 
-      // d. Record audit record and blacklist entry
+      // d. Create permanent deletion records across deletedUsers, blacklist, and deleted_accounts
+      const rawUsername = (req.body?.username || '').trim();
+      const rawEmail = (req.body?.email || '').trim();
+      const normUsername = rawUsername.toLowerCase().replace(/^@+/, '');
+      const normEmail = rawEmail.toLowerCase().trim();
+
+      const deletionRecord = {
+        uid: targetUid,
+        username: normUsername,
+        email: normEmail,
+        status: 'permanently_deleted',
+        deletedAt: Date.now(),
+        deletedBy: caller.email
+      };
+
       try {
-        await adminDb.collection('deleted_accounts').doc(targetUid).set({
-          uid: targetUid,
-          deletedAt: Date.now(),
-          deletedBy: caller.email,
-          status: 'DELETED'
-        });
-        await adminDb.collection('blacklist').doc(targetUid).set({
-          uid: targetUid,
-          blacklistedAt: Date.now(),
-          reason: 'PERMANENTLY_DELETED'
-        });
+        await adminDb.collection('deletedUsers').doc(targetUid).set(deletionRecord);
+        if (normUsername) {
+          await adminDb.collection('deletedUsers').doc(`username_${normUsername}`).set(deletionRecord);
+        }
+        if (normEmail) {
+          await adminDb.collection('deletedUsers').doc(`email_${normEmail}`).set(deletionRecord);
+        }
+        await adminDb.collection('deleted_accounts').doc(targetUid).set(deletionRecord);
+        await adminDb.collection('blacklist').doc(targetUid).set(deletionRecord);
+        if (normUsername) {
+          await adminDb.collection('blacklist').doc(`username_${normUsername}`).set(deletionRecord);
+        }
+        if (normEmail) {
+          await adminDb.collection('blacklist').doc(`email_${normEmail}`).set(deletionRecord);
+        }
       } catch (auditErr) {
-        // non-fatal
+        console.warn('[SERVER-DELETE] Permanent deletion recording note:', auditErr);
       }
 
       firestoreDeleted = true;

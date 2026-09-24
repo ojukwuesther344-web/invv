@@ -22,6 +22,9 @@ import {
   dbDeleteUserProfile,
   dbAddUserToBlacklist,
   dbIsUserBlacklisted,
+  dbRecordPermanentDeletion,
+  dbIsPermanentlyDeleted,
+  normalizeIdentifier,
   dbExecuteLedgerAdjustment,
   DEFAULT_ADMIN_KEY,
   dbGetAdminPasswordKey,
@@ -35,6 +38,9 @@ export {
   subscribeToAllTransactions, 
   subscribeToUserProfile, 
   dbIsUserBlacklisted as isUserBlacklisted,
+  dbIsPermanentlyDeleted as isUserPermanentlyDeleted,
+  dbRecordPermanentDeletion as recordPermanentDeletion,
+  normalizeIdentifier,
   DEFAULT_ADMIN_KEY
 };
 
@@ -565,10 +571,16 @@ export async function saveSystemSettings(settings: any): Promise<void> {
 export async function syncLocalDataToFirebase(uid: string, username: string): Promise<void> {}
 
 export async function deleteUserProfile(uid: string, username?: string, email?: string): Promise<void> {
+  const normUser = username ? normalizeIdentifier(username) : '';
+  const normEmail = email ? normalizeIdentifier(email) : '';
+
+  // Record permanent deletion record in Firestore and local state
+  await dbRecordPermanentDeletion(uid, normUser, normEmail);
+
   if (isFirebaseReady) {
     try {
-      await dbDeleteUserProfile(uid);
-      await dbAddUserToBlacklist(uid, username, email);
+      await dbDeleteUserProfile(uid, normUser, normEmail);
+      await dbAddUserToBlacklist(uid, normUser, normEmail);
     } catch (error) {
       console.warn("Failed deleting user from Firebase:", error);
     }
@@ -579,8 +591,9 @@ export async function deleteUserProfile(uid: string, username?: string, email?: 
       const parsedBL = JSON.parse(localBL);
       parsedBL.push({
         uid,
-        username: username?.toLowerCase().trim() || '',
-        email: email?.toLowerCase().trim() || '',
+        username: normUser,
+        email: normEmail,
+        status: 'permanently_deleted',
         blacklistedAt: Date.now()
       });
       localStorage.setItem('local_blacklist', JSON.stringify(parsedBL));
@@ -588,6 +601,9 @@ export async function deleteUserProfile(uid: string, username?: string, email?: 
       console.warn("Failed caching local blacklist:", e);
     }
   }
+  if (normUser) localStorage.setItem(`deleted_user_${normUser}`, 'true');
+  if (normEmail) localStorage.setItem(`deleted_user_${normEmail}`, 'true');
+  localStorage.setItem(`deleted_uid_${uid}`, 'true');
   localStorage.removeItem(`user_profile_${uid}`);
   localStorage.removeItem(`deposits_${uid}`);
   localStorage.removeItem(`withdrawals_${uid}`);

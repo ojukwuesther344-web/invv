@@ -8,7 +8,14 @@ import {
   lookupEmailByUsername,
   authLogout
 } from '../services/firebaseService';
-import { saveUserProfile, fetchUserProfile, getDefaultUserMetrics, isUserBlacklisted } from '../services/db';
+import { 
+  saveUserProfile, 
+  fetchUserProfile, 
+  getDefaultUserMetrics, 
+  isUserBlacklisted,
+  isUserPermanentlyDeleted,
+  normalizeIdentifier
+} from '../services/db';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 interface RegisterViewProps {
@@ -42,8 +49,8 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
   });
   
   // Login States
-  const [loginUsername, setLoginUsername] = useState('aa'); // defaults to match screenshot 5 "Welcome aa"
-  const [loginPassword, setLoginPassword] = useState('12345678');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -70,17 +77,45 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
       return;
     }
 
+    const normUsername = normalizeIdentifier(username);
+    const normEmail = normalizeIdentifier(email);
+
+    // Hard Permanent Deletion & Blacklist Check before attempting any operation
+    const isDeleted = await isUserPermanentlyDeleted({
+      username: normUsername,
+      email: normEmail
+    });
+
+    if (isDeleted) {
+      setErrorMsg('This account has been permanently disabled and cannot be recreated.');
+      return;
+    }
+
     setSuccessMsg('Registering account with Firebase auth and database...');
     try {
-      let uid = `user_${username.toLowerCase().trim()}`;
-      const isBanned = await isUserBlacklisted(uid, username, email);
-      if (isBanned) {
-        setErrorMsg('This username or email has been permanently blacklisted or deactivated.');
-        return;
+      let uid = `user_${normUsername}`;
+
+      if (isFirebaseReady) {
+        try {
+          uid = await authRegister(normEmail, password);
+        } catch (regErr: any) {
+          if (
+            regErr?.message?.includes('permanently disabled') ||
+            regErr?.message?.includes('cannot be recreated')
+          ) {
+            setErrorMsg('This account has been permanently disabled and cannot be recreated.');
+            return;
+          }
+          if (regErr?.code === 'auth/email-already-in-use' || regErr?.message?.includes('email-already-in-use')) {
+            setErrorMsg('This email is already in use. Please sign in or use another email.');
+            return;
+          }
+          throw regErr;
+        }
       }
 
       const profile: UserState = {
-        ...getDefaultUserMetrics(email, username, fullName, {
+        ...getDefaultUserMetrics(normEmail, username.trim(), fullName.trim(), {
           usdtTrc20,
           bitcoin,
           ethereum,
@@ -91,61 +126,27 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         referralEarnings: 0
       };
 
-      if (isFirebaseReady) {
-        try {
-          uid = await authRegister(email, password);
-        } catch (regErr: any) {
-          if (regErr?.code === 'auth/email-already-in-use' || regErr?.message?.includes('email-already-in-use')) {
-            console.warn("Email already registered in Firebase, registering with unique email suffix to ensure active session...");
-            try {
-              const uniqueEmail = `${username.toLowerCase().trim()}_${Math.random().toString(36).substring(2, 7)}@chibuike.com`;
-              uid = await authRegister(uniqueEmail, password);
-              profile.email = uniqueEmail;
-            } catch (fallbackRegErr: any) {
-              console.warn("Silent fallback registration failed:", fallbackRegErr);
-            }
-          } else {
-            throw regErr;
-          }
-        }
-      }
-
       await saveUserProfile(uid, profile);
       
       // Store local helper map to resolve username to external email during sign-in
-      localStorage.setItem(`user_email_map_${username.toLowerCase().trim()}`, email.trim());
+      localStorage.setItem(`user_email_map_${normUsername}`, normEmail);
       
       setSuccessMsg('Account registered successfully! Loading wallet dashboard...');
       setTimeout(() => {
-        onRegisterSuccess({ ...profile, uid, isLoggedIn: true, email });
+        onRegisterSuccess({ ...profile, uid, isLoggedIn: true, email: normEmail });
         onPageChange('Dashboard');
       }, 1000);
     } catch (err: any) {
       console.error(err);
-      if (err?.code === 'auth/operation-not-allowed' || err?.message?.includes('operation-not-allowed')) {
+      if (
+        err?.message?.includes('permanently disabled') ||
+        err?.message?.includes('cannot be recreated')
+      ) {
+        setErrorMsg('This account has been permanently disabled and cannot be recreated.');
+      } else if (err?.code === 'auth/operation-not-allowed' || err?.message?.includes('operation-not-allowed')) {
         setErrorMsg('auth/operation-not-allowed');
       } else if (err?.code === 'auth/email-already-in-use' || err?.message?.includes('email-already-in-use')) {
-        // Email already registered in Firebase but user wants to use this account name local simulation
-        console.log("Registration email occupied. Gracefully logging in via local sandbox fallback...");
-        const fallbackProfile: UserState = {
-          ...getDefaultUserMetrics(email, username, fullName, {
-            usdtTrc20,
-            bitcoin,
-            ethereum,
-            usdtErc20
-          }),
-          referredBy: referredByInput.trim(),
-          referralsCount: 0,
-          referralEarnings: 0
-        };
-        const localUid = `user_${username.toLowerCase().trim()}`;
-        await saveUserProfile(localUid, fallbackProfile);
-        
-        setSuccessMsg('Account name preserved in Firebase! Launching localized session...');
-        setTimeout(() => {
-          onRegisterSuccess({ ...fallbackProfile, uid: localUid, isLoggedIn: true, email });
-          onPageChange('Dashboard');
-        }, 1200);
+        setErrorMsg('This email is already in use. Please sign in or use another email.');
       } else {
         setErrorMsg(err?.message || 'Failed to register account via Firebase.');
       }
@@ -162,123 +163,147 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
       return;
     }
 
-    setSuccessMsg('Logging in securely...');
-    const cleanedUsername = loginUsername.toLowerCase().trim();
-    let parsedEmail = loginUsername.trim();
+    setSuccessMsg('Verifying credentials...');
+    const rawInput = loginUsername.trim();
+    const isInputEmail = rawInput.includes('@');
+    const normInput = normalizeIdentifier(rawInput);
 
-    // 1. Instant local checks for blacklist and suspension (0ms)
-    const localBL = localStorage.getItem('local_blacklist') || '[]';
-    try {
-      const parsedBL = JSON.parse(localBL);
-      if (parsedBL.some((item: any) => 
-        (item.uid && (item.uid === `user_${cleanedUsername}` || item.uid === cleanedUsername)) || 
-        (item.username && item.username === cleanedUsername) ||
-        (item.email && item.email === parsedEmail.toLowerCase())
-      )) {
-        setErrorMsg('user not found');
-        return;
-      }
-    } catch {}
+    // 1. Initial check: Is the input username or email permanently deleted or disabled?
+    const isDirectDeleted = await isUserPermanentlyDeleted({
+      username: isInputEmail ? undefined : normInput,
+      email: isInputEmail ? normInput : undefined
+    });
 
-    const cachedLocalProfile = localStorage.getItem(`user_profile_user_${cleanedUsername}`) || localStorage.getItem(`user_profile_${cleanedUsername}`);
-    if (cachedLocalProfile) {
-      try {
-        const parsedP = JSON.parse(cachedLocalProfile);
-        if (parsedP.suspended) {
-          setErrorMsg('account suspended');
-          return;
-        }
-      } catch {}
+    if (isDirectDeleted) {
+      setSuccessMsg('');
+      setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+      return;
     }
 
-    // 2. Fast email resolution: local storage first (instant), then quick raced lookup if needed
-    if (!loginUsername.includes('@')) {
-      const mappedEmail = localStorage.getItem(`user_email_map_${cleanedUsername}`);
+    // 2. Email resolution for username inputs
+    let parsedEmail = rawInput;
+    if (!isInputEmail) {
+      const mappedEmail = localStorage.getItem(`user_email_map_${normInput}`);
       if (mappedEmail) {
         parsedEmail = mappedEmail;
       } else if (isFirebaseReady) {
-        try {
-          const lookupPromise = lookupEmailByUsername(cleanedUsername);
-          const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 350));
-          const fetchedEmail = await Promise.race([lookupPromise, timeoutPromise]);
-          if (fetchedEmail) {
-            parsedEmail = fetchedEmail;
+        const foundEmail = await lookupEmailByUsername(normInput);
+        if (foundEmail) {
+          parsedEmail = foundEmail;
+        } else {
+          // If username not found in database, check if it's in deletedUsers
+          const checkDel = await isUserPermanentlyDeleted({ username: normInput });
+          setSuccessMsg('');
+          if (checkDel) {
+            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
           } else {
-            parsedEmail = `${cleanedUsername}@chibuike.com`;
+            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
           }
-        } catch {
-          parsedEmail = `${cleanedUsername}@chibuike.com`;
+          return;
         }
       } else {
-        parsedEmail = `${cleanedUsername}@chibuike.com`;
+        setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+        return;
       }
     }
 
-    let uid = `user_${cleanedUsername}`;
+    const normResolvedEmail = normalizeIdentifier(parsedEmail);
+
+    // 3. Re-verify the resolved email against permanent deletion records
+    const isResolvedEmailDeleted = await isUserPermanentlyDeleted({
+      username: isInputEmail ? undefined : normInput,
+      email: normResolvedEmail
+    });
+
+    if (isResolvedEmailDeleted) {
+      setSuccessMsg('');
+      setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+      return;
+    }
+
+    // 4. Authenticate strictly with Firebase Auth
+    let uid = '';
     let profile: UserState | null = null;
 
     try {
       if (isFirebaseReady) {
         try {
-          // Direct, fast Firebase authentication call
-          uid = await authLogin(parsedEmail, loginPassword);
-          
-          // Fast profile resolution: race network fetch with cached profile for instant readiness
-          const cachedUidProfile = localStorage.getItem(`user_profile_${uid}`);
-          const fetchPromise = fetchUserProfile(uid);
-          const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 500));
-          profile = await Promise.race([fetchPromise, timeoutPromise]);
-          if (!profile && cachedUidProfile) {
-            try { profile = JSON.parse(cachedUidProfile); } catch {}
-          }
-        } catch (signInErr: any) {
+          uid = await authLogin(normResolvedEmail, loginPassword);
+        } catch (authErr: any) {
+          setSuccessMsg('');
           if (
-            signInErr?.code === 'auth/invalid-credential' || 
-            signInErr?.code === 'auth/user-not-found' || 
-            signInErr?.code === 'auth/wrong-password' ||
-            signInErr?.message?.includes('invalid-credential') ||
-            signInErr?.message?.includes('user-not-found') ||
-            signInErr?.message?.includes('wrong-password')
+            authErr?.message?.includes('permanently disabled') ||
+            authErr?.message?.includes("Account doesn't exist")
           ) {
-            try {
-              // High-fidelity fallback: register silently on-the-fly to support instant dashboard preview
-              uid = await authRegister(parsedEmail, loginPassword);
-              const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
-              profile = getDefaultUserMetrics(parsedEmail, loginUsername, fallbackName);
-              saveUserProfile(uid, profile).catch(console.error);
-            } catch (signUpErr: any) {
-              try {
-                const randSuffix = Math.random().toString(36).substring(2, 7);
-                const uniqueEmail = `${cleanedUsername}_${randSuffix}@chibuike.com`;
-                uid = await authRegister(uniqueEmail, loginPassword);
-                const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
-                profile = getDefaultUserMetrics(uniqueEmail, loginUsername, fallbackName);
-                saveUserProfile(uid, profile).catch(console.error);
-              } catch {
-                throw signInErr;
-              }
-            }
-          } else {
-            throw signInErr;
+            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+            return;
           }
+          // On invalid credentials or user not found, check again if username/email was deleted
+          const checkDel = await isUserPermanentlyDeleted({
+            username: normInput,
+            email: normResolvedEmail
+          });
+          if (checkDel) {
+            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          } else {
+            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          }
+          return;
+        }
+
+        // Verify authenticated UID against permanent deletion records
+        const isUidDeleted = await isUserPermanentlyDeleted({
+          uid,
+          username: normInput,
+          email: normResolvedEmail
+        });
+
+        if (isUidDeleted) {
+          await authLogout().catch(() => {});
+          setSuccessMsg('');
+          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          return;
+        }
+
+        // Fetch live database profile from Firestore
+        profile = await fetchUserProfile(uid);
+
+        // ABSOLUTE SECURITY RULE: Missing profile document MUST NEVER auto-create a user!
+        if (!profile) {
+          console.warn("[AUTH-REJECT] Missing user profile in Firestore for UID:", uid);
+          await authLogout().catch(() => {});
+          setSuccessMsg('');
+          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          return;
+        }
+
+        // Check account suspension
+        if (profile.suspended) {
+          await authLogout().catch(() => {});
+          setSuccessMsg('');
+          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          return;
         }
       } else {
-        profile = await fetchUserProfile(uid);
-      }
-
-      if (!profile) {
-        const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
-        profile = getDefaultUserMetrics(parsedEmail, loginUsername, fallbackName);
-        saveUserProfile(uid, profile).catch(console.error);
-      }
-
-      // Check suspension
-      if (profile?.suspended) {
-        if (isFirebaseReady) {
-          authLogout().catch(console.error);
+        // Fallback when Firebase is offline
+        const localUid = `user_${normInput}`;
+        const isLocallyDeleted = await isUserPermanentlyDeleted({
+          uid: localUid,
+          username: normInput,
+          email: normResolvedEmail
+        });
+        if (isLocallyDeleted) {
+          setSuccessMsg('');
+          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          return;
         }
-        setErrorMsg('account suspended');
-        return;
+        profile = await fetchUserProfile(localUid);
+        if (!profile || profile.suspended) {
+          setSuccessMsg('');
+          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          return;
+        }
+        uid = localUid;
       }
 
       setSuccessMsg('Authentication successful! Loading wallet dashboard...');
@@ -287,38 +312,17 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
           onRegisterSuccess({ ...profile, uid, isLoggedIn: true });
         }
         onPageChange('Dashboard');
-      }, 200);
+      }, 300);
     } catch (err: any) {
-      console.error(err);
-      if (err?.code === 'auth/operation-not-allowed' || err?.message?.includes('operation-not-allowed')) {
-        setErrorMsg('auth/operation-not-allowed');
-      } else if (
-        err?.code === 'auth/invalid-credential' || 
-        err?.message?.includes('invalid-credential') || 
-        err?.code === 'auth/user-not-found' || 
-        err?.code === 'auth/wrong-password' ||
-        err?.code === 'auth/email-already-in-use' ||
-        err?.message?.includes('email-already-in-use')
+      console.error("[LOGIN-ERROR]", err);
+      setSuccessMsg('');
+      if (
+        err?.message?.includes('permanently disabled') ||
+        err?.message?.includes("Account doesn't exist")
       ) {
-        // Fast local fallback
-        const cleanedUsername = loginUsername.toLowerCase().trim();
-        const fallbackName = loginUsername === 'aa' ? 'Alex Adams' : loginUsername;
-        const fallbackEmail = loginUsername.includes('@') ? loginUsername.trim() : `${cleanedUsername}@chibuike.com`;
-        const fallbackProfile = getDefaultUserMetrics(fallbackEmail, loginUsername, fallbackName);
-        
-        const backupUid = `user_${cleanedUsername}`;
-        const localCached = localStorage.getItem(`user_profile_${backupUid}`);
-        profile = localCached ? JSON.parse(localCached) : fallbackProfile;
-        
-        setSuccessMsg('Authentication successful! Loading wallet dashboard...');
-        setTimeout(() => {
-          if (profile) {
-            onRegisterSuccess({ ...profile, uid: backupUid, isLoggedIn: true });
-          }
-          onPageChange('Dashboard');
-        }, 200);
+        setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
       } else {
-        setErrorMsg(err?.message || 'Failed to authenticate via Firebase.');
+        setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
       }
     }
   };

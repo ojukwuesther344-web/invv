@@ -14,6 +14,7 @@ interface HeaderProps {
 export default function Header({ currentPage, onPageChange, user, onLogout }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [logoLoadError, setLogoLoadError] = useState(false);
 
   const navItems = [
     { name: 'Home', view: 'Home' as Page },
@@ -53,7 +54,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
             </a>
             <span className="flex items-center gap-1.5">
               <MapPin size={12} className="text-[#C59B4E]" />
-              <span>2767 Sunrise Street, NY 1002, USA</span>
+              <span>20-22 Wenlock Road, London, England, N1 7GU</span>
             </span>
           </div>
 
@@ -98,12 +99,29 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
             className="flex items-center text-left cursor-pointer group py-1"
             title="WorldVest Capital LTD"
           >
-            <img 
-              src={logoheadImg || "/logohead.png"} 
-              alt="WorldVest Capital LTD" 
-              className="h-9 sm:h-11 md:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
-              referrerPolicy="no-referrer"
-            />
+            {!logoLoadError ? (
+              <img 
+                src={logoheadImg || "/logohead.png"} 
+                alt="WorldVest Capital LTD" 
+                onError={() => setLogoLoadError(true)}
+                className="h-9 sm:h-11 md:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-[#0B2545] border border-[#C59B4E]/40 flex items-center justify-center text-[#C59B4E] font-black text-lg shadow-sm">
+                  W
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-display font-black text-slate-800 text-base md:text-lg tracking-tight leading-none">
+                    World<span className="text-[#C59B4E]">Vest</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">
+                    Capital LTD
+                  </span>
+                </div>
+              </div>
+            )}
           </button>
 
           {/* Desktop Navigation Links */}

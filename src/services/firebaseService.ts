@@ -35,7 +35,8 @@ export const isFirebaseReady = !!(firebaseConfig.apiKey && firebaseConfig.apiKey
  */
 export async function lookupEmailByUsername(username: string): Promise<string | null> {
   if (!isFirebaseReady) return null;
-  const cleaned = username.toLowerCase().trim();
+  const cleaned = normalizeIdentifier(username);
+  if (!cleaned) return null;
   const path = 'users';
 
   try {
@@ -247,11 +248,156 @@ export function subscribeToUserProfile(
 }
 
 /**
+ * Helper to normalize usernames and emails consistently (strips whitespace, lowercase, strips leading @)
+ */
+export function normalizeIdentifier(val: string): string {
+  if (!val || typeof val !== 'string') return '';
+  return val.toLowerCase().trim().replace(/^@+/, '');
+}
+
+/**
+ * Checks whether an identity (UID, username, or email) is permanently deleted or disabled.
+ */
+export async function dbIsPermanentlyDeleted(params: {
+  uid?: string;
+  username?: string;
+  email?: string;
+}): Promise<boolean> {
+  const cleanUid = params.uid ? params.uid.trim() : '';
+  const normUsername = params.username ? normalizeIdentifier(params.username) : '';
+  const normEmail = params.email ? normalizeIdentifier(params.email) : '';
+
+  // 1. Instant local storage check
+  try {
+    if (cleanUid && localStorage.getItem(`deleted_uid_${cleanUid}`) === 'true') return true;
+    if (normUsername && localStorage.getItem(`deleted_user_${normUsername}`) === 'true') return true;
+    if (normEmail && localStorage.getItem(`deleted_user_${normEmail}`) === 'true') return true;
+
+    const localBL = localStorage.getItem('local_blacklist') || '[]';
+    const parsedBL = JSON.parse(localBL);
+    if (Array.isArray(parsedBL) && parsedBL.some((item: any) => 
+      (cleanUid && (item.uid === cleanUid || item.uid === `user_${cleanUid}`)) ||
+      (normUsername && item.username === normUsername) ||
+      (normEmail && item.email === normEmail)
+    )) {
+      return true;
+    }
+  } catch {}
+
+  if (!isFirebaseReady) return false;
+
+  // 2. Comprehensive Firestore checks against permanent deletion record
+  try {
+    // Check by UID
+    if (cleanUid) {
+      const snapUid = await getDoc(doc(db, 'deletedUsers', cleanUid));
+      if (snapUid.exists()) return true;
+      const snapBl = await getDoc(doc(db, 'blacklist', cleanUid));
+      if (snapBl.exists()) return true;
+      const snapAcc = await getDoc(doc(db, 'deleted_accounts', cleanUid));
+      if (snapAcc.exists()) return true;
+    }
+
+    // Check by normalized username
+    if (normUsername) {
+      const snapUsrDoc = await getDoc(doc(db, 'deletedUsers', `username_${normUsername}`));
+      if (snapUsrDoc.exists()) return true;
+      const snapBlUsrDoc = await getDoc(doc(db, 'blacklist', `username_${normUsername}`));
+      if (snapBlUsrDoc.exists()) return true;
+
+      const qDelUsr = query(collection(db, 'deletedUsers'), where('username', '==', normUsername));
+      const resDelUsr = await getDocs(qDelUsr);
+      if (!resDelUsr.empty) return true;
+
+      const qBlUsr = query(collection(db, 'blacklist'), where('username', '==', normUsername));
+      const resBlUsr = await getDocs(qBlUsr);
+      if (!resBlUsr.empty) return true;
+    }
+
+    // Check by normalized email
+    if (normEmail) {
+      const snapEmlDoc = await getDoc(doc(db, 'deletedUsers', `email_${normEmail}`));
+      if (snapEmlDoc.exists()) return true;
+      const snapBlEmlDoc = await getDoc(doc(db, 'blacklist', `email_${normEmail}`));
+      if (snapBlEmlDoc.exists()) return true;
+
+      const qDelEml = query(collection(db, 'deletedUsers'), where('email', '==', normEmail));
+      const resDelEml = await getDocs(qDelEml);
+      if (!resDelEml.empty) return true;
+
+      const qBlEml = query(collection(db, 'blacklist'), where('email', '==', normEmail));
+      const resBlEml = await getDocs(qBlEml);
+      if (!resBlEml.empty) return true;
+    }
+  } catch (err) {
+    console.warn('[PERMANENT-DELETE] Error querying Firestore deleted status:', err);
+  }
+
+  return false;
+}
+
+/**
+ * Creates persistent permanent deletion records in Firestore and local storage.
+ */
+export async function dbRecordPermanentDeletion(uid: string, username?: string, email?: string): Promise<void> {
+  const cleanUid = (uid || '').trim();
+  const normUsername = username ? normalizeIdentifier(username) : '';
+  const normEmail = email ? normalizeIdentifier(email) : '';
+
+  const payload = {
+    uid: cleanUid,
+    username: normUsername,
+    email: normEmail,
+    status: 'permanently_deleted',
+    deletedAt: Date.now()
+  };
+
+  if (isFirebaseReady) {
+    try {
+      if (cleanUid) {
+        await setDoc(doc(db, 'deletedUsers', cleanUid), payload);
+        await setDoc(doc(db, 'blacklist', cleanUid), payload);
+        await setDoc(doc(db, 'deleted_accounts', cleanUid), payload);
+      }
+      if (normUsername) {
+        await setDoc(doc(db, 'deletedUsers', `username_${normUsername}`), payload);
+        await setDoc(doc(db, 'blacklist', `username_${normUsername}`), payload);
+      }
+      if (normEmail) {
+        await setDoc(doc(db, 'deletedUsers', `email_${normEmail}`), payload);
+        await setDoc(doc(db, 'blacklist', `email_${normEmail}`), payload);
+      }
+    } catch (err) {
+      console.warn('[PERMANENT-DELETE] Error writing permanent deletion record to Firestore:', err);
+    }
+  }
+
+  // Local storage synchronization
+  try {
+    const localBL = localStorage.getItem('local_blacklist') || '[]';
+    const parsedBL = JSON.parse(localBL);
+    parsedBL.push(payload);
+    localStorage.setItem('local_blacklist', JSON.stringify(parsedBL));
+
+    if (cleanUid) localStorage.setItem(`deleted_uid_${cleanUid}`, 'true');
+    if (normUsername) localStorage.setItem(`deleted_user_${normUsername}`, 'true');
+    if (normEmail) localStorage.setItem(`deleted_user_${normEmail}`, 'true');
+  } catch (e) {
+    console.warn('[PERMANENT-DELETE] Local storage sync note:', e);
+  }
+}
+
+/**
  * Firebase Auth signup function
  */
 export async function authRegister(email: string, pass: string): Promise<string> {
   if (!isFirebaseReady) {
     throw new Error("Firebase is not initialized or configured.");
+  }
+  const normEmail = normalizeIdentifier(email);
+  const isDeleted = await dbIsPermanentlyDeleted({ email: normEmail });
+  if (isDeleted) {
+    throw new Error("This account has been permanently disabled and cannot be recreated.");
   }
   const credential = await createUserWithEmailAndPassword(auth, email, pass);
   return credential.user.uid;
@@ -264,7 +410,19 @@ export async function authLogin(email: string, pass: string): Promise<string> {
   if (!isFirebaseReady) {
     throw new Error("Firebase is not initialized or configured.");
   }
+  const normEmail = normalizeIdentifier(email);
+  const isDeleted = await dbIsPermanentlyDeleted({ email: normEmail });
+  if (isDeleted) {
+    throw new Error("Account doesn't exist or this account has been permanently disabled.");
+  }
   const credential = await signInWithEmailAndPassword(auth, email, pass);
+  if (credential.user?.uid) {
+    const isUidDeleted = await dbIsPermanentlyDeleted({ uid: credential.user.uid, email: normEmail });
+    if (isUidDeleted) {
+      await signOut(auth).catch(() => {});
+      throw new Error("Account doesn't exist or this account has been permanently disabled.");
+    }
+  }
   return credential.user.uid;
 }
 
@@ -1001,11 +1159,14 @@ export async function dbDeleteInvestmentPlan(planId: string): Promise<void> {
 /**
  * Deletes user profile document and purges related records (Admin only)
  */
-export async function dbDeleteUserProfile(uid: string): Promise<void> {
+export async function dbDeleteUserProfile(uid: string, username?: string, email?: string): Promise<void> {
   if (!isFirebaseReady) return;
   const path = `users/${uid}`;
 
   try {
+    // Record permanent deletion record in Firestore and local state
+    await dbRecordPermanentDeletion(uid, username, email);
+
     const docRef = doc(db, 'users', uid);
     await deleteDoc(docRef);
 

@@ -30,8 +30,12 @@ import {
   updateTransactionStatus,
   isFirebaseReady,
   syncLocalDataToFirebase,
-  subscribeToUserProfile
+  subscribeToUserProfile,
+  isUserPermanentlyDeleted,
+  normalizeIdentifier
 } from './services/db';
+import { db } from './firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { detectUserSession } from './utils/sessionTracker';
 import {
   subscribeToUserTransactions,
@@ -120,12 +124,11 @@ export default function App() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   
-  // Default user simulation with initial zero balance parameters
-  const [user, setUser] = useState<UserState>({
-    isLoggedIn: false, // true once registered or signed in!
-    username: 'aa',
-    fullName: 'Alex Adams',
-    email: 'aa@WorldvestCapital.com',
+  const emptyUserState: UserState = {
+    isLoggedIn: false,
+    username: '',
+    fullName: '',
+    email: '',
     wallets: {
       usdtTrc20: '',
       bitcoin: '',
@@ -140,8 +143,11 @@ export default function App() {
     activeDeposit: 0,
     lastDeposit: 0,
     totalDeposit: 0,
-    lastWithdrawal: 0
-  });
+    lastWithdrawal: 0,
+    profilePhoto: ''
+  };
+
+  const [user, setUser] = useState<UserState>(emptyUserState);
 
   // Setup active tracking background ticking
   useEffect(() => {
@@ -220,23 +226,30 @@ export default function App() {
     if (isFirebaseReady) {
       const unsubscribe = subscribeToUserProfile(
         uid,
-        (profile) => {
-          if (profile) {
-            if (profile.suspended) {
-              setUser((prev) => ({
-                ...prev,
-                isLoggedIn: false
-              }));
-              authLogout().catch(console.error);
-              setCurrentPage('Register');
-              return;
-            }
-            setUser((prev) => ({
-              ...prev,
-              ...profile,
-              isLoggedIn: true
-            }));
+        async (profile) => {
+          if (!profile) {
+            // User profile document was deleted by administrator! Evict immediately.
+            console.warn("[SESSION-GUARD] User profile was deleted from Firestore. Terminating session.");
+            setUser(emptyUserState);
+            await authLogout().catch(() => {});
+            localStorage.removeItem(`user_profile_${uid}`);
+            localStorage.removeItem(`deposits_${uid}`);
+            localStorage.removeItem(`withdrawals_${uid}`);
+            localStorage.removeItem(`transactions_${uid}`);
+            setCurrentPage('Register');
+            return;
           }
+          if (profile.suspended) {
+            setUser(emptyUserState);
+            await authLogout().catch(() => {});
+            setCurrentPage('Register');
+            return;
+          }
+          setUser((prev) => ({
+            ...prev,
+            ...profile,
+            isLoggedIn: true
+          }));
         },
         (error) => {
           console.error("Error subscribing to user profile:", error);
@@ -262,6 +275,28 @@ export default function App() {
       return () => clearInterval(interval);
     }
   }, [user.isLoggedIn, user.uid, user.username]);
+
+  // Real-time Security Sentinel: Evicts user immediately if administrator permanently deletes account while active
+  useEffect(() => {
+    if (!user.isLoggedIn || !user.uid) return;
+    const cleanUid = user.uid;
+
+    if (isFirebaseReady) {
+      const unsub = onSnapshot(doc(db, 'deletedUsers', cleanUid), async (snap) => {
+        if (snap.exists()) {
+          console.warn("[SECURITY-SENTINEL] Active session user was permanently deleted. Immediate termination.");
+          setUser(emptyUserState);
+          await authLogout().catch(() => {});
+          localStorage.removeItem(`user_profile_${cleanUid}`);
+          localStorage.removeItem(`deposits_${cleanUid}`);
+          localStorage.removeItem(`withdrawals_${cleanUid}`);
+          localStorage.removeItem(`transactions_${cleanUid}`);
+          setCurrentPage('Register');
+        }
+      });
+      return () => unsub();
+    }
+  }, [user.isLoggedIn, user.uid]);
 
   // Real-time listener for ALL transactions from Firestore
   useEffect(() => {
@@ -610,28 +645,25 @@ export default function App() {
     const unsubscribe = subscribeToAuth(async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          // 1. Strict check if restored user is permanently deleted
+          const isDeleted = await isUserPermanentlyDeleted({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || undefined
+          });
+          if (isDeleted) {
+            console.warn("[AUTH-GUARD] Restored Firebase user is permanently deleted. Signing out.");
+            await authLogout().catch(() => {});
+            setUser(emptyUserState);
+            setCurrentPage('Register');
+            return;
+          }
+
           const profile = await fetchUserProfile(firebaseUser.uid);
           if (profile) {
             if (profile.suspended) {
-              await authLogout();
-              setUser({
-                username: '',
-                fullName: '',
-                email: '',
-                isLoggedIn: false,
-                wallets: { usdtTrc20: '', bitcoin: '', ethereum: '', usdtErc20: '' },
-                accountBalance: 0,
-                earnedTotal: 0,
-                pendingWithdrawal: 0,
-                totalWithdrew: 0,
-                activeDeposit: 0,
-                lastDeposit: 0,
-                totalDeposit: 0,
-                lastWithdrawal: 0,
-                profilePhoto: ''
-              });
+              await authLogout().catch(() => {});
+              setUser(emptyUserState);
               setCurrentPage('Register');
-              alert("account suspended");
               return;
             }
             setUser({
@@ -640,21 +672,13 @@ export default function App() {
               email: firebaseUser.email || profile.email,
               isLoggedIn: true
             });
-            // Automatically push any local transaction/profile data up to the newly configured Firebase
             syncLocalDataToFirebase(firebaseUser.uid, profile.username || '').catch(console.error);
           } else {
-            // New user account from Firebase Auth - initialize live Firestore database record
-            const rawEmail = firebaseUser.email || 'user@chibuike.com';
-            const username = rawEmail.split('@')[0];
-            const defaultProfile = getDefaultUserMetrics(rawEmail, username, username);
-            const initialDoc: UserState = {
-              ...defaultProfile,
-              uid: firebaseUser.uid,
-              email: rawEmail,
-              isLoggedIn: true
-            };
-            await saveUserProfile(firebaseUser.uid, initialDoc);
-            setUser(initialDoc);
+            // Profile does NOT exist in Firestore: MUST NEVER AUTOMATICALLY CREATE A USER!
+            console.warn("[AUTH-GUARD] Authenticated Firebase user has no Firestore profile. Signing out.");
+            await authLogout().catch(() => {});
+            setUser(emptyUserState);
+            setCurrentPage('Register');
           }
         } catch (err) {
           console.error("Auth restore error: ", err);
@@ -663,6 +687,14 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Protected route guard: Deflect any unauthenticated user navigating to protected views
+  useEffect(() => {
+    const protectedPages: Page[] = ['Dashboard', 'Deposit'];
+    if (protectedPages.includes(currentPage) && !user.isLoggedIn) {
+      setCurrentPage('Register');
+    }
+  }, [currentPage, user.isLoggedIn]);
 
   // Adjust browser tab title dynamically and scale viewport gracefully for a perfect zoomed-out high-fidelity desktop experience
   useEffect(() => {

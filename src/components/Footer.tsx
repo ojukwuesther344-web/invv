@@ -102,7 +102,7 @@ export default function Footer({ onPageChange }: FooterProps) {
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Location</div>
-                  <div className="text-gray-300">2767 Sunrise Street, NY 1002, USA</div>
+                  <div className="text-gray-300">20-22 Wenlock Road, London, England, N1 7GU</div>
                 </div>
               </div>
 

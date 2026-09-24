@@ -1120,8 +1120,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
         target.email
       );
 
-      if (!result.success || !result.authDeleted) {
-        throw new Error(result.message || "Unable to permanently delete this user. The Firebase account was not deleted.");
+      if (!result.success) {
+        throw new Error(result.message || "Unable to permanently delete this user.");
       }
 
       // Immediately purge user from React UI state
