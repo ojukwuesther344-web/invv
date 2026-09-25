@@ -255,6 +255,11 @@ export function normalizeIdentifier(val: string): string {
   return val.toLowerCase().trim().replace(/^@+/, '');
 }
 
+export const AUTHORIZED_SYSTEM_ADMINS = [
+  'blessingubah38@gmail.com',
+  'sheilawalshsheila@gmail.com'
+];
+
 /**
  * Checks whether an identity (UID, username, or email) is permanently deleted or disabled.
  */
@@ -266,6 +271,9 @@ export async function dbIsPermanentlyDeleted(params: {
   const cleanUid = params.uid ? params.uid.trim() : '';
   const normUsername = params.username ? normalizeIdentifier(params.username) : '';
   const normEmail = params.email ? normalizeIdentifier(params.email) : '';
+
+  // Protected administrators are never marked as deleted
+  if (normEmail && AUTHORIZED_SYSTEM_ADMINS.includes(normEmail)) return false;
 
   // 1. Instant local storage check
   try {
@@ -286,49 +294,37 @@ export async function dbIsPermanentlyDeleted(params: {
 
   if (!isFirebaseReady) return false;
 
-  // 2. Comprehensive Firestore checks against permanent deletion record
+  // 2. High-speed concurrent Firestore checks
   try {
+    const checks: Promise<boolean>[] = [];
+
     // Check by UID
     if (cleanUid) {
-      const snapUid = await getDoc(doc(db, 'deletedUsers', cleanUid));
-      if (snapUid.exists()) return true;
-      const snapBl = await getDoc(doc(db, 'blacklist', cleanUid));
-      if (snapBl.exists()) return true;
-      const snapAcc = await getDoc(doc(db, 'deleted_accounts', cleanUid));
-      if (snapAcc.exists()) return true;
+      checks.push(
+        getDoc(doc(db, 'deletedUsers', cleanUid)).then(s => s.exists()),
+        getDoc(doc(db, 'blacklist', cleanUid)).then(s => s.exists()),
+        getDoc(doc(db, 'deleted_accounts', cleanUid)).then(s => s.exists())
+      );
     }
 
     // Check by normalized username
     if (normUsername) {
-      const snapUsrDoc = await getDoc(doc(db, 'deletedUsers', `username_${normUsername}`));
-      if (snapUsrDoc.exists()) return true;
-      const snapBlUsrDoc = await getDoc(doc(db, 'blacklist', `username_${normUsername}`));
-      if (snapBlUsrDoc.exists()) return true;
-
-      const qDelUsr = query(collection(db, 'deletedUsers'), where('username', '==', normUsername));
-      const resDelUsr = await getDocs(qDelUsr);
-      if (!resDelUsr.empty) return true;
-
-      const qBlUsr = query(collection(db, 'blacklist'), where('username', '==', normUsername));
-      const resBlUsr = await getDocs(qBlUsr);
-      if (!resBlUsr.empty) return true;
+      checks.push(
+        getDoc(doc(db, 'deletedUsers', `username_${normUsername}`)).then(s => s.exists()),
+        getDoc(doc(db, 'blacklist', `username_${normUsername}`)).then(s => s.exists())
+      );
     }
 
     // Check by normalized email
     if (normEmail) {
-      const snapEmlDoc = await getDoc(doc(db, 'deletedUsers', `email_${normEmail}`));
-      if (snapEmlDoc.exists()) return true;
-      const snapBlEmlDoc = await getDoc(doc(db, 'blacklist', `email_${normEmail}`));
-      if (snapBlEmlDoc.exists()) return true;
-
-      const qDelEml = query(collection(db, 'deletedUsers'), where('email', '==', normEmail));
-      const resDelEml = await getDocs(qDelEml);
-      if (!resDelEml.empty) return true;
-
-      const qBlEml = query(collection(db, 'blacklist'), where('email', '==', normEmail));
-      const resBlEml = await getDocs(qBlEml);
-      if (!resBlEml.empty) return true;
+      checks.push(
+        getDoc(doc(db, 'deletedUsers', `email_${normEmail}`)).then(s => s.exists()),
+        getDoc(doc(db, 'blacklist', `email_${normEmail}`)).then(s => s.exists())
+      );
     }
+
+    const results = await Promise.all(checks);
+    if (results.some(Boolean)) return true;
   } catch (err) {
     console.warn('[PERMANENT-DELETE] Error querying Firestore deleted status:', err);
   }
@@ -410,19 +406,38 @@ export async function authLogin(email: string, pass: string): Promise<string> {
   if (!isFirebaseReady) {
     throw new Error("Firebase is not initialized or configured.");
   }
-  const normEmail = normalizeIdentifier(email);
-  const isDeleted = await dbIsPermanentlyDeleted({ email: normEmail });
-  if (isDeleted) {
-    throw new Error("Account doesn't exist or this account has been permanently disabled.");
+  const cleanEmail = email.trim();
+  const normEmail = normalizeIdentifier(cleanEmail);
+  const isAdmin = AUTHORIZED_SYSTEM_ADMINS.includes(normEmail);
+
+  // For regular users, check permanent deletion before or after authentication
+  if (!isAdmin) {
+    const isDeleted = await dbIsPermanentlyDeleted({ email: normEmail });
+    if (isDeleted) {
+      throw new Error("Account doesn't exist or this account has been permanently disabled.");
+    }
   }
-  const credential = await signInWithEmailAndPassword(auth, email, pass);
-  if (credential.user?.uid) {
-    const isUidDeleted = await dbIsPermanentlyDeleted({ uid: credential.user.uid, email: normEmail });
+
+  let credential;
+  try {
+    credential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+  } catch (err: any) {
+    // If password had spaces or special chars, try trimmed pass as fallback
+    if (pass !== pass.trim()) {
+      credential = await signInWithEmailAndPassword(auth, cleanEmail, pass.trim());
+    } else {
+      throw err;
+    }
+  }
+
+  if (!isAdmin && credential.user?.uid) {
+    const isUidDeleted = await dbIsPermanentlyDeleted({ uid: credential.user.uid });
     if (isUidDeleted) {
       await signOut(auth).catch(() => {});
       throw new Error("Account doesn't exist or this account has been permanently disabled.");
     }
   }
+
   return credential.user.uid;
 }
 

@@ -3,10 +3,15 @@ import { getAuth } from 'firebase/auth';
 import {
   initializeFirestore,
   getFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager
+  memoryLocalCache,
+  setLogLevel
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
+
+// Suppress noisy internal lease/polling logs in multi-tab iframe environments
+try {
+  setLogLevel('error');
+} catch {}
 
 // Initialize or reuse Firebase App instance
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -15,13 +20,13 @@ export const auth = getAuth(app);
 // Target database ID
 const databaseId = firebaseConfig.firestoreDatabaseId || '(default)';
 
-// Initialize Firestore with resilient offline persistent caching and auto-detected long polling
+// Initialize Firestore with fast and resilient memoryLocalCache
+// This prevents "Failed to obtain primary lease for action 'Backfill Indexes' / 'Collect garbage'" errors
+// in iframe and multi-tab browser environments
 let firestoreDb: any;
 try {
   firestoreDb = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    }),
+    localCache: memoryLocalCache(),
     experimentalAutoDetectLongPolling: true
   }, databaseId);
 } catch {

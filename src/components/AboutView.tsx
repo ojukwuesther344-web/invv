@@ -210,7 +210,7 @@ export default function AboutView({ onPageChange, images }: AboutViewProps) {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center max-w-5xl mx-auto">
+          <div className="grid grid-cols-5 gap-6 text-center max-w-5xl mx-auto">
             {stats.map((st, i) => (
               <div key={i} className="flex flex-col items-center gap-2 p-4 bg-[#0a1f33] border border-slate-800 rounded-xl hover:border-[#C59B4E]/60 transition-colors duration-300">
                 <div className="w-10 h-10 rounded-full bg-[#071625]/80 flex items-center justify-center border border-slate-700/50 mb-1">

@@ -146,9 +146,9 @@ export default function FAQsView({ onPageChange, faqManImage }: FAQsViewProps) {
         </div>
       </div>
 
-      <section className="py-16 md:py-24 px-4 sm:px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+      <section className="py-16 md:py-24 px-4 sm:px-6 max-w-7xl mx-auto grid grid-cols-12 gap-12 lg:gap-16 items-start">
         {/* Left Column: Large circular portrait and quick help card */}
-        <div className="lg:col-span-5 flex flex-col items-center gap-8">
+        <div className="col-span-5 flex flex-col items-center gap-8">
           <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-full overflow-hidden border-8 border-white shadow-2xl bg-amber-50 hover:scale-[1.01] transition-transform duration-300">
             <div className="absolute inset-0 bg-[#C59B4E]/10 rounded-full"></div>
             <img 
@@ -185,7 +185,7 @@ export default function FAQsView({ onPageChange, faqManImage }: FAQsViewProps) {
         </div>
 
         {/* Right Column: Real-time search bar + Accordion list */}
-        <div className="lg:col-span-7 flex flex-col gap-6 w-full">
+        <div className="col-span-7 flex flex-col gap-6 w-full">
           <div>
             <span className="text-xs font-black uppercase tracking-widest text-[#C59B4E]">KNOWLEDGE BASE</span>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display mt-1">

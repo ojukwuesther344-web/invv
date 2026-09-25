@@ -50,10 +50,10 @@ export default function UkCertificateSection() {
 
         {/* Main Certificate 2-Section Container */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden p-6 md:p-10 lg:p-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          <div className="grid grid-cols-12 gap-10 lg:gap-14 items-center">
             
             {/* ================= LEFT SECTION: UK GOVT FULL DETAILS ================= */}
-            <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
+            <div className="col-span-7 flex flex-col justify-between space-y-6">
               
               {/* Top Authority Badge */}
               <div className="flex flex-wrap items-center gap-3">
@@ -205,7 +205,7 @@ export default function UkCertificateSection() {
 
 
             {/* ================= RIGHT SECTION: WORLD.PNG CERTIFICATE IMAGE ================= */}
-            <div className="lg:col-span-5 flex flex-col items-center">
+            <div className="col-span-5 flex flex-col items-center">
               
               <div 
                 onClick={() => setIsZoomed(true)}

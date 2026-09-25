@@ -73,8 +73,10 @@ export default function LiveChatWidget({ isAdmin = false }: LiveChatWidgetProps)
         replyText = "Withdrawals are processed swiftly to your configured wallet address. You can submit a withdrawal request anytime under 'Withdraw' once your account balance meets the minimum payout.";
       } else if (low.includes('plan') || low.includes('profit') || low.includes('interest') || low.includes('roi')) {
         replyText = "We offer daily yield investment plans starting from 6% daily up to 40% after 1 day. Check the Plans section on the homepage or dashboard to calculate your returns.";
-      } else if (low.includes('admin') || low.includes('login') || low.includes('password')) {
-        replyText = "For administrator access, you can visit the dedicated Admin Portal via the link at the bottom of the sign-in page or footer.";
+      } else if (low.includes('admin')) {
+        replyText = "Administrative access is restricted to authorized personnel. Please contact system support if you require administrator credentials.";
+      } else if (low.includes('login') || low.includes('password')) {
+        replyText = "To access your account, click Register / Login at the top right of the page and enter your credentials.";
       }
 
       setMessages((prev) => [

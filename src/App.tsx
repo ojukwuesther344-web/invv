@@ -706,51 +706,32 @@ export default function App() {
 
     const handleResize = () => {
       const width = window.innerWidth;
-      const isDashboardOrAdmin = currentPage === 'Admin' || currentPage === 'Dashboard' || currentPage === 'Deposit';
+      const DESKTOP_WIDTH = 1280;
 
-      if (isDashboardOrAdmin) {
-        // Full screen dashboard / admin: Stretch to 100% of browser window, disable rigid 1200px lock
-        htmlEl.style.zoom = '1';
-        htmlEl.style.width = '100%';
-        htmlEl.style.minWidth = 'unset';
-        htmlEl.style.maxWidth = 'none';
-        htmlEl.style.margin = '0';
-        
-        bodyEl.style.width = '100%';
-        bodyEl.style.minWidth = 'unset';
-        bodyEl.style.maxWidth = 'none';
-        bodyEl.style.margin = '0';
+      htmlEl.style.width = '100%';
+      htmlEl.style.maxWidth = 'none';
+      htmlEl.style.margin = '0';
+      htmlEl.style.padding = '0';
+      htmlEl.style.zoom = '1';
 
-        if (rootEl) {
-          rootEl.style.width = '100%';
-          rootEl.style.minWidth = 'unset';
-          rootEl.style.maxWidth = 'none';
-          rootEl.style.margin = '0';
-        }
-      } else {
-        // Landing pages: Normal desktop view zoom-scaling under 1200px
-        if (width < 1200) {
-          const scaleFactor = Math.max(0.3, width / 1200);
-          htmlEl.style.zoom = `${scaleFactor}`;
+      bodyEl.style.width = '100%';
+      bodyEl.style.maxWidth = 'none';
+      bodyEl.style.margin = '0';
+      bodyEl.style.padding = '0';
+      bodyEl.style.overflowX = 'hidden';
+
+      if (rootEl) {
+        if (width < DESKTOP_WIDTH) {
+          const scaleFactor = Math.max(0.2, width / DESKTOP_WIDTH);
+          rootEl.style.width = `${DESKTOP_WIDTH}px`;
+          rootEl.style.minWidth = `${DESKTOP_WIDTH}px`;
+          rootEl.style.maxWidth = `${DESKTOP_WIDTH}px`;
+          rootEl.style.zoom = `${scaleFactor}`;
         } else {
-          htmlEl.style.zoom = '1';
-        }
-        
-        htmlEl.style.width = '100%';
-        htmlEl.style.minWidth = 'unset';
-        htmlEl.style.maxWidth = 'none';
-        htmlEl.style.margin = '0';
-        
-        bodyEl.style.width = '100%';
-        bodyEl.style.minWidth = 'unset';
-        bodyEl.style.maxWidth = 'none';
-        bodyEl.style.margin = '0';
-
-        if (rootEl) {
           rootEl.style.width = '100%';
           rootEl.style.minWidth = 'unset';
           rootEl.style.maxWidth = 'none';
-          rootEl.style.margin = '0';
+          rootEl.style.zoom = '1';
         }
       }
     };

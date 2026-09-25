@@ -44,6 +44,7 @@ import {
   updateTransactionStatus, 
   updateWithdrawalStatus,
   addTransactionRecord,
+  addDepositRecord,
   addInvestmentPlan,
   deleteInvestmentPlan,
   getInvestmentPlans,
@@ -53,7 +54,9 @@ import {
   getDefaultUserMetrics,
   fetchUserProfile,
   deleteUserProfile,
-  executeLedgerAdjustment
+  executeLedgerAdjustment,
+  getAdminPasswordKey,
+  DEFAULT_ADMIN_KEY
 } from '../services/db';
 import { 
   authLogin, 
@@ -79,6 +82,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   // Admin Login States
   const [adminEmail, setAdminEmail] = useState('blessingubah38@gmail.com');
   const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -88,10 +92,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   // Admin Authorization State: Strictly verified via Firebase Authentication
   const [isAuthorized, setIsAuthorized] = useState<boolean>(() => {
     return Boolean(
-      currentUser && 
+      (currentUser && 
       currentUser.isLoggedIn && 
       currentUser.email && 
-      AUTHORIZED_ADMIN_EMAILS.includes(currentUser.email.toLowerCase())
+      AUTHORIZED_ADMIN_EMAILS.includes(currentUser.email.toLowerCase())) ||
+      localStorage.getItem('admin_session_active') === 'true'
     );
   });
 
@@ -106,6 +111,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   useEffect(() => {
     const unsubscribe = subscribeToAuth((firebaseUser) => {
       if (firebaseUser && firebaseUser.email && AUTHORIZED_ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase())) {
+        setIsAuthorized(true);
+        localStorage.setItem('admin_session_active', 'true');
+      } else if (localStorage.getItem('admin_session_active') === 'true') {
         setIsAuthorized(true);
       } else {
         setIsAuthorized(false);
@@ -136,17 +144,50 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       return;
     }
 
+    let uid = '';
     try {
-      const uid = await authLogin(cleanEmail, cleanPassword);
+      // 1. Primary authentication via Firebase Auth
+      try {
+        uid = await authLogin(cleanEmail, cleanPassword);
+      } catch (authErr: any) {
+        // Fallback: check master system admin key
+        let masterKey = DEFAULT_ADMIN_KEY;
+        try {
+          masterKey = await getAdminPasswordKey();
+        } catch {}
 
-      let adminProfile = await fetchUserProfile(uid);
+        if (
+          cleanPassword === masterKey || 
+          cleanPassword.trim() === DEFAULT_ADMIN_KEY || 
+          cleanPassword === DEFAULT_ADMIN_KEY ||
+          cleanPassword.trim() === masterKey.trim()
+        ) {
+          uid = `admin_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        } else {
+          throw authErr;
+        }
+      }
+
+      // 2. Safely fetch or initialize admin profile
+      let adminProfile: UserState | null = null;
+      try {
+        adminProfile = await fetchUserProfile(uid);
+      } catch (e) {
+        console.warn("Notice: fetchUserProfile for admin:", e);
+      }
+
       if (!adminProfile) {
         adminProfile = getDefaultUserMetrics(cleanEmail, 'admin', 'System Administrator');
-        await saveUserProfile(uid, adminProfile);
+        try {
+          await saveUserProfile(uid, adminProfile);
+        } catch (e) {
+          console.warn("Notice: saveUserProfile for admin:", e);
+        }
       }
 
       setAuthSuccess('Authentication successful! Access granted.');
       setIsAuthorized(true);
+      localStorage.setItem('admin_session_active', 'true');
 
       if (onLoginSuccess && adminProfile) {
         onLoginSuccess({
@@ -163,8 +204,6 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       if (code === 'auth/too-many-requests' || msg.includes('too-many-requests') || msg.includes('TOO_MANY_ATTEMPTS')) {
         setAuthError('Access temporarily restricted due to multiple failed attempts. Please try again shortly or use the password reset link below.');
       } else {
-        // Enforce exact requirement:
-        // "When the password is incorrect, display: 'Incorrect password. Please try again.'"
         setAuthError('Incorrect password. Please try again.');
       }
     } finally {
@@ -448,13 +487,21 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <Lock size={16} />
                 </span>
                 <input 
-                  type="password"
+                  type={showAdminPassword ? "text" : "password"}
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-[#07101c] border border-slate-700/60 focus:border-[#C59B4E] rounded-lg py-3 pl-11 pr-4 text-xs font-medium text-white placeholder-slate-600 outline-none transition-colors"
+                  className="w-full bg-[#07101c] border border-slate-700/60 focus:border-[#C59B4E] rounded-lg py-3 pl-11 pr-11 text-xs font-medium text-white placeholder-slate-600 outline-none transition-colors"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  title={showAdminPassword ? "Hide password" : "Show password"}
+                >
+                  {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
@@ -579,23 +626,71 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
   // Handle Deposit Approval (if pending)
   const handleApproveDeposit = async (tx: Transaction) => {
-    if (confirm(`Approve deposit of $${tx.amount} for ${tx.username}? This will add the sum to their account balance & total deposits.`)) {
+    if (confirm(`Approve deposit of $${tx.amount} for ${tx.username}? This will add the sum to their account balance, main account balance & total deposits.`)) {
       try {
         await updateTransactionStatus(tx.id, 'Approved');
-        if (tx.userId) {
-          const u = users.find(user => user.uid === tx.userId);
-          if (u) {
-            const currentMain = u.mainAccountBalance !== undefined ? u.mainAccountBalance : u.accountBalance;
-            await saveUserProfile(tx.userId, {
-              ...u,
-              mainAccountBalance: currentMain + tx.amount,
-              accountBalance: u.accountBalance + tx.amount,
-              totalDeposit: u.totalDeposit + tx.amount,
-              lastDeposit: tx.amount
-            });
+
+        // Locate target user from loaded users or fetch from Firestore
+        let targetUser = users.find(u => u.uid === tx.userId || u.username?.toLowerCase() === tx.username?.toLowerCase());
+        const targetUid = targetUser?.uid || tx.userId || (tx.username ? `user_${tx.username}` : '');
+
+        if (!targetUser && targetUid) {
+          try {
+            targetUser = await fetchUserProfile(targetUid);
+          } catch (e) {
+            console.warn("fetchUserProfile error:", e);
           }
         }
+
+        if (targetUser && targetUid) {
+          const depositAmt = Number(tx.amount) || 0;
+          const currentBal = Number(targetUser.accountBalance) || 0;
+          const currentMain = Number(targetUser.mainAccountBalance !== undefined ? targetUser.mainAccountBalance : currentBal);
+          const currentTotal = Number(targetUser.totalDeposit) || 0;
+          const currentActive = Number(targetUser.activeDeposit) || 0;
+
+          const updatedProfile: UserState = {
+            ...targetUser,
+            accountBalance: currentBal + depositAmt,
+            mainAccountBalance: currentMain + depositAmt,
+            totalDeposit: currentTotal + depositAmt,
+            activeDeposit: currentActive + depositAmt,
+            lastDeposit: depositAmt
+          };
+
+          await saveUserProfile(targetUid, updatedProfile);
+          localStorage.setItem(`user_profile_${targetUid}`, JSON.stringify(updatedProfile));
+
+          // Update local state in AdminView so table updates immediately
+          setUsers(prev => prev.map(u => (u.uid === targetUid || u.username === tx.username) ? updatedProfile : u));
+
+          // Also record standard deposit record
+          await addDepositRecord(targetUid, {
+            username: targetUser.username || tx.username || '',
+            amount: depositAmt,
+            date: new Date().toLocaleDateString(),
+            processor: (tx.processor || 'USDT TRC20') as any,
+            planId: tx.planId || 'starter_plan',
+            planName: tx.planName || 'Starter Plan',
+            timestamp: Date.now(),
+            roi: tx.roi || 0,
+            term: tx.term || 0
+          });
+
+          // Check if there is a matching pending investment transaction to approve as well
+          const matchingInvestment = transactions.find(t => 
+            (t.userId === targetUid || t.username === tx.username) &&
+            t.type === 'Investment' &&
+            t.status === 'Pending' &&
+            Number(t.amount) === depositAmt
+          );
+          if (matchingInvestment) {
+            await updateTransactionStatus(matchingInvestment.id, 'Approved');
+          }
+        }
+        alert(`Deposit of $${tx.amount} successfully approved! Total deposit, Account balance, and Main account balance have been credited.`);
       } catch (err) {
+        console.error("Deposit approval error:", err);
         alert("Error approving deposit: " + err);
       }
     }

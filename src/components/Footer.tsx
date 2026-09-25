@@ -20,7 +20,7 @@ export default function Footer({ onPageChange }: FooterProps) {
   return (
     <footer className="bg-[#050e18] text-gray-300 font-sans pt-16 pb-8 relative border-t border-gray-900">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+        <div className="grid grid-cols-5 gap-8 mb-12">
           {/* Logo & Description */}
           <div className="lg:col-span-1.5 flex flex-col gap-6">
             <button 
@@ -132,7 +132,7 @@ export default function Footer({ onPageChange }: FooterProps) {
         </div>
 
         {/* Bottom Sub-footer line exactly */}
-        <div className="border-t border-gray-950 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[13px] text-gray-500">
+        <div className="border-t border-gray-950 mt-12 pt-8 flex flex-row justify-between items-center gap-4 text-[13px] text-gray-500">
           <div>
             © WorldVest Capital LTD. All Rights Reserved By{' '}
             <button onClick={() => handleLinkClick('Home')} className="text-[#C59B4E] hover:underline cursor-pointer font-medium">
@@ -143,9 +143,6 @@ export default function Footer({ onPageChange }: FooterProps) {
           <div className="flex items-center gap-6">
             <button onClick={() => handleLinkClick('About')} className="hover:text-gray-400 transition-colors">About</button>
             <button onClick={() => handleLinkClick('FAQs')} className="hover:text-gray-400 transition-colors">FAQs</button>
-            <button onClick={() => handleLinkClick('Admin')} className="hover:text-[#C59B4E] text-gray-500 transition-colors flex items-center gap-1">
-              <span>Admin Portal</span>
-            </button>
             <button onClick={scrollToTop} className="hover:text-gray-400 transition-colors">Terms of Services</button>
           </div>
         </div>

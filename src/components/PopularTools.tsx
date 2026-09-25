@@ -47,8 +47,8 @@ export default function PopularTools({ onPageChange }: PopularToolsProps) {
           </h2>
         </div>
 
-        {/* Tools Cards Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        {/* Tools Cards Layout - strictly 3 columns desktop side-by-side */}
+        <div className="grid grid-cols-3 gap-8 mb-12">
           {tools.map((tool, idx) => (
             <div 
               key={idx}

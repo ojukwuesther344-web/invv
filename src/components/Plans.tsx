@@ -73,7 +73,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
         {/* 4 Plans Flexbox Container */}
         <div 
           id="investment-plans-flexbox"
-          className="flex flex-col md:flex-row flex-wrap xl:flex-nowrap justify-center items-stretch gap-6 max-w-7xl mx-auto mb-20"
+          className="flex flex-row flex-nowrap justify-center items-stretch gap-6 max-w-7xl mx-auto mb-20"
         >
           {investmentPlans.map((plan, index) => {
             const isSelectedInCalc = calcPlan === plan.id;
@@ -81,7 +81,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
               <div 
                 key={plan.id}
                 id={`plan-card-${plan.id}`}
-                className={`flex-1 min-w-[260px] max-w-[340px] bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 text-center flex flex-col items-center relative overflow-hidden ${
+                className={`flex-1 min-w-[260px] max-w-[300px] bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 text-center flex flex-col items-center relative overflow-hidden ${
                   isSelectedInCalc ? 'border-[#C59B4E] ring-2 ring-[#C59B4E]/30 shadow-lg' : 'border-slate-200/90 shadow-sm'
                 }`}
               >
@@ -170,7 +170,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-3 gap-6 items-start">
             {/* Choose Plan */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Select Target Plan</label>
@@ -249,7 +249,7 @@ export default function Plans({ onPlanSelect, onPageChange, isLoggedIn }: PlansP
           </div>
 
           {/* Call to action within calculator */}
-          <div className="mt-6 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-6 pt-5 border-t border-slate-800 flex flex-row items-center justify-between gap-4">
             <div className="text-xs text-slate-400">
               Profits calculated on your selected contract terms ({calcDetails.ratePercentText}) and credited every 24 hours into your available balance.
             </div>

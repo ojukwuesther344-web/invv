@@ -282,7 +282,7 @@ export default function LiveStats() {
         <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_4px_28px_-4px_rgba(11,37,69,0.06)] p-6 md:p-9">
           
           {/* Header Row: Title & Live Ticker Counter */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7 pb-2">
+          <div className="flex flex-row items-center justify-between gap-4 mb-7 pb-2">
             <div>
               <h2 className="text-2xl md:text-[28px] font-bold text-[#0B2545] tracking-tight font-display">
                 Latest transactions

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Page, UserState } from '../types';
-import { UserPlus, ShieldAlert, KeyRound, Info, Check } from 'lucide-react';
+import { UserPlus, ShieldAlert, KeyRound, Info, Check, Loader2 } from 'lucide-react';
 import { 
   isFirebaseReady, 
   authRegister, 
@@ -52,6 +52,10 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Loading States
+  const [loadingRegister, setLoadingRegister] = useState(false);
+  const [loadingLogin, setLoadingLogin] = useState(false);
+
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -77,28 +81,34 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
       return;
     }
 
+    setLoadingRegister(true);
+    setSuccessMsg('Registering Account');
+
     const normUsername = normalizeIdentifier(username);
     const normEmail = normalizeIdentifier(email);
 
-    // Hard Permanent Deletion & Blacklist Check before attempting any operation
-    const isDeleted = await isUserPermanentlyDeleted({
-      username: normUsername,
-      email: normEmail
-    });
-
-    if (isDeleted) {
-      setErrorMsg('This account has been permanently disabled and cannot be recreated.');
-      return;
-    }
-
-    setSuccessMsg('Registering account with Firebase auth and database...');
     try {
+      // Hard Permanent Deletion & Blacklist Check before attempting any operation
+      const isDeleted = await isUserPermanentlyDeleted({
+        username: normUsername,
+        email: normEmail
+      });
+
+      if (isDeleted) {
+        setLoadingRegister(false);
+        setSuccessMsg('');
+        setErrorMsg('This account has been permanently disabled and cannot be recreated.');
+        return;
+      }
+
       let uid = `user_${normUsername}`;
 
       if (isFirebaseReady) {
         try {
           uid = await authRegister(normEmail, password);
         } catch (regErr: any) {
+          setLoadingRegister(false);
+          setSuccessMsg('');
           if (
             regErr?.message?.includes('permanently disabled') ||
             regErr?.message?.includes('cannot be recreated')
@@ -137,6 +147,8 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         onPageChange('Dashboard');
       }, 1000);
     } catch (err: any) {
+      setLoadingRegister(false);
+      setSuccessMsg('');
       console.error(err);
       if (
         err?.message?.includes('permanently disabled') ||
@@ -148,7 +160,7 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
       } else if (err?.code === 'auth/email-already-in-use' || err?.message?.includes('email-already-in-use')) {
         setErrorMsg('This email is already in use. Please sign in or use another email.');
       } else {
-        setErrorMsg(err?.message || 'Failed to register account via Firebase.');
+        setErrorMsg(err?.message || 'Failed to register account.');
       }
     }
   };
@@ -163,24 +175,13 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
       return;
     }
 
-    setSuccessMsg('Verifying credentials...');
+    setLoadingLogin(true);
+    setSuccessMsg('Logging in to account...');
     const rawInput = loginUsername.trim();
     const isInputEmail = rawInput.includes('@');
     const normInput = normalizeIdentifier(rawInput);
 
-    // 1. Initial check: Is the input username or email permanently deleted or disabled?
-    const isDirectDeleted = await isUserPermanentlyDeleted({
-      username: isInputEmail ? undefined : normInput,
-      email: isInputEmail ? normInput : undefined
-    });
-
-    if (isDirectDeleted) {
-      setSuccessMsg('');
-      setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-      return;
-    }
-
-    // 2. Email resolution for username inputs
+    // 1. Resolve email if username was provided
     let parsedEmail = rawInput;
     if (!isInputEmail) {
       const mappedEmail = localStorage.getItem(`user_email_map_${normInput}`);
@@ -190,38 +191,21 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         const foundEmail = await lookupEmailByUsername(normInput);
         if (foundEmail) {
           parsedEmail = foundEmail;
+          localStorage.setItem(`user_email_map_${normInput}`, foundEmail);
         } else {
-          // If username not found in database, check if it's in deletedUsers
-          const checkDel = await isUserPermanentlyDeleted({ username: normInput });
+          setLoadingLogin(false);
           setSuccessMsg('');
-          if (checkDel) {
-            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-          } else {
-            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-          }
+          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
           return;
         }
       } else {
-        setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-        return;
+        parsedEmail = `${normInput}@worldvest.local`;
       }
     }
 
     const normResolvedEmail = normalizeIdentifier(parsedEmail);
 
-    // 3. Re-verify the resolved email against permanent deletion records
-    const isResolvedEmailDeleted = await isUserPermanentlyDeleted({
-      username: isInputEmail ? undefined : normInput,
-      email: normResolvedEmail
-    });
-
-    if (isResolvedEmailDeleted) {
-      setSuccessMsg('');
-      setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-      return;
-    }
-
-    // 4. Authenticate strictly with Firebase Auth
+    // 2. Authenticate directly
     let uid = '';
     let profile: UserState | null = null;
 
@@ -230,48 +214,30 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         try {
           uid = await authLogin(normResolvedEmail, loginPassword);
         } catch (authErr: any) {
+          setLoadingLogin(false);
           setSuccessMsg('');
+          const errText = authErr?.message || '';
           if (
-            authErr?.message?.includes('permanently disabled') ||
-            authErr?.message?.includes("Account doesn't exist")
+            errText.includes('permanently disabled') ||
+            errText.includes("Account doesn't exist") ||
+            errText.includes('user-not-found')
           ) {
             setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-            return;
-          }
-          // On invalid credentials or user not found, check again if username/email was deleted
-          const checkDel = await isUserPermanentlyDeleted({
-            username: normInput,
-            email: normResolvedEmail
-          });
-          if (checkDel) {
-            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          } else if (errText.includes('wrong-password') || errText.includes('invalid-credential')) {
+            setErrorMsg("Invalid password. Please check your credentials and try again.");
           } else {
-            setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+            setErrorMsg(authErr?.message || "Invalid credentials. Please try again.");
           }
-          return;
-        }
-
-        // Verify authenticated UID against permanent deletion records
-        const isUidDeleted = await isUserPermanentlyDeleted({
-          uid,
-          username: normInput,
-          email: normResolvedEmail
-        });
-
-        if (isUidDeleted) {
-          await authLogout().catch(() => {});
-          setSuccessMsg('');
-          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
           return;
         }
 
         // Fetch live database profile from Firestore
         profile = await fetchUserProfile(uid);
 
-        // ABSOLUTE SECURITY RULE: Missing profile document MUST NEVER auto-create a user!
         if (!profile) {
           console.warn("[AUTH-REJECT] Missing user profile in Firestore for UID:", uid);
           await authLogout().catch(() => {});
+          setLoadingLogin(false);
           setSuccessMsg('');
           setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
           return;
@@ -280,25 +246,17 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         // Check account suspension
         if (profile.suspended) {
           await authLogout().catch(() => {});
+          setLoadingLogin(false);
           setSuccessMsg('');
-          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          setErrorMsg("This account has been suspended by an administrator.");
           return;
         }
       } else {
         // Fallback when Firebase is offline
         const localUid = `user_${normInput}`;
-        const isLocallyDeleted = await isUserPermanentlyDeleted({
-          uid: localUid,
-          username: normInput,
-          email: normResolvedEmail
-        });
-        if (isLocallyDeleted) {
-          setSuccessMsg('');
-          setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-          return;
-        }
         profile = await fetchUserProfile(localUid);
         if (!profile || profile.suspended) {
+          setLoadingLogin(false);
           setSuccessMsg('');
           setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
           return;
@@ -306,24 +264,16 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
         uid = localUid;
       }
 
-      setSuccessMsg('Authentication successful! Loading wallet dashboard...');
-      setTimeout(() => {
-        if (profile) {
-          onRegisterSuccess({ ...profile, uid, isLoggedIn: true });
-        }
-        onPageChange('Dashboard');
-      }, 300);
+      setSuccessMsg('Authentication successful! Loading dashboard...');
+      if (profile) {
+        onRegisterSuccess({ ...profile, uid, isLoggedIn: true });
+      }
+      onPageChange('Dashboard');
     } catch (err: any) {
       console.error("[LOGIN-ERROR]", err);
+      setLoadingLogin(false);
       setSuccessMsg('');
-      if (
-        err?.message?.includes('permanently disabled') ||
-        err?.message?.includes("Account doesn't exist")
-      ) {
-        setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-      } else {
-        setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
-      }
+      setErrorMsg(err?.message || "Unable to complete login. Please verify your connection.");
     }
   };
 
@@ -563,7 +513,7 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
                   <span className="text-[10px] font-bold text-[#C59B4E] uppercase tracking-widest pl-1">Referral / Upline Username (Optional)</span>
                   <input 
                     type="text" 
-                    placeholder="User who referred you (e.g. admin)" 
+                    placeholder="User who referred you (optional)" 
                     value={referredByInput}
                     onChange={(e) => setReferredByInput(e.target.value)}
                     className="input-field text-xs text-[#B3873B] font-bold" 
@@ -599,9 +549,21 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
               {/* CREATE ACCOUNT Button */}
               <button 
                 type="submit"
-                className="w-full mt-2 py-4 px-6 bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform duration-200 border border-[#0B2545]"
+                disabled={loadingRegister}
+                className={`w-full mt-2 py-4 px-6 font-black text-xs uppercase tracking-widest rounded-lg transition-all duration-200 border flex items-center justify-center gap-2.5 ${
+                  loadingRegister
+                    ? 'bg-slate-300 border-slate-300 text-slate-600 cursor-not-allowed opacity-90 shadow-none'
+                    : 'bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.99] text-white border-[#0B2545] shadow-md cursor-pointer'
+                }`}
               >
-                CREATE ACCOUNT &gt;
+                {loadingRegister ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin text-slate-600" />
+                    <span>Loading Request...</span>
+                  </>
+                ) : (
+                  <span>CREATE ACCOUNT &gt;</span>
+                )}
               </button>
 
               {/* Switch to Login login segment */}
@@ -706,9 +668,21 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
 
               <button 
                 type="submit"
-                className="w-full mt-3 py-3.5 px-6 bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform duration-200 border border-[#0B2545]"
+                disabled={loadingLogin}
+                className={`w-full mt-3 py-3.5 px-6 font-black text-xs uppercase tracking-widest rounded-lg transition-all duration-200 border flex items-center justify-center gap-2.5 ${
+                  loadingLogin
+                    ? 'bg-slate-300 border-slate-300 text-slate-600 cursor-not-allowed opacity-90 shadow-none'
+                    : 'bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.99] text-white border-[#0B2545] shadow-md cursor-pointer'
+                }`}
               >
-                SIGN IN &gt;
+                {loadingLogin ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin text-slate-600" />
+                    <span>Logging in to account...</span>
+                  </>
+                ) : (
+                  <span>SIGN IN &gt;</span>
+                )}
               </button>
 
               <div className="text-center mt-6 text-xs font-semibold text-slate-400 uppercase tracking-wider flex flex-col gap-2">
@@ -720,17 +694,6 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
                     className="text-[#C59B4E] font-black hover:underline cursor-pointer"
                   >
                     Create Account
-                  </button>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={() => onPageChange('Admin')}
-                    className="inline-flex items-center gap-1.5 text-slate-400 hover:text-purple-600 text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    <ShieldAlert size={13} className="text-purple-500" />
-                    <span>Administrator Portal Login</span>
                   </button>
                 </div>
               </div>

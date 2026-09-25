@@ -2,7 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta id="viewport-meta" name="viewport" content="width=1280" />
+    <script>
+      (function() {
+        function enforceDesktopCanvas() {
+          var w = window.screen.width || window.innerWidth || 1280;
+          var meta = document.getElementById('viewport-meta');
+          if (meta) {
+            if (w < 1280) {
+              var scale = Math.max(0.2, Math.min(1.0, w / 1280));
+              meta.setAttribute('content', 'width=1280, initial-scale=' + scale.toFixed(4) + ', minimum-scale=0.2, maximum-scale=3.0, user-scalable=yes');
+            } else {
+              meta.setAttribute('content', 'width=1280');
+            }
+          }
+        }
+        enforceDesktopCanvas();
+        window.addEventListener('resize', enforceDesktopCanvas);
+        window.addEventListener('orientationchange', enforceDesktopCanvas);
+      })();
+    </script>
     <title>WorldvestCapital | Home - crypto investment & Exchange platform</title>
     <meta name="description" content="WorldvestCapital investment and currency exchange platform with high fidelity UI, interactive dashboard, multiple page views (Home, About Us, FAQs, Registration, Deposit Plans), live currency rates, and dynamic animations." />
     <meta property="og:title" content="WorldvestCapital | Home - crypto investment & Exchange platform" />

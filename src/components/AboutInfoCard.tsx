@@ -46,7 +46,7 @@ export function BenefitsGrid() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-3 gap-8">
           {benefits.map((benefit, idx) => (
             <div 
               key={idx} 
@@ -205,7 +205,7 @@ export function ReviewsList() {
       <div className="max-w-7xl mx-auto">
         
         {/* Section Header with Navigation Controls */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
+        <div className="flex flex-row items-end justify-between gap-6 mb-14">
           <div>
             <span className="text-xs uppercase tracking-widest font-black text-[#C59B4E]">Testimonials</span>
             <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mt-2 font-display">
@@ -255,7 +255,7 @@ export function ReviewsList() {
             {pairs.map((pair, pageIdx) => (
               <div 
                 key={pageIdx} 
-                className="w-full shrink-0 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 px-1"
+                className="w-full shrink-0 grid grid-cols-2 gap-6 lg:gap-8 px-1"
               >
                 {pair.map((rev) => (
                   <div 

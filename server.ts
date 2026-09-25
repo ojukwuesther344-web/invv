@@ -339,18 +339,20 @@ async function startServer() {
   app.post('/api/admin/delete-user', handleDeleteUserRequest);
 
   // Mount Vite or serve static dist
-  if (!isProd) {
+  const distPath = path.resolve(__dirname, 'dist');
+  const indexHtmlPath = path.resolve(distPath, 'index.html');
+
+  if (isProd && fs.existsSync(indexHtmlPath)) {
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(indexHtmlPath);
+    });
+  } else {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.resolve(__dirname, 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
-    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {

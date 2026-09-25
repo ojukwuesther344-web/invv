@@ -591,9 +591,9 @@ export default function DashboardView({
     setPaymentError('');
   };
 
-  const handleConfirmPayment = async (simulateInstantApprove = false) => {
+  const handleConfirmPayment = async () => {
     if (!paymentSession) return;
-    if (!simulateInstantApprove && !paymentTxHash) {
+    if (!paymentTxHash) {
       setPaymentError('Required: Transaction hash (TxID/TxHash) is required for payment auditing.');
       return;
     }
@@ -602,11 +602,11 @@ export default function DashboardView({
     const timestamp = Date.now();
     const amountNum = paymentSession.amount;
     const proc = paymentSession.processor;
-    const status = simulateInstantApprove ? 'Approved' : 'Pending';
+    const status = 'Pending';
 
     try {
       if (paymentSession.type === 'Deposit') {
-        // Record Deposit & matching Investment
+        // Record Deposit & matching Investment as Pending for Admin Approval
         await addTransactionRecord(uid, {
           username: user.username,
           type: 'Deposit',
@@ -615,7 +615,9 @@ export default function DashboardView({
           timestamp: timestamp,
           status: status,
           processor: proc,
-          txHash: paymentTxHash || `SIMULATED_${proc.toUpperCase()}_PAYMENT_HASH`,
+          planId: paymentSession.planId,
+          planName: paymentSession.planName,
+          txHash: paymentTxHash,
           paymentProof: paymentProofFile || ''
         });
 
@@ -631,26 +633,11 @@ export default function DashboardView({
           planName: paymentSession.planName,
           term: paymentSession.term,
           roi: paymentSession.roi,
-          txHash: paymentTxHash || `SIMULATED_${proc.toUpperCase()}_PAYMENT_HASH`,
+          txHash: paymentTxHash,
           paymentProof: paymentProofFile || ''
         });
-
-        if (status === 'Approved') {
-          // Also record standard deposit tracking
-          await addDepositRecord(uid, {
-            username: user.username,
-            amount: amountNum,
-            date: new Date().toLocaleDateString(),
-            processor: proc,
-            planId: paymentSession.planId || 'p1',
-            planName: paymentSession.planName || 'Plan',
-            timestamp: timestamp,
-            roi: paymentSession.roi || 0,
-            term: paymentSession.term || 0
-          });
-        }
       } else {
-        // Direct Account Balance funding
+        // Direct Account Balance funding as Pending for Admin Approval
         await addTransactionRecord(uid, {
           username: user.username,
           type: 'Deposit',
@@ -659,7 +646,7 @@ export default function DashboardView({
           timestamp: timestamp,
           status: status,
           processor: proc,
-          txHash: paymentTxHash || `SIMULATED_${proc.toUpperCase()}_PAYMENT_HASH`,
+          txHash: paymentTxHash,
           paymentProof: paymentProofFile || ''
         });
       }
@@ -1181,29 +1168,11 @@ export default function DashboardView({
                     <div className="space-y-2 pt-1">
                       <button
                         type="button"
-                        onClick={() => handleConfirmPayment(false)}
+                        onClick={handleConfirmPayment}
                         className="w-full py-3 bg-[#C59B4E] hover:bg-[#A98035] text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-98"
                       >
                         <ShieldCheck size={13} className="stroke-[2.5]" /> Confirm Transfer Detail
                       </button>
-
-                      <div className="relative flex py-1 items-center">
-                        <div className="flex-grow border-t border-slate-800"></div>
-                        <span className="flex-shrink mx-2 text-[8px] font-black text-slate-505 uppercase tracking-widest font-mono">Local Sandbox</span>
-                        <div className="flex-grow border-t border-slate-800"></div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleConfirmPayment(true)}
-                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[9px] uppercase tracking-wider rounded-xl transition-all active:scale-98 flex items-center justify-center gap-1 cursor-pointer border border-indigo-400/20"
-                      >
-                        Bypass & Self-Approve (Simulation Mode)
-                      </button>
-
-                      <p className="text-[8px] text-slate-500 text-center leading-normal">
-                        <strong>💡 Sandbox Notice:</strong> Standard confirmations render as <strong>'Pending'</strong> auditing. Please use the automated self-approve shortcut above to complete simulated payments!
-                      </p>
 
                       <button
                         type="button"
@@ -1272,9 +1241,15 @@ export default function DashboardView({
                   </span>
                   <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
-                <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EARNED TOTAL</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">{formatCurrency(user.earnedTotal)} USD</span>
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-1">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">MAIN ACCOUNT BALANCE</span>
+                    <span className="font-bold text-slate-800">{formatCurrency(user.mainAccountBalance !== undefined ? user.mainAccountBalance : user.accountBalance)} USD</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EARNED TOTAL</span>
+                    <span className="font-bold text-slate-800">{formatCurrency(user.earnedTotal)} USD</span>
+                  </div>
                 </div>
               </div>
 
