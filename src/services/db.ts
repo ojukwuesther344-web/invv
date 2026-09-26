@@ -515,14 +515,22 @@ export async function getAllTransactions(): Promise<Transaction[]> {
 export async function getAllUsers(): Promise<UserState[]> {
   try {
     const cached = localStorage.getItem('all_users_cache');
-    if (cached) return JSON.parse(cached);
+    if (cached) {
+      const parsed: UserState[] = JSON.parse(cached);
+      return parsed.filter(u => (u.username || '').toLowerCase().trim() !== 'blessingubah38' && u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2');
+    }
     const users: UserState[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('user_profile_')) {
         const val = localStorage.getItem(key);
         if (val) {
-          try { users.push(JSON.parse(val)); } catch {}
+          try { 
+            const u = JSON.parse(val);
+            if ((u.username || '').toLowerCase().trim() !== 'blessingubah38' && u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2') {
+              users.push(u);
+            }
+          } catch {}
         }
       }
     }

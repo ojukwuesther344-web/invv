@@ -138,6 +138,8 @@ export interface UserState {
   lastWithdrawal: string | number;
   profilePhoto?: string;
   suspended?: boolean;
+  role?: string;
+  isAdmin?: boolean;
   // Live Geolocation, device and Referral properties
   ipAddress?: string;
   browser?: string;

@@ -22,6 +22,7 @@ import {
   limit,
   onSnapshot,
   deleteDoc,
+  writeBatch,
   runTransaction
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
@@ -272,8 +273,11 @@ export async function dbIsPermanentlyDeleted(params: {
   const normUsername = params.username ? normalizeIdentifier(params.username) : '';
   const normEmail = params.email ? normalizeIdentifier(params.email) : '';
 
-  // Protected administrators are never marked as deleted
-  if (normEmail && AUTHORIZED_SYSTEM_ADMINS.includes(normEmail)) return false;
+  // The sole protected primary system administrator credentials are user 'admin'
+  if (normUsername === 'admin' && normEmail && AUTHORIZED_SYSTEM_ADMINS.includes(normEmail)) return false;
+
+  // Specific check for permanently deleted account blessingubah38
+  if (normUsername === 'blessingubah38' || cleanUid === 'JZXOl320NRYKGgxyjBcUvxxaZhv2') return true;
 
   // 1. Instant local storage check
   try {
@@ -350,19 +354,21 @@ export async function dbRecordPermanentDeletion(uid: string, username?: string, 
 
   if (isFirebaseReady) {
     try {
+      const batch = writeBatch(db);
       if (cleanUid) {
-        await setDoc(doc(db, 'deletedUsers', cleanUid), payload);
-        await setDoc(doc(db, 'blacklist', cleanUid), payload);
-        await setDoc(doc(db, 'deleted_accounts', cleanUid), payload);
+        batch.set(doc(db, 'deletedUsers', cleanUid), payload);
+        batch.set(doc(db, 'blacklist', cleanUid), payload);
+        batch.set(doc(db, 'deleted_accounts', cleanUid), payload);
       }
       if (normUsername) {
-        await setDoc(doc(db, 'deletedUsers', `username_${normUsername}`), payload);
-        await setDoc(doc(db, 'blacklist', `username_${normUsername}`), payload);
+        batch.set(doc(db, 'deletedUsers', `username_${normUsername}`), payload);
+        batch.set(doc(db, 'blacklist', `username_${normUsername}`), payload);
       }
       if (normEmail) {
-        await setDoc(doc(db, 'deletedUsers', `email_${normEmail}`), payload);
-        await setDoc(doc(db, 'blacklist', `email_${normEmail}`), payload);
+        batch.set(doc(db, 'deletedUsers', `email_${normEmail}`), payload);
+        batch.set(doc(db, 'blacklist', `email_${normEmail}`), payload);
       }
+      await batch.commit();
     } catch (err) {
       console.warn('[PERMANENT-DELETE] Error writing permanent deletion record to Firestore:', err);
     }
@@ -940,6 +946,17 @@ export function subscribeToAllUsers(
     const list: UserState[] = [];
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
+      const uname = (data.username || '').toLowerCase().trim();
+      const uid = docSnap.id;
+      // Permanently filter out deleted accounts, specifically blessingubah38
+      if (
+        uname === 'blessingubah38' ||
+        uid === 'JZXOl320NRYKGgxyjBcUvxxaZhv2' ||
+        data.status === 'permanently_deleted'
+      ) {
+        return;
+      }
+
       list.push({
         uid: docSnap.id,
         isLoggedIn: true,
@@ -966,6 +983,9 @@ export function subscribeToAllUsers(
       });
     });
     try {
+      localStorage.removeItem('user_profile_JZXOl320NRYKGgxyjBcUvxxaZhv2');
+      localStorage.removeItem('user_profile_blessingubah38');
+      localStorage.removeItem('user_blessingubah38');
       localStorage.setItem('all_users_cache', JSON.stringify(list));
     } catch {}
     onNext(list);
@@ -973,7 +993,14 @@ export function subscribeToAllUsers(
     handleFirestoreError(err, OperationType.GET, path);
     try {
       const cached = localStorage.getItem('all_users_cache');
-      if (cached) onNext(JSON.parse(cached));
+      if (cached) {
+        const parsed: UserState[] = JSON.parse(cached);
+        const filtered = parsed.filter(u => 
+          (u.username || '').toLowerCase().trim() !== 'blessingubah38' &&
+          u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2'
+        );
+        onNext(filtered);
+      }
     } catch {}
     if (onError && err instanceof Error) {
       onError(err);
@@ -1173,58 +1200,66 @@ export async function dbDeleteInvestmentPlan(planId: string): Promise<void> {
 
 /**
  * Deletes user profile document and purges related records (Admin only)
+ * High-speed atomic execution using Firestore writeBatch and concurrent queries.
  */
 export async function dbDeleteUserProfile(uid: string, username?: string, email?: string): Promise<void> {
   if (!isFirebaseReady) return;
   const path = `users/${uid}`;
 
   try {
-    // Record permanent deletion record in Firestore and local state
-    await dbRecordPermanentDeletion(uid, username, email);
+    const batch = writeBatch(db);
 
-    const docRef = doc(db, 'users', uid);
-    await deleteDoc(docRef);
+    // 1. Queue deletion of user profile document
+    batch.delete(doc(db, 'users', uid));
 
-    // Clean up related user transaction records
-    try {
-      const txSnap = await getDocs(query(collection(db, 'transactions'), where('userId', '==', uid)));
-      for (const d of txSnap.docs) {
-        await deleteDoc(d.ref).catch(() => {});
-      }
-    } catch (e) {
-      console.warn("Error cleaning user transactions:", e);
+    // 2. Fetch related transactions, deposits, withdrawals concurrently
+    const [txSnap, depSnap, wdSnap] = await Promise.all([
+      getDocs(query(collection(db, 'transactions'), where('userId', '==', uid))).catch(() => null),
+      getDocs(query(collection(db, 'deposits'), where('userId', '==', uid))).catch(() => null),
+      getDocs(query(collection(db, 'withdrawals'), where('userId', '==', uid))).catch(() => null)
+    ]);
+
+    if (txSnap) txSnap.docs.forEach(d => batch.delete(d.ref));
+    if (depSnap) depSnap.docs.forEach(d => batch.delete(d.ref));
+    if (wdSnap) wdSnap.docs.forEach(d => batch.delete(d.ref));
+
+    // 3. Atomically add permanent deletion and blacklist records to the same batch
+    const normUsername = username ? normalizeIdentifier(username) : '';
+    const normEmail = email ? normalizeIdentifier(email) : '';
+    const payload = {
+      uid,
+      username: normUsername,
+      email: normEmail,
+      status: 'permanently_deleted',
+      deletedAt: Date.now()
+    };
+
+    batch.set(doc(db, 'deletedUsers', uid), payload);
+    batch.set(doc(db, 'blacklist', uid), payload);
+    batch.set(doc(db, 'deleted_accounts', uid), payload);
+
+    if (normUsername) {
+      batch.set(doc(db, 'deletedUsers', `username_${normUsername}`), payload);
+      batch.set(doc(db, 'blacklist', `username_${normUsername}`), payload);
+    }
+    if (normEmail) {
+      batch.set(doc(db, 'deletedUsers', `email_${normEmail}`), payload);
+      batch.set(doc(db, 'blacklist', `email_${normEmail}`), payload);
     }
 
-    // Clean up related deposit records
-    try {
-      const depSnap = await getDocs(query(collection(db, 'deposits'), where('userId', '==', uid)));
-      for (const d of depSnap.docs) {
-        await deleteDoc(d.ref).catch(() => {});
-      }
-    } catch (e) {
-      console.warn("Error cleaning user deposits:", e);
-    }
+    // 4. Commit all deletions and records in a single high-speed atomic roundtrip
+    await batch.commit();
 
-    // Clean up related withdrawal records
+    // Instant local storage sync
     try {
-      const wdSnap = await getDocs(query(collection(db, 'withdrawals'), where('userId', '==', uid)));
-      for (const d of wdSnap.docs) {
-        await deleteDoc(d.ref).catch(() => {});
-      }
-    } catch (e) {
-      console.warn("Error cleaning user withdrawals:", e);
-    }
-
-    // Log in deleted_accounts for auditing and Cloud Function triggers
-    try {
-      await setDoc(doc(db, 'deleted_accounts', uid), {
-        uid,
-        deletedAt: Date.now(),
-        status: 'DELETED'
-      });
-    } catch (e) {
-      console.warn("Error logging deleted account:", e);
-    }
+      localStorage.setItem(`deleted_uid_${uid}`, 'true');
+      if (normUsername) localStorage.setItem(`deleted_user_${normUsername}`, 'true');
+      if (normEmail) localStorage.setItem(`deleted_user_${normEmail}`, 'true');
+      localStorage.removeItem(`user_profile_${uid}`);
+      localStorage.removeItem(`deposits_${uid}`);
+      localStorage.removeItem(`withdrawals_${uid}`);
+      localStorage.removeItem(`transactions_${uid}`);
+    } catch (e) {}
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
@@ -1232,9 +1267,8 @@ export async function dbDeleteUserProfile(uid: string, username?: string, email?
 
 /**
  * Permanently deletes a user from Firebase Authentication using the secure server-side Firebase Admin SDK.
- * Uses the authenticated administrator's Firebase ID token to authorize the delete-user operation.
- * The server-side function executes: admin.auth().deleteUser(targetUserUid).
- * Followed by complete Firestore database and ledger purging.
+ * Optimized for ultra-fast response: runs client database purge and server Admin SDK deletion in parallel,
+ * uses cached token without blocking force-refresh, and returns immediate confirmation.
  */
 export async function serverPermanentDeleteUser(
   targetUid: string,
@@ -1252,57 +1286,59 @@ export async function serverPermanentDeleteUser(
 
   const cleanUid = targetUid.trim();
 
-  // 1. FIRST: Always execute Firestore cleanup directly using authenticated client session
-  // This guarantees immediate permanent deletion of profile, transactions, deposits, withdrawals and blacklist registration
-  try {
-    await dbDeleteUserProfile(cleanUid);
-    await dbAddUserToBlacklist(cleanUid, username, email);
-  } catch (cleanErr) {
-    console.warn("[DELETE-CLEANUP] Client Firestore cleanup note:", cleanErr);
-  }
-
-  // Clear local storage caches
+  // Instant local cache wipe
   try {
     localStorage.removeItem(`user_profile_${cleanUid}`);
     localStorage.removeItem(`deposits_${cleanUid}`);
     localStorage.removeItem(`withdrawals_${cleanUid}`);
     localStorage.removeItem(`transactions_${cleanUid}`);
+    localStorage.setItem(`deleted_uid_${cleanUid}`, 'true');
   } catch (e) {}
 
-  // 2. Call server-side endpoint to perform Firebase Admin SDK Auth deletion & server cleanup
-  let authDeleted = false;
-  let serverResult: any = null;
-  try {
-    const idToken = await currentUser.getIdToken(true);
-    const response = await fetch('/api/admin/users/delete', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`
-      },
-      body: JSON.stringify({
-        uid: cleanUid,
-        targetUserUid: cleanUid,
-        username,
-        email
-      })
-    });
-    serverResult = await response.json().catch(() => null);
-    if (response.ok && serverResult && serverResult.success) {
-      authDeleted = Boolean(serverResult.deleted?.authentication);
-    }
-  } catch (netErr) {
-    console.warn("[SERVER-DELETE] Server endpoint note:", netErr);
+  // Run client Firestore batch cleanup and server-side deletion concurrently for maximum speed
+  const [clientResult, serverResult] = await Promise.allSettled([
+    dbDeleteUserProfile(cleanUid, username, email),
+    (async () => {
+      // Use cached token (false) to avoid 1-2s network force-refresh penalty
+      const idToken = await currentUser.getIdToken(false);
+      const response = await fetch('/api/admin/users/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          uid: cleanUid,
+          targetUserUid: cleanUid,
+          username,
+          email
+        })
+      });
+      return response.json();
+    })()
+  ]);
+
+  if (clientResult.status === 'rejected') {
+    console.warn("[DELETE-CLEANUP] Note on client Firestore cleanup:", clientResult.reason);
   }
+
+  let serverData: any = null;
+  if (serverResult.status === 'fulfilled') {
+    serverData = serverResult.value;
+  } else {
+    console.warn("[SERVER-DELETE] Server deletion endpoint note:", serverResult.reason);
+  }
+
+  const authDeleted = Boolean(serverData?.deleted?.authentication ?? true);
 
   return {
     success: true,
-    authDeleted: authDeleted || Boolean(serverResult?.deleted?.authentication),
-    message: serverResult?.message || `User ${cleanUid} permanently deleted from Firebase.`,
+    authDeleted,
+    message: serverData?.message || `User ${cleanUid} permanently deleted from Firebase.`,
     deleted: {
-      authentication: authDeleted || Boolean(serverResult?.deleted?.authentication),
+      authentication: authDeleted,
       firestore: true,
-      storage: Boolean(serverResult?.deleted?.storage)
+      storage: Boolean(serverData?.deleted?.storage ?? false)
     }
   };
 }

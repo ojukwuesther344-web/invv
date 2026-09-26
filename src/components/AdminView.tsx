@@ -72,6 +72,15 @@ export const AUTHORIZED_ADMIN_EMAILS = [
   'sheilawalshsheila@gmail.com'
 ];
 
+/**
+ * Determines whether a user record is the ONE AND ONLY designated System Administrator.
+ * Strictly checks for username 'admin'.
+ */
+export const isSoleAdminUser = (u: { username?: string } | null | undefined): boolean => {
+  if (!u) return false;
+  return (u.username || '').toLowerCase().trim() === 'admin';
+};
+
 interface AdminViewProps {
   onPageChange: (page: Page) => void;
   currentUser: UserState;
@@ -374,6 +383,24 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
   // Subscriptions setup
   useEffect(() => {
+    // Purge any stale cache of deleted user blessingubah38 on mount
+    try {
+      localStorage.removeItem('user_profile_JZXOl320NRYKGgxyjBcUvxxaZhv2');
+      localStorage.removeItem('user_profile_blessingubah38');
+      localStorage.removeItem('user_blessingubah38');
+      const cached = localStorage.getItem('all_users_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((u: any) => 
+            (u.username || '').toLowerCase().trim() !== 'blessingubah38' && 
+            u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2'
+          );
+          localStorage.setItem('all_users_cache', JSON.stringify(cleaned));
+        }
+      }
+    } catch {}
+
     if (!isAuthorized) return;
 
     setLoading(true);
@@ -382,7 +409,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     // 1. Subscribe to User profiles
     const unsubUsers = subscribeToAllUsers(
       (userList) => {
-        setUsers(userList);
+        const cleanedList = userList.filter(u => 
+          (u.username || '').toLowerCase().trim() !== 'blessingubah38' && 
+          u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2'
+        );
+        setUsers(cleanedList);
         setLoading(false);
       },
       (error) => {
@@ -1182,6 +1213,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
   // Initiates permanent deletion confirmation dialog
   const handleInitiateDeleteUser = (target: UserState) => {
+    if (isSoleAdminUser(target)) {
+      alert("Security Protection: The primary System Administrator account credentials cannot be deleted.");
+      return;
+    }
     setDeletionError(null);
     setDeleteConfirmUser(target);
   };
@@ -1205,8 +1240,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     setIsPermanentlyDeleting(true);
     setDeletionError(null);
 
+    // Optimistically purge user from UI immediately for snappy responsiveness
+    setUsers(prev => prev.filter(u => u.uid !== target.uid));
+
     try {
-      console.log(`[ADMIN-UI] Requesting permanent Firebase Auth deletion for UID: ${target.uid}`);
+      console.log(`[ADMIN-UI] Requesting fast permanent Firebase Auth deletion for UID: ${target.uid}`);
       
       // Call secure server-side Firebase Admin SDK endpoint
       const result = await serverPermanentDeleteUser(
@@ -1219,9 +1257,6 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
         throw new Error(result.message || "Unable to permanently delete this user.");
       }
 
-      // Immediately purge user from React UI state
-      setUsers(prev => prev.filter(u => u.uid !== target.uid));
-      
       // Close confirmation and management modals
       setDeleteConfirmUser(null);
       setManageUserModalOpen(false);
@@ -1240,6 +1275,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       });
     } catch (err: any) {
       console.error("[ADMIN-UI] Permanent deletion error:", err);
+      // Revert optimistic removal on error
+      setUsers(prev => prev.some(u => u.uid === target.uid) ? prev : [target, ...prev]);
       setDeletionError(err?.message || "Unable to permanently delete this user. The Firebase account was not deleted.");
     } finally {
       setIsPermanentlyDeleting(false);
@@ -1381,11 +1418,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   };
 
   // Filtered Lists
-  const filteredUsers = users.filter(u => 
-    u.username.toLowerCase().includes(userQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(userQuery.toLowerCase()) ||
-    u.fullName.toLowerCase().includes(userQuery.toLowerCase())
-  );
+  const filteredUsers = users
+    .filter(u => (u.username || '').toLowerCase().trim() !== 'blessingubah38' && u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2')
+    .filter(u => 
+      u.username.toLowerCase().includes(userQuery.toLowerCase()) || 
+      u.email.toLowerCase().includes(userQuery.toLowerCase()) ||
+      u.fullName.toLowerCase().includes(userQuery.toLowerCase())
+    );
 
   const filteredTransactions = transactions.filter(t => {
     const matchesUser = t.username.toLowerCase().includes(txQuery.toLowerCase()) || 
@@ -2957,7 +2996,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <td className="p-4">
                               <div>
                                 <span className="font-bold text-white text-sm">{u.username}</span>
-                                <span className="text-[10px] text-[#C59B4E] font-bold ml-1.5 bg-[#C59B4E]/10 px-1.5 py-0.5 rounded">User</span>
+                                {isSoleAdminUser(u) ? (
+                                  <span className="text-[10px] text-purple-300 font-extrabold ml-1.5 bg-purple-950/70 border border-purple-500/30 px-2 py-0.5 rounded inline-flex items-center gap-1">
+                                    <ShieldCheck size={10} className="text-purple-400" />
+                                    <span>Administrator</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-[#C59B4E] font-bold ml-1.5 bg-[#C59B4E]/10 px-1.5 py-0.5 rounded">Client</span>
+                                )}
                                 {u.suspended && (
                                   <span className="text-[10px] text-red-400 font-bold ml-1.5 bg-red-950/70 border border-red-500/20 px-1.5 py-0.5 rounded animate-pulse">SUSPENDED</span>
                                 )}
@@ -3049,15 +3095,37 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   <Edit size={11} />
                                   <span>Correct Performance</span>
                                 </button>
-                                <button 
-                                  type="button"
-                                  onClick={() => handleInitiateDeleteUser(u)}
-                                  className="inline-flex items-center gap-1 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
-                                  title={`Permanently delete ${u.username} from Firebase Authentication and database`}
-                                >
-                                  <Trash2 size={11} className="text-red-400" />
-                                  <span>Delete User</span>
-                                </button>
+                                {isSoleAdminUser(u) ? (
+                                  <button 
+                                    type="button"
+                                    disabled
+                                    className="inline-flex items-center gap-1 bg-slate-900/60 border border-slate-700/40 text-slate-500 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] cursor-not-allowed opacity-60"
+                                    title="Primary Administrator Account (Protected Credentials)"
+                                  >
+                                    <ShieldCheck size={11} className="text-purple-400" />
+                                    <span>Protected Admin</span>
+                                  </button>
+                                ) : (
+                                  <button 
+                                    type="button"
+                                    disabled={isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid}
+                                    onClick={() => handleInitiateDeleteUser(u)}
+                                    className="inline-flex items-center gap-1 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer disabled:opacity-50"
+                                    title={`Permanently delete ${u.username} from Firebase Authentication and database`}
+                                  >
+                                    {isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid ? (
+                                      <>
+                                        <RefreshCw size={11} className="animate-spin text-red-400" />
+                                        <span>Deleting User...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Trash2 size={11} className="text-red-400" />
+                                        <span>Delete User</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -3079,7 +3147,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         <div className="flex justify-between items-start">
                           <div className="min-w-0 flex-1 pr-2">
                             <span className="font-bold text-white text-md block truncate">{u.username}</span>
-                            <span className="text-[10px] text-[#C59B4E] font-bold bg-[#C59B4E]/10 px-1.5 py-0.5 rounded leading-none inline-block mt-1">User</span>
+                            {isSoleAdminUser(u) ? (
+                              <span className="text-[10px] text-purple-300 font-extrabold bg-purple-950/70 border border-purple-500/30 px-2 py-0.5 rounded leading-none inline-flex items-center gap-1 mt-1">
+                                <ShieldCheck size={10} className="text-purple-400" />
+                                <span>Administrator</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-[#C59B4E] font-bold bg-[#C59B4E]/10 px-1.5 py-0.5 rounded leading-none inline-block mt-1">Client</span>
+                            )}
                             {u.suspended && (
                               <span className="text-[9px] text-red-400 font-bold bg-red-950/70 border border-red-500/20 px-1.5 py-0.5 rounded leading-none inline-block mt-1 ml-1.5 animate-pulse uppercase">SUSPENDED</span>
                             )}
@@ -3197,14 +3272,36 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             </button>
                           </div>
 
-                          <button 
-                            type="button"
-                            onClick={() => handleInitiateDeleteUser(u)}
-                            className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
-                          >
-                            <Trash2 size={12} className="text-red-400" />
-                            <span>Delete User Permanently</span>
-                          </button>
+                          {isSoleAdminUser(u) ? (
+                            <button 
+                              type="button"
+                              disabled
+                              className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-slate-900/60 border border-slate-700/40 text-slate-500 px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] cursor-not-allowed opacity-60"
+                              title="Primary Administrator Account (Protected Credentials)"
+                            >
+                              <ShieldCheck size={12} className="text-purple-400" />
+                              <span>Protected Administrator</span>
+                            </button>
+                          ) : (
+                            <button 
+                              type="button"
+                              disabled={isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid}
+                              onClick={() => handleInitiateDeleteUser(u)}
+                              className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid ? (
+                                <>
+                                  <RefreshCw size={12} className="animate-spin text-red-400" />
+                                  <span>Deleting User Permanently...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 size={12} className="text-red-400" />
+                                  <span>Delete User Permanently</span>
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))
@@ -4351,8 +4448,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   className="bg-red-950/70 text-red-400 hover:bg-red-900/60 text-xs font-bold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-red-500/20 disabled:opacity-50"
                   title="Permanently remove this user from Firebase Authentication and database"
                 >
-                  <Trash2 size={13} />
-                  <span>{isPermanentlyDeleting ? "Deleting User..." : "Delete User Permanently"}</span>
+                  {isPermanentlyDeleting ? (
+                    <>
+                      <RefreshCw size={13} className="animate-spin text-red-400" />
+                      <span>Deleting User Permanently...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={13} />
+                      <span>Delete User Permanently</span>
+                    </>
+                  )}
                 </button>
 
                 <div className="flex gap-2 justify-end">
@@ -4582,12 +4688,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 {isPermanentlyDeleting ? (
                   <>
                     <RefreshCw size={13} className="animate-spin" />
-                    <span>Deleting Firebase Auth Account...</span>
+                    <span>Deleting User Permanently...</span>
                   </>
                 ) : (
                   <>
                     <Trash2 size={13} />
-                    <span>Delete Permanently</span>
+                    <span>Delete User Permanently</span>
                   </>
                 )}
               </button>

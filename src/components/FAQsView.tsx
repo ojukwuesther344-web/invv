@@ -175,7 +175,11 @@ export default function FAQsView({ onPageChange, faqManImage }: FAQsViewProps) {
             </div>
             <button
               id="faq-contact-support-btn"
-              onClick={() => onPageChange('Home')}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-support-chat'));
+                const liveBtn = document.getElementById('custom-live-support-btn');
+                if (liveBtn) liveBtn.click();
+              }}
               className="w-full py-2.5 px-4 bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.98] text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Sparkles size={14} className="text-[#C59B4E]" />

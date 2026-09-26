@@ -60,9 +60,25 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
 
           {/* Right Links & Languages */}
           <div className="flex items-center gap-4 text-gray-300">
-            <button className="hover:text-white transition-colors">Support</button>
+            <button 
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-support-chat'));
+                const liveBtn = document.getElementById('custom-live-support-btn');
+                if (liveBtn) liveBtn.click();
+              }} 
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              Support
+            </button>
             <span className="text-gray-700">|</span>
-            <button className="hover:text-white transition-colors">Help</button>
+            <button 
+              type="button"
+              onClick={() => onPageChange('FAQs')} 
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              Help
+            </button>
             <span className="text-gray-700">|</span>
             
             {/* Language dropdown */}

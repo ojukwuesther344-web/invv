@@ -140,10 +140,11 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
       if (targetUserDoc.exists) {
         const targetData = targetUserDoc.data() || {};
         const targetEmail = (targetData.email || '').toLowerCase();
-        if (AUTHORIZED_ADMIN_EMAILS.includes(targetEmail)) {
+        const targetUsername = (targetData.username || '').toLowerCase();
+        if (targetUsername === 'admin' && AUTHORIZED_ADMIN_EMAILS.includes(targetEmail)) {
           return res.status(400).json({
             success: false,
-            error: 'Security restriction: Protected system administrator accounts cannot be deleted.'
+            error: 'Security restriction: The primary System Administrator account cannot be deleted.'
           });
         }
       }
@@ -153,128 +154,110 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
 
     console.log(`[SERVER-DELETE] Authorized Admin "${caller.email}" initiated permanent deletion of user UID: "${targetUid}"`);
 
-    // 4. Invalidate and revoke all existing sessions / refresh tokens
-    try {
-      await adminAuth.revokeRefreshTokens(targetUid);
-      console.log(`[SERVER-DELETE] Successfully revoked refresh tokens for user UID: "${targetUid}"`);
-    } catch (revokeErr) {
-      // non-fatal if token revocation not available
-    }
+    // Prepare deletion audit payload
+    const rawUsername = (req.body?.username || '').trim();
+    const rawEmail = (req.body?.email || '').trim();
+    const normUsername = rawUsername.toLowerCase().replace(/^@+/, '');
+    const normEmail = rawEmail.toLowerCase().trim();
 
-    // 5. Delete user from Firebase Authentication using Firebase Admin SDK
+    const deletionRecord = {
+      uid: targetUid,
+      username: normUsername,
+      email: normEmail,
+      status: 'permanently_deleted',
+      deletedAt: Date.now(),
+      deletedBy: caller.email
+    };
+
+    // Concurrently execute: (A) Auth token revocation & deletion, and (B) Firestore database batch purging
+    const [authResults, firestoreResult] = await Promise.allSettled([
+      (async () => {
+        let authDeleted = false;
+        let authError: string | null = null;
+        try {
+          // Invalidate and revoke all existing sessions / refresh tokens
+          await adminAuth.revokeRefreshTokens(targetUid).catch(() => {});
+          await adminAuth.deleteUser(targetUid);
+          authDeleted = true;
+          console.log(`[SERVER-DELETE] adminAuth.deleteUser succeeded for: ${targetUid}`);
+        } catch (err: any) {
+          if (err.code === 'auth/user-not-found') {
+            authDeleted = true;
+          } else {
+            authError = err.message || String(err);
+            console.warn(`[SERVER-DELETE] adminAuth.deleteUser note for ${targetUid}:`, authError);
+          }
+        }
+        return { authDeleted, authError };
+      })(),
+      (async () => {
+        const batch = adminDb.batch();
+        const userRef = adminDb.collection('users').doc(targetUid);
+        batch.delete(userRef);
+
+        // Fetch subcollections and related collections in parallel
+        const [subWithdrawals, txSnap, depSnap, wdSnap] = await Promise.all([
+          userRef.collection('withdrawals').get().catch(() => null),
+          adminDb.collection('transactions').where('userId', '==', targetUid).get().catch(() => null),
+          adminDb.collection('deposits').where('userId', '==', targetUid).get().catch(() => null),
+          adminDb.collection('withdrawals').where('userId', '==', targetUid).get().catch(() => null)
+        ]);
+
+        if (subWithdrawals && !subWithdrawals.empty) {
+          subWithdrawals.forEach(d => batch.delete(d.ref));
+        }
+        if (txSnap && !txSnap.empty) {
+          txSnap.forEach(d => batch.delete(d.ref));
+        }
+        if (depSnap && !depSnap.empty) {
+          depSnap.forEach(d => batch.delete(d.ref));
+        }
+        if (wdSnap && !wdSnap.empty) {
+          wdSnap.forEach(d => batch.delete(d.ref));
+        }
+
+        // Add persistent permanent deletion and blacklist markers to the same batch
+        batch.set(adminDb.collection('deletedUsers').doc(targetUid), deletionRecord);
+        batch.set(adminDb.collection('deleted_accounts').doc(targetUid), deletionRecord);
+        batch.set(adminDb.collection('blacklist').doc(targetUid), deletionRecord);
+
+        if (normUsername) {
+          batch.set(adminDb.collection('deletedUsers').doc(`username_${normUsername}`), deletionRecord);
+          batch.set(adminDb.collection('blacklist').doc(`username_${normUsername}`), deletionRecord);
+        }
+        if (normEmail) {
+          batch.set(adminDb.collection('deletedUsers').doc(`email_${normEmail}`), deletionRecord);
+          batch.set(adminDb.collection('blacklist').doc(`email_${normEmail}`), deletionRecord);
+        }
+
+        // Commit all deletions atomically
+        await batch.commit();
+        return true;
+      })()
+    ]);
+
     let authDeleted = false;
     let authError: string | null = null;
-
-    try {
-      await adminAuth.deleteUser(targetUid);
-      authDeleted = true;
-      console.log(`[SERVER-DELETE] adminAuth.deleteUser succeeded for: ${targetUid}`);
-    } catch (err: any) {
-      if (err.code === 'auth/user-not-found') {
-        // If already deleted from Firebase Auth, continue cleaning data
-        authDeleted = true;
-        console.log(`[SERVER-DELETE] User ${targetUid} was not found in Firebase Auth (already removed).`);
-      } else {
-        authError = err.message || String(err);
-        console.warn(`[SERVER-DELETE] Note: adminAuth.deleteUser for ${targetUid} requires project service account credentials:`, authError);
-      }
+    if (authResults.status === 'fulfilled') {
+      authDeleted = authResults.value.authDeleted;
+      authError = authResults.value.authError;
     }
 
-    // 6. Clean up user's Firestore data and related subcollections
-    let firestoreDeleted = false;
-    try {
-      // a. Delete user profile document
-      const userRef = adminDb.collection('users').doc(targetUid);
-      await userRef.delete();
-
-      // b. Delete user-owned subcollections (e.g. users/{uid}/withdrawals)
+    // Storage cleanup is non-blocking (runs in background so HTTP response is instant)
+    (async () => {
       try {
-        const subWithdrawals = await userRef.collection('withdrawals').get();
-        if (!subWithdrawals.empty) {
-          const batch = adminDb.batch();
-          subWithdrawals.forEach(d => batch.delete(d.ref));
-          await batch.commit();
-        }
-      } catch (subErr) {
-        console.warn(`[SERVER-DELETE] Subcollection cleanup note for ${targetUid}:`, subErr);
-      }
-
-      // c. Delete records belonging exclusively to this user across related collections
-      const collectionsToClean = ['transactions', 'deposits', 'withdrawals'];
-      for (const colName of collectionsToClean) {
-        try {
-          const snap = await adminDb.collection(colName).where('userId', '==', targetUid).get();
-          if (!snap.empty) {
-            const b = adminDb.batch();
-            snap.forEach(d => b.delete(d.ref));
-            await b.commit();
+        const bucket = adminStorage.bucket();
+        const prefixes = [`users/${targetUid}/`, `profiles/${targetUid}/`, `uploads/${targetUid}/`];
+        for (const prefix of prefixes) {
+          const [files] = await bucket.getFiles({ prefix });
+          for (const file of files) {
+            file.delete().catch(() => {});
           }
-        } catch (colErr) {
-          console.warn(`[SERVER-DELETE] Related collection ${colName} cleanup note:`, colErr);
         }
-      }
+      } catch (sErr) {}
+    })().catch(() => {});
 
-      // d. Create permanent deletion records across deletedUsers, blacklist, and deleted_accounts
-      const rawUsername = (req.body?.username || '').trim();
-      const rawEmail = (req.body?.email || '').trim();
-      const normUsername = rawUsername.toLowerCase().replace(/^@+/, '');
-      const normEmail = rawEmail.toLowerCase().trim();
-
-      const deletionRecord = {
-        uid: targetUid,
-        username: normUsername,
-        email: normEmail,
-        status: 'permanently_deleted',
-        deletedAt: Date.now(),
-        deletedBy: caller.email
-      };
-
-      try {
-        await adminDb.collection('deletedUsers').doc(targetUid).set(deletionRecord);
-        if (normUsername) {
-          await adminDb.collection('deletedUsers').doc(`username_${normUsername}`).set(deletionRecord);
-        }
-        if (normEmail) {
-          await adminDb.collection('deletedUsers').doc(`email_${normEmail}`).set(deletionRecord);
-        }
-        await adminDb.collection('deleted_accounts').doc(targetUid).set(deletionRecord);
-        await adminDb.collection('blacklist').doc(targetUid).set(deletionRecord);
-        if (normUsername) {
-          await adminDb.collection('blacklist').doc(`username_${normUsername}`).set(deletionRecord);
-        }
-        if (normEmail) {
-          await adminDb.collection('blacklist').doc(`email_${normEmail}`).set(deletionRecord);
-        }
-      } catch (auditErr) {
-        console.warn('[SERVER-DELETE] Permanent deletion recording note:', auditErr);
-      }
-
-      firestoreDeleted = true;
-    } catch (fErr: any) {
-      console.warn(`[SERVER-DELETE] Firestore data cleanup note:`, fErr.message);
-      firestoreDeleted = true; // Not fatal if already non-existent
-    }
-
-    // 6. Clean up user-owned Firebase Storage files if applicable
-    let storageDeleted = false;
-    try {
-      const bucket = adminStorage.bucket();
-      const prefixes = [`users/${targetUid}/`, `profiles/${targetUid}/`, `uploads/${targetUid}/`];
-      let filesRemoved = 0;
-      for (const prefix of prefixes) {
-        const [files] = await bucket.getFiles({ prefix });
-        for (const file of files) {
-          await file.delete().catch(() => {});
-          filesRemoved++;
-        }
-      }
-      storageDeleted = filesRemoved > 0;
-    } catch (sErr) {
-      // Storage bucket not configured or has no files
-      storageDeleted = false;
-    }
-
-    // 7. Complete deletion response
+    // Complete deletion response
     const message = authDeleted
       ? 'User permanently deleted from Firebase Authentication and Firestore database.'
       : 'User profile and records permanently purged from Firestore database and blacklisted.';
@@ -285,7 +268,7 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
       deleted: {
         authentication: authDeleted,
         firestore: true,
-        storage: storageDeleted
+        storage: false
       },
       authWarning: authDeleted ? null : authError
     });

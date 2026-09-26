@@ -13,7 +13,7 @@ import AboutView from './components/AboutView';
 import FAQsView from './components/FAQsView';
 import RegisterView from './components/RegisterView';
 import AdminView from './components/AdminView';
-import LiveChatWidget from './components/LiveChatWidget';
+import SupportFloatingButton from './components/SupportFloatingButton';
 import { Page, UserState, Deposit, Withdrawal, Transaction } from './types';
 import { formatCurrency } from './utils/formatters';
 import { 
@@ -119,6 +119,20 @@ export default function App() {
       window.removeEventListener('popstate', handleLocationChange);
     };
   }, []);
+
+  // Sync Tawk.to widget visibility across pages (hide on Admin portal for clean administrative display)
+  useEffect(() => {
+    try {
+      const w = window as any;
+      if (w.Tawk_API && typeof w.Tawk_API.hideWidget === 'function') {
+        if (currentPage === 'Admin') {
+          w.Tawk_API.hideWidget();
+        } else {
+          w.Tawk_API.showWidget?.();
+        }
+      }
+    } catch {}
+  }, [currentPage]);
   const [dashboardSection, setDashboardSection] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
@@ -859,6 +873,7 @@ export default function App() {
           reloadTransactions={reloadTransactions}
           reloadDeposits={reloadDeposits}
         />
+        <SupportFloatingButton onPageChange={handlePageChange} />
       </div>
     );
   }
@@ -1359,8 +1374,8 @@ export default function App() {
       {/* Absolute bottom global Footer */}
       <Footer onPageChange={handlePageChange} />
 
-      {/* Floating 24/7 Live Support Chat Widget */}
-      <LiveChatWidget isAdmin={currentPage === 'Admin'} />
+      {/* Floating 24/7 LIVE SUPPORT button matching exact screenshot design */}
+      <SupportFloatingButton onPageChange={handlePageChange} />
 
     </div>
   );
