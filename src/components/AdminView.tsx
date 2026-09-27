@@ -31,10 +31,27 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  Headphones,
+  MessageSquare,
+  Send,
+  CheckCheck,
+  Bot,
+  MessageCircle
 } from 'lucide-react';
 import { UserState, Transaction, InvestmentPlan, Page } from '../types';
 import { formatCurrency } from '../utils/formatters';
+import { 
+  SupportChatSession, 
+  SupportAutoReplySettings, 
+  DEFAULT_SUPPORT_SETTINGS,
+  subscribeToAllChatSessions, 
+  subscribeToSupportSettings, 
+  saveSupportSettings, 
+  sendAdminChatMessage, 
+  deleteChatSession,
+  markSessionAsReadByAdmin
+} from '../services/supportService';
 
 export const FIREBASE_AUTH_CONSOLE_URL = 'https://console.firebase.google.com/project/gen-lang-client-0540857696/authentication/users';
 import { 
@@ -263,9 +280,21 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     'newsletter' |
     'plans' |
     'settings' |
+    'live_support' |
     'password_security'
   >('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Live Support Desk States
+  const [supportSessions, setSupportSessions] = useState<SupportChatSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [adminReplyInput, setAdminReplyInput] = useState('');
+  const [isSendingAdminReply, setIsSendingAdminReply] = useState(false);
+  const [supportSubTab, setSupportSubTab] = useState<'chats' | 'autoreply'>('chats');
+  const [autoReplySettings, setAutoReplySettings] = useState<SupportAutoReplySettings>(DEFAULT_SUPPORT_SETTINGS);
+  const [isSavingAutoReply, setIsSavingAutoReply] = useState(false);
+  const [autoReplySaveStatus, setAutoReplySaveStatus] = useState<string | null>(null);
+  const [supportSearchQuery, setSupportSearchQuery] = useState('');
   
   // Real-time Database state
   const [users, setUsers] = useState<UserState[]>([]);
@@ -441,11 +470,38 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       if (res) setSettings(res);
     }).catch(console.error);
 
+    // 5. Subscribe to Live Support Inquiries
+    const unsubSupportChats = subscribeToAllChatSessions((chatList) => {
+      setSupportSessions(chatList);
+      setSelectedSessionId((currentSelected) => {
+        if (currentSelected && chatList.some(s => s.id === currentSelected)) {
+          return currentSelected;
+        }
+        return chatList.length > 0 ? chatList[0].id : null;
+      });
+    });
+
+    // 6. Subscribe to Support Auto-Reply Settings
+    const unsubSupportSettings = subscribeToSupportSettings((s) => {
+      if (s) setAutoReplySettings(s);
+    });
+
     return () => {
       unsubUsers();
       unsubTransactions();
+      unsubSupportChats();
+      unsubSupportSettings();
     };
   }, [isAuthorized]);
+
+  // Mark session read when opened
+  useEffect(() => {
+    if (selectedSessionId && isAuthorized) {
+      markSessionAsReadByAdmin(selectedSessionId);
+    }
+  }, [selectedSessionId, isAuthorized]);
+
+  const unreadSupportCount = supportSessions.filter(s => s.unreadByAdmin).length;
 
   if (!isAuthorized) {
     return (
@@ -1417,6 +1473,50 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     }
   };
 
+  // Live Support Desk Handlers
+  const handleSendAdminReply = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedSessionId || !adminReplyInput.trim() || isSendingAdminReply) return;
+
+    try {
+      setIsSendingAdminReply(true);
+      await sendAdminChatMessage(selectedSessionId, adminReplyInput.trim());
+      setAdminReplyInput('');
+    } catch (err) {
+      console.error('Error sending admin reply:', err);
+    } finally {
+      setIsSendingAdminReply(false);
+    }
+  };
+
+  const handleSaveAutoReplySettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSavingAutoReply(true);
+      setAutoReplySaveStatus(null);
+      await saveSupportSettings(autoReplySettings);
+      setAutoReplySaveStatus('Auto-reply rules updated successfully! Changes are live across all visitor chats.');
+      setTimeout(() => setAutoReplySaveStatus(null), 4000);
+    } catch (err) {
+      console.error('Error saving support settings:', err);
+      setAutoReplySaveStatus('Failed to save settings. Please check connection and try again.');
+    } finally {
+      setIsSavingAutoReply(false);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!window.confirm('Are you sure you want to permanently delete this client chat thread?')) return;
+    try {
+      await deleteChatSession(sessionId);
+      if (selectedSessionId === sessionId) {
+        setSelectedSessionId(null);
+      }
+    } catch (err) {
+      console.error('Error deleting session:', err);
+    }
+  };
+
   // Filtered Lists
   const filteredUsers = users
     .filter(u => (u.username || '').toLowerCase().trim() !== 'blessingubah38' && u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2')
@@ -1676,6 +1776,26 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
           <button 
             onClick={() => {
+              setActiveTab('live_support');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer ${
+              activeTab === 'live_support' ? 'bg-[#9333ea] text-white shadow-md font-extrabold ring-1 ring-[#C59B4E]/60' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Headphones size={14} className="text-[#C59B4E]" />
+              <span>Live Support Desk</span>
+            </div>
+            {unreadSupportCount > 0 && (
+              <span className="bg-[#f59e0b] text-[#081627] text-[10px] font-extrabold px-1.5 py-0.5 rounded-full shadow-xs">
+                {unreadSupportCount}
+              </span>
+            )}
+          </button>
+
+          <button 
+            onClick={() => {
               setActiveTab('password_security');
               setMobileMenuOpen(false);
             }}
@@ -1730,6 +1850,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               {activeTab === 'newsletter' && "Send a Newsletter"}
               {activeTab === 'plans' && "Dynamic Investment Packages"}
               {activeTab === 'settings' && "Global Platform Configuration"}
+              {activeTab === 'live_support' && "Live Support Desk & Auto-Replies"}
               {activeTab === 'password_security' && "Password & Security"}
             </h1>
             <p className="text-xs text-slate-400 mt-1">
@@ -3834,6 +3955,438 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     </div>
                   </form>
                 </div>
+              </div>
+            )}
+
+            {/* 6. LIVE SUPPORT DESK & AUTO-REPLIES */}
+            {activeTab === 'live_support' && (
+              <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300">
+                {/* Top Metrics & Subtab Navigation */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#091527] border border-[#1a385e] rounded-2xl p-4 sm:p-5 shadow-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-[#C59B4E]/10 border border-[#C59B4E]/30 flex items-center justify-center text-[#C59B4E]">
+                      <Headphones size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-black text-white uppercase font-display tracking-wider flex items-center gap-2">
+                        <span>24/7 Live Support Command Center</span>
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Manage incoming visitor questions in real-time and customize automated bot responses.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Sub-tabs pills */}
+                  <div className="flex items-center gap-2 bg-[#06101c] p-1.5 rounded-xl border border-[#152e4f]">
+                    <button
+                      type="button"
+                      onClick={() => setSupportSubTab('chats')}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                        supportSubTab === 'chats'
+                          ? 'bg-[#C59B4E] text-[#081627] shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <MessageSquare size={14} />
+                      <span>Live Inquiries</span>
+                      {unreadSupportCount > 0 && (
+                        <span className="bg-[#f59e0b] text-[#081627] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
+                          {unreadSupportCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSupportSubTab('autoreply')}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                        supportSubTab === 'autoreply'
+                          ? 'bg-[#C59B4E] text-[#081627] shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Bot size={14} />
+                      <span>Auto-Reply Settings</span>
+                      <span className={`w-2 h-2 rounded-full ${autoReplySettings.enabled ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sub-tab 1: Live Inquiries & Client Chats */}
+                {supportSubTab === 'chats' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left: Chat Sessions List (5 cols) */}
+                    <div className="lg:col-span-4 bg-[#091527] border border-[#1a385e] rounded-2xl p-4 shadow-xl flex flex-col gap-3 min-h-[560px]">
+                      <div className="flex items-center justify-between pb-3 border-b border-[#142d4a]">
+                        <div className="flex items-center gap-2">
+                          <MessageCircle size={16} className="text-[#C59B4E]" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                            Client Inquiries ({supportSessions.length})
+                          </h3>
+                        </div>
+                        {unreadSupportCount > 0 && (
+                          <span className="text-[11px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                            {unreadSupportCount} Unread
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Search box */}
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500 pointer-events-none">
+                          <Search size={14} />
+                        </span>
+                        <input
+                          type="text"
+                          value={supportSearchQuery}
+                          onChange={(e) => setSupportSearchQuery(e.target.value)}
+                          placeholder="Search conversations..."
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                      </div>
+
+                      {/* Sessions List */}
+                      <div className="flex-1 overflow-y-auto space-y-2 max-h-[460px] pr-1">
+                        {supportSessions.length === 0 ? (
+                          <div className="text-center py-12 px-4 text-slate-500">
+                            <Headphones size={32} className="mx-auto mb-2 opacity-40 text-[#C59B4E]" />
+                            <p className="text-xs font-medium text-slate-400">No active inquiries</p>
+                            <p className="text-[11px] text-slate-600 mt-1">
+                              When visitors ask questions on the live chat, their conversations appear here in real-time.
+                            </p>
+                          </div>
+                        ) : (
+                          supportSessions
+                            .filter(s => {
+                              const q = supportSearchQuery.toLowerCase();
+                              return (
+                                (s.userEmail || '').toLowerCase().includes(q) ||
+                                (s.userName || '').toLowerCase().includes(q) ||
+                                (s.lastMessage || '').toLowerCase().includes(q)
+                              );
+                            })
+                            .map((s) => {
+                              const isSelected = s.id === selectedSessionId;
+                              return (
+                                <div
+                                  key={s.id}
+                                  onClick={() => setSelectedSessionId(s.id)}
+                                  className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 relative ${
+                                    isSelected
+                                      ? 'bg-[#12243d] border-[#C59B4E] shadow-md'
+                                      : 'bg-[#06101c]/60 border-[#152e4f] hover:bg-[#0c1c33] hover:border-[#204473]'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-white truncate max-w-[160px]">
+                                      {s.userName || s.userEmail || 'Guest Visitor'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      {s.messages && s.messages.length > 0 ? s.messages[s.messages.length - 1].timestamp : ''}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                                      {s.lastMessage || (s.messages?.[s.messages.length - 1]?.text) || 'New conversation'}
+                                    </p>
+                                    {s.unreadByAdmin && (
+                                      <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shadow-xs shrink-0" title="Unread message" />
+                                    )}
+                                  </div>
+
+                                  <span className="text-[10px] text-slate-500 font-mono truncate">
+                                    {s.userEmail}
+                                  </span>
+                                </div>
+                              );
+                            })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Active Chat View (8 cols) */}
+                    <div className="lg:col-span-8 bg-[#091527] border border-[#1a385e] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px]">
+                      {(() => {
+                        const activeSession = supportSessions.find(s => s.id === selectedSessionId) || null;
+                        if (!activeSession) {
+                          return (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
+                              <MessageSquare size={40} className="mb-3 text-[#C59B4E]/60 opacity-60" />
+                              <h3 className="text-sm font-bold text-slate-300">Select an Inquiry to Respond</h3>
+                              <p className="text-xs text-slate-500 max-w-sm mt-1">
+                                Choose a conversation from the left to view user questions and send real-time answers directly to their screen.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="flex-1 flex flex-col h-full min-h-0">
+                            {/* Thread Header */}
+                            <div className="flex items-center justify-between pb-3 border-b border-[#142d4a] shrink-0">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-[#112136] border border-[#C59B4E]/40 flex items-center justify-center text-[#C59B4E]">
+                                  <Headphones size={18} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-bold text-white uppercase">
+                                      {activeSession.userName || 'Client'}
+                                    </h4>
+                                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                      Connected
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-400 font-mono">
+                                    {activeSession.userEmail}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSession(activeSession.id)}
+                                className="text-slate-400 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
+                                title="Delete Conversation"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+
+                            {/* Chat Messages Stream */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[#06101c] rounded-xl my-3 border border-[#142d4e]">
+                              {activeSession.messages && activeSession.messages.length > 0 ? (
+                                activeSession.messages.map((m) => (
+                                  <div
+                                    key={m.id}
+                                    className={`flex flex-col ${m.sender === 'support' ? 'items-end' : 'items-start'}`}
+                                  >
+                                    <div className="text-[10px] font-bold text-slate-400 mb-1">
+                                      {m.sender === 'support' ? 'Support Specialist (You)' : (activeSession.userName || 'Client')}
+                                    </div>
+                                    {m.sender === 'support' ? (
+                                      <div className="bg-[#0e213b] text-slate-100 border border-[#1a3e6b] text-xs px-4 py-2.5 rounded-2xl rounded-tr-xs shadow-xs max-w-[80%] leading-relaxed break-words">
+                                        {m.text}
+                                      </div>
+                                    ) : (
+                                      <div className="bg-[#C59B4E] text-slate-900 font-medium text-xs px-4 py-2.5 rounded-2xl rounded-tl-xs shadow-xs max-w-[80%] leading-relaxed break-words">
+                                        {m.text}
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500 font-mono">
+                                      <span>{m.timestamp}</span>
+                                      {m.sender === 'support' && (
+                                        <CheckCheck size={13} className="text-[#C59B4E]" />
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-center py-8 text-xs text-slate-500">
+                                  No messages recorded in this session.
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Quick Response Templates Bar */}
+                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 shrink-0 mb-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
+                                Quick Fill:
+                              </span>
+                              {[
+                                { label: 'Greeting', text: 'Hello! How may I assist you with your WorldVest Capital account today?' },
+                                { label: 'Deposit Help', text: 'To fund your account, visit Dashboard > Deposit, choose your coin, and send to your unique deposit address.' },
+                                { label: 'Withdrawal Help', text: 'Withdrawals are processed automatically through our secure ledger. Please check your receiving wallet settings.' },
+                                { label: 'KYC Notice', text: 'Your verification details are currently being processed by compliance and will update shortly.' },
+                                { label: 'Thank You', text: 'Thank you for contacting 24/7 Live Support. We are always here if you have more questions!' }
+                              ].map((tmpl, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => setAdminReplyInput(tmpl.text)}
+                                  className="text-[10px] bg-[#10243d] hover:bg-[#19375e] text-slate-300 hover:text-white px-2.5 py-1 rounded-md border border-[#1b3a62] whitespace-nowrap transition-colors cursor-pointer"
+                                >
+                                  {tmpl.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Admin Reply Composer Form */}
+                            <form onSubmit={handleSendAdminReply} className="flex items-center gap-2 shrink-0">
+                              <input
+                                type="text"
+                                value={adminReplyInput}
+                                onChange={(e) => setAdminReplyInput(e.target.value)}
+                                placeholder={`Reply directly to ${activeSession.userName || 'client'}...`}
+                                className="flex-1 bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                              />
+                              <button
+                                type="submit"
+                                disabled={!adminReplyInput.trim() || isSendingAdminReply}
+                                className="bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                              >
+                                {isSendingAdminReply ? (
+                                  <Activity size={14} className="animate-spin" />
+                                ) : (
+                                  <Send size={14} />
+                                )}
+                                <span>Send Reply</span>
+                              </button>
+                            </form>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-tab 2: Auto-Reply & Bot Rules Configuration */}
+                {supportSubTab === 'autoreply' && (
+                  <div className="bg-[#091527] border border-[#1a385e] rounded-2xl p-6 sm:p-8 shadow-xl max-w-4xl">
+                    <div className="pb-4 border-b border-[#142d4a] mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-base font-black text-white uppercase font-display tracking-wider flex items-center gap-2">
+                          <Bot size={18} className="text-[#C59B4E]" />
+                          <span>Automated Response Rules</span>
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Edit the automated replies sent to visitors when they initiate chats or click quick support topics.
+                        </p>
+                      </div>
+
+                      {/* Master Toggle */}
+                      <label className="flex items-center gap-3 cursor-pointer bg-[#06101c] px-4 py-2.5 rounded-xl border border-[#163356]">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                          Auto-Reply Bot:
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={autoReplySettings.enabled}
+                          onChange={(e) => setAutoReplySettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                          className="w-4 h-4 accent-[#C59B4E] rounded cursor-pointer"
+                        />
+                        <span className={`text-xs font-bold ${autoReplySettings.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+                          {autoReplySettings.enabled ? 'ACTIVE' : 'DISABLED'}
+                        </span>
+                      </label>
+                    </div>
+
+                    {autoReplySaveStatus && (
+                      <div className="p-4 rounded-xl text-xs font-medium mb-6 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2">
+                        <CheckCircle size={16} className="text-emerald-400 shrink-0" />
+                        <span>{autoReplySaveStatus}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSaveAutoReplySettings} className="space-y-6">
+                      {/* Default Welcome / Reviewing Auto-Reply */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                          <span>1. Default Live Chat Greeting & Review Message</span>
+                          <span className="text-[10px] text-[#C59B4E] font-normal">Sent for any general user message</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={autoReplySettings.defaultReply}
+                          onChange={(e) => setAutoReplySettings(prev => ({ ...prev, defaultReply: e.target.value }))}
+                          placeholder="Thank you for reaching out! A support specialist is reviewing your inquiry and will guide you momentarily."
+                          required
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                        <span className="text-[11px] text-slate-500">
+                          Matches the exact wording shown in your visitor support popup.
+                        </span>
+                      </div>
+
+                      {/* Deposit Help Auto-Reply */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                          <span>2. "Deposit Help" Topic Response</span>
+                          <span className="text-[10px] text-[#C59B4E] font-normal">Triggered when user clicks "Deposit Help" chip</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={autoReplySettings.depositReply}
+                          onChange={(e) => setAutoReplySettings(prev => ({ ...prev, depositReply: e.target.value }))}
+                          required
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                      </div>
+
+                      {/* Withdrawal Info Auto-Reply */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                          <span>3. "Withdrawal Info" Topic Response</span>
+                          <span className="text-[10px] text-[#C59B4E] font-normal">Triggered when user clicks "Withdrawal Info" chip</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={autoReplySettings.withdrawalReply}
+                          onChange={(e) => setAutoReplySettings(prev => ({ ...prev, withdrawalReply: e.target.value }))}
+                          required
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                      </div>
+
+                      {/* Plans & Rates Auto-Reply */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                          <span>4. "Plans & Rates" Topic Response</span>
+                          <span className="text-[10px] text-[#C59B4E] font-normal">Triggered when user clicks "Plans & Rates" chip</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={autoReplySettings.plansReply}
+                          onChange={(e) => setAutoReplySettings(prev => ({ ...prev, plansReply: e.target.value }))}
+                          required
+                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                        />
+                      </div>
+
+                      {/* Typing Simulation Delay */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-[#06101c] border border-[#163356]">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                            Typing Indicator Delay (Seconds)
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Simulates authentic agent typing duration before auto-reply appears.
+                          </p>
+                        </div>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.5"
+                          max="10"
+                          value={autoReplySettings.typingDelaySeconds || 1.2}
+                          onChange={(e) => setAutoReplySettings(prev => ({ ...prev, typingDelaySeconds: parseFloat(e.target.value) || 1.2 }))}
+                          className="w-24 bg-[#091527] border border-[#1a385e] rounded-lg py-2 px-3 text-xs text-white font-mono text-center outline-none"
+                        />
+                      </div>
+
+                      <div className="pt-4 border-t border-[#142d4a] flex items-center justify-end">
+                        <button
+                          type="submit"
+                          disabled={isSavingAutoReply}
+                          className="bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 text-slate-900 font-bold py-3 px-8 rounded-xl text-xs uppercase tracking-wider shadow-lg flex items-center gap-2 transition-all cursor-pointer"
+                        >
+                          {isSavingAutoReply ? (
+                            <>
+                              <Activity size={14} className="animate-spin" />
+                              <span>Saving Settings...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle size={14} />
+                              <span>Save Auto-Reply Rules</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
               </div>
             )}
 

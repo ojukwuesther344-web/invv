@@ -873,7 +873,7 @@ export default function App() {
           reloadTransactions={reloadTransactions}
           reloadDeposits={reloadDeposits}
         />
-        <SupportFloatingButton onPageChange={handlePageChange} />
+        <SupportFloatingButton onPageChange={handlePageChange} currentUser={liveUser} />
       </div>
     );
   }
@@ -1255,7 +1255,7 @@ export default function App() {
                   </h2>
 
                   <p className="text-slate-500 font-normal text-sm md:text-base leading-relaxed max-w-xl">
-                    In our dolore with people who are important to you, conversations that bring you closer to each other and those who enjoy our dishes. Quisque pretium dolor turpis, quis blandit turpis semper ut. Nam malesuada eros nec luctus laoreet. Fusce sodales consequat velit eget dictum. Integer ornare magna.
+                    Manage your portfolio on the go with real-time asset monitoring, instant deposit settlements, and automated daily yield compounding. Access institutional-grade security protocols, track your earnings 24/7, and withdraw your capital effortlessly from anywhere in the world.
                   </p>
 
                   <div className="text-slate-400 font-bold uppercase tracking-wider text-sm md:text-base mt-3">
@@ -1375,7 +1375,7 @@ export default function App() {
       <Footer onPageChange={handlePageChange} />
 
       {/* Floating 24/7 LIVE SUPPORT button matching exact screenshot design */}
-      <SupportFloatingButton onPageChange={handlePageChange} />
+      <SupportFloatingButton onPageChange={handlePageChange} currentUser={user} />
 
     </div>
   );

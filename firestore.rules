@@ -40,5 +40,14 @@ service cloud.firestore {
     match /settings/{settingsId} {
       allow read, write: if true;
     }
+
+    // Support Chats & Auto-Replies
+    match /support_chats/{chatId} {
+      allow read, write: if true;
+    }
+
+    match /support_settings/{settingId} {
+      allow read, write: if true;
+    }
   }
 }

@@ -20,19 +20,18 @@ export const auth = getAuth(app);
 // Target database ID
 const databaseId = firebaseConfig.firestoreDatabaseId || '(default)';
 
-// Initialize Firestore with fast and resilient memoryLocalCache
-// This prevents "Failed to obtain primary lease for action 'Backfill Indexes' / 'Collect garbage'" errors
-// in iframe and multi-tab browser environments
+// Initialize Firestore with fast and resilient memoryLocalCache and forced long-polling
+// experimentalForceLongPolling: true guarantees instant connection without the 10-second backend timeout in iframe/preview environments
 let firestoreDb: any;
 try {
   firestoreDb = initializeFirestore(app, {
     localCache: memoryLocalCache(),
-    experimentalAutoDetectLongPolling: true
+    experimentalForceLongPolling: true
   }, databaseId);
 } catch {
   try {
     firestoreDb = initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true
+      experimentalForceLongPolling: true
     }, databaseId);
   } catch {
     firestoreDb = getFirestore(app, databaseId);

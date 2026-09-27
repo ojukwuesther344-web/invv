@@ -1,56 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Headphones, Maximize2, Minimize2, X, Send, CheckCheck } from 'lucide-react';
-import { Page } from '../types';
+import { Page, UserState } from '../types';
+import { 
+  ChatMessage, 
+  SupportAutoReplySettings, 
+  DEFAULT_SUPPORT_SETTINGS,
+  subscribeToSupportSettings, 
+  subscribeToChatSession, 
+  sendUserChatMessage, 
+  sendAdminChatMessage
+} from '../services/supportService';
 
 interface SupportFloatingButtonProps {
   onPageChange?: (page: Page) => void;
+  currentUser?: UserState | null;
 }
 
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'support';
-  text: string;
-  timestamp: string;
-}
+const DEFAULT_MESSAGES: ChatMessage[] = [];
 
-const DEFAULT_MESSAGES: ChatMessage[] = [
-  {
-    id: 'm1',
-    sender: 'user',
-    text: 'hello',
-    timestamp: '04:55 PM'
-  },
-  {
-    id: 'm2',
-    sender: 'support',
-    text: 'Thank you for reaching out! A support specialist is reviewing your inquiry and will guide you momentarily.',
-    timestamp: '04:55 PM'
-  },
-  {
-    id: 'm3',
-    sender: 'user',
-    text: 'hi',
-    timestamp: '04:55 PM'
-  },
-  {
-    id: 'm4',
-    sender: 'support',
-    text: 'Thank you for reaching out! A support specialist is reviewing your inquiry and will guide you momentarily.',
-    timestamp: '04:55 PM'
-  }
-];
-
-export default function SupportFloatingButton({ onPageChange }: SupportFloatingButtonProps) {
+export default function SupportFloatingButton({ onPageChange, currentUser }: SupportFloatingButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [settings, setSettings] = useState<SupportAutoReplySettings>(DEFAULT_SUPPORT_SETTINGS);
+
+  // Persistent visitor session ID
+  const [sessionId] = useState<string>(() => {
+    let id = localStorage.getItem('wv_visitor_chat_session_id');
+    if (!id) {
+      id = `session_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      try {
+        localStorage.setItem('wv_visitor_chat_session_id', id);
+      } catch {}
+    }
+    return id;
+  });
+
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem('wv_support_chat_messages');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // If the cached messages were only the old dummy mockup sample ('m1'...'m4'), start fresh
+          const isOldMockup = parsed.some(m => m.id === 'm1' || m.id === 'm2');
+          if (!isOldMockup) return parsed;
+        }
       }
     } catch {}
     return DEFAULT_MESSAGES;
@@ -58,6 +54,47 @@ export default function SupportFloatingButton({ onPageChange }: SupportFloatingB
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Persistent key & ref ensuring the greeting response is sent STRICTLY ONCE per conversation
+  const greetingSentKey = `wv_greeting_sent_${sessionId}`;
+  const greetingDispatchedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(greetingSentKey) === 'true' || sessionStorage.getItem(greetingSentKey) === 'true') {
+        greetingDispatchedRef.current = true;
+      }
+    } catch {}
+  }, [greetingSentKey]);
+
+  // If any support response already exists in messages, permanently lock the greeting flag
+  useEffect(() => {
+    if (messages && messages.some(m => m.sender === 'support')) {
+      greetingDispatchedRef.current = true;
+      try {
+        localStorage.setItem(greetingSentKey, 'true');
+        sessionStorage.setItem(greetingSentKey, 'true');
+      } catch {}
+    }
+  }, [messages, greetingSentKey]);
+
+  // Subscribe to real-time auto-reply configuration from Admin
+  useEffect(() => {
+    const unsubscribe = subscribeToSupportSettings((newSettings) => {
+      if (newSettings) setSettings(newSettings);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Subscribe to real-time chat updates (for admin replies)
+  useEffect(() => {
+    const unsubscribe = subscribeToChatSession(sessionId, (session) => {
+      if (session && session.messages && session.messages.length > 0) {
+        setMessages(session.messages);
+      }
+    });
+    return () => unsubscribe();
+  }, [sessionId]);
 
   // Global event listener to open chat from any button
   useEffect(() => {
@@ -73,7 +110,7 @@ export default function SupportFloatingButton({ onPageChange }: SupportFloatingB
     }
   }, [messages, isOpen, isTyping]);
 
-  // Persist messages
+  // Persist messages to local storage
   useEffect(() => {
     try {
       localStorage.setItem('wv_support_chat_messages', JSON.stringify(messages));
@@ -89,61 +126,84 @@ export default function SupportFloatingButton({ onPageChange }: SupportFloatingB
     }
   }, [isOpen]);
 
-  const getCurrentTimeFormatted = () => {
-    const d = new Date();
-    let hours = d.getHours();
-    const minutes = d.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const strMinutes = minutes < 10 ? '0' + minutes : minutes;
-    const strHours = hours < 10 ? '0' + hours : hours;
-    return `${strHours}:${strMinutes} ${ampm}`;
-  };
-
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string, isChipAction = false) => {
     const text = (textToSend || inputValue).trim();
     if (!text) return;
 
-    const time = getCurrentTimeFormatted();
-    const userMsg: ChatMessage = {
-      id: `usr_${Date.now()}`,
-      sender: 'user',
-      text,
-      timestamp: time
-    };
-
-    setMessages(prev => [...prev, userMsg]);
     if (!textToSend) setInputValue('');
 
-    // Simulate agent typing and replying
-    setIsTyping(true);
-    setTimeout(() => {
-      let reply = 'Thank you for reaching out! A support specialist is reviewing your inquiry and will guide you momentarily.';
-      const lower = text.toLowerCase();
+    const userEmail = currentUser?.email || 'Guest Visitor';
+    const userName = currentUser?.fullName || currentUser?.username || 'Client';
 
-      if (lower.includes('deposit') || lower.includes('fund')) {
-        reply = 'To deposit funds, navigate to your dashboard and click "Deposit". Select your desired token (USDT TRC20/ERC20, Bitcoin, Ethereum, etc.) and copy your uniquely assigned secure wallet address.';
-      } else if (lower.includes('withdraw') || lower.includes('payout')) {
-        reply = 'Withdrawals are processed automatically via bank-grade blockchain routing. Please verify your payout wallet address in settings before submitting a request.';
-      } else if (lower.includes('plan') || lower.includes('rate') || lower.includes('interest')) {
-        reply = 'Our verified investment plans range from 44-hour and 66-hour high-frequency cycles to institutional 21-day terms. Yields are calculated automatically and credited to your balance.';
+    // Send user message to Firestore & local state
+    const userMsg = await sendUserChatMessage(sessionId, text, { email: userEmail, name: userName });
+    setMessages(prev => {
+      if (prev.some(m => m.id === userMsg.id)) return prev;
+      return [...prev, userMsg];
+    });
+
+    // Check if auto-reply is enabled in admin settings
+    if (settings.enabled) {
+      // Check if any greeting or support message has already been dispatched
+      const alreadySent = 
+        greetingDispatchedRef.current === true || 
+        localStorage.getItem(greetingSentKey) === 'true' ||
+        sessionStorage.getItem(greetingSentKey) === 'true' ||
+        messages.some(m => m.sender === 'support');
+
+      if (isChipAction) {
+        // Quick Action Chips (Deposit Help, Withdrawal Info, Plans & Rates)
+        const lower = text.toLowerCase();
+        let reply = '';
+        if (lower.includes('deposit')) {
+          reply = settings.depositReply || DEFAULT_SUPPORT_SETTINGS.depositReply;
+        } else if (lower.includes('withdraw')) {
+          reply = settings.withdrawalReply || DEFAULT_SUPPORT_SETTINGS.withdrawalReply;
+        } else if (lower.includes('plan') || lower.includes('rate')) {
+          reply = settings.plansReply || DEFAULT_SUPPORT_SETTINGS.plansReply;
+        }
+
+        if (reply) {
+          setIsTyping(true);
+          const delayMs = Math.max(800, (settings.typingDelaySeconds || 1.2) * 1000);
+          setTimeout(async () => {
+            const botMsg = await sendAdminChatMessage(sessionId, reply);
+            setMessages(prev => {
+              if (prev.some(m => m.id === botMsg.id)) return prev;
+              return [...prev, botMsg];
+            });
+            setIsTyping(false);
+          }, delayMs);
+        }
+      } else if (!alreadySent) {
+        // LOCK THE GREETING FLAG IMMEDIATELY SYNCHRONOUSLY
+        // This ensures typing a second or third message can NEVER trigger the greeting again
+        greetingDispatchedRef.current = true;
+        try {
+          localStorage.setItem(greetingSentKey, 'true');
+          sessionStorage.setItem(greetingSentKey, 'true');
+        } catch {}
+
+        setIsTyping(true);
+        const delayMs = Math.max(800, (settings.typingDelaySeconds || 1.2) * 1000);
+
+        setTimeout(async () => {
+          const reply = settings.defaultReply || DEFAULT_SUPPORT_SETTINGS.defaultReply;
+          const botMsg = await sendAdminChatMessage(sessionId, reply);
+          setMessages(prev => {
+            if (prev.some(m => m.id === botMsg.id)) return prev;
+            return [...prev, botMsg];
+          });
+          setIsTyping(false);
+        }, delayMs);
       }
-
-      const botMsg: ChatMessage = {
-        id: `sup_${Date.now()}`,
-        sender: 'support',
-        text: reply,
-        timestamp: getCurrentTimeFormatted()
-      };
-
-      setMessages(prev => [...prev, botMsg]);
-      setIsTyping(false);
-    }, 1200);
+      // If alreadySent is true, NO bot reply is triggered for regular chat messages!
+      // All subsequent user messages go straight to the Admin Live Support Desk for a real human agent to answer.
+    }
   };
 
   const handleChipClick = (chipText: string) => {
-    handleSendMessage(chipText);
+    handleSendMessage(chipText, true);
   };
 
   return (
@@ -232,31 +292,45 @@ export default function SupportFloatingButton({ onPageChange }: SupportFloatingB
 
           {/* Messages Stream Container */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[#06101c] text-left">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
-              >
-                {/* Message Bubble */}
-                {m.sender === 'user' ? (
-                  <div className="bg-[#C59B4E] text-slate-900 font-medium text-[13px] px-3.5 py-2 rounded-2xl rounded-tr-xs shadow-xs max-w-[80%] leading-snug break-words">
-                    {m.text}
-                  </div>
-                ) : (
-                  <div className="bg-[#0e213b] text-slate-100 border border-[#16335a]/50 text-[13px] px-4 py-3 rounded-2xl rounded-tl-xs shadow-xs max-w-[85%] leading-relaxed break-words font-sans">
-                    {m.text}
-                  </div>
-                )}
-
-                {/* Timestamp and Double Checkmarks */}
-                <div className={`flex items-center gap-1 mt-1 text-[10px] text-slate-400 font-mono ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <span>{m.timestamp}</span>
-                  {m.sender === 'user' && (
-                    <CheckCheck size={13} className="text-[#C59B4E] stroke-[2.4]" />
-                  )}
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 text-slate-500 my-auto">
+                <div className="w-12 h-12 rounded-full bg-[#112136] border border-[#C59B4E]/30 flex items-center justify-center text-[#C59B4E] mb-3">
+                  <Headphones size={22} />
                 </div>
+                <h4 className="text-xs font-bold text-white uppercase font-display tracking-wider">
+                  WorldVest Live Support
+                </h4>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-[240px]">
+                  How can we help you today? Type your message below or select a quick topic.
+                </p>
               </div>
-            ))}
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
+                >
+                  {/* Message Bubble */}
+                  {m.sender === 'user' ? (
+                    <div className="bg-[#C59B4E] text-slate-900 font-medium text-[13px] px-3.5 py-2 rounded-2xl rounded-tr-xs shadow-xs max-w-[80%] leading-snug break-words">
+                      {m.text}
+                    </div>
+                  ) : (
+                    <div className="bg-[#0e213b] text-slate-100 border border-[#16335a]/50 text-[13px] px-4 py-3 rounded-2xl rounded-tl-xs shadow-xs max-w-[85%] leading-relaxed break-words font-sans">
+                      {m.text}
+                    </div>
+                  )}
+
+                  {/* Timestamp and Double Checkmarks */}
+                  <div className={`flex items-center gap-1 mt-1 text-[10px] text-slate-400 font-mono ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <span>{m.timestamp}</span>
+                    {m.sender === 'user' && (
+                      <CheckCheck size={13} className="text-[#C59B4E] stroke-[2.4]" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
 
             {/* Live Typing Indicator */}
             {isTyping && (
