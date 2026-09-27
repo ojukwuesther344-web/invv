@@ -517,7 +517,12 @@ export async function getAllUsers(): Promise<UserState[]> {
     const cached = localStorage.getItem('all_users_cache');
     if (cached) {
       const parsed: UserState[] = JSON.parse(cached);
-      return parsed.filter(u => (u.username || '').toLowerCase().trim() !== 'blessingubah38' && u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2');
+      return parsed.filter(u => 
+        (u.username || '').toLowerCase().trim() !== 'blessingubah38' && 
+        (u.username || '').toLowerCase().trim() !== 'admin' &&
+        (u.fullName || '').toLowerCase().trim() !== 'system administrator' &&
+        u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2'
+      );
     }
     const users: UserState[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -527,7 +532,12 @@ export async function getAllUsers(): Promise<UserState[]> {
         if (val) {
           try { 
             const u = JSON.parse(val);
-            if ((u.username || '').toLowerCase().trim() !== 'blessingubah38' && u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2') {
+            if (
+              (u.username || '').toLowerCase().trim() !== 'blessingubah38' && 
+              (u.username || '').toLowerCase().trim() !== 'admin' &&
+              (u.fullName || '').toLowerCase().trim() !== 'system administrator' &&
+              u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2'
+            ) {
               users.push(u);
             }
           } catch {}

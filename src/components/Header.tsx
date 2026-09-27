@@ -3,6 +3,7 @@ import { Phone, Mail, MapPin, ChevronDown, User, LogOut, Menu, X, ArrowRight } f
 import { Page, UserState } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
 import CryptoTickerBar from './CryptoTickerBar';
+import { isSystemAdminIdentity } from '../services/firebaseService';
 
 interface HeaderProps {
   currentPage: Page;
@@ -163,7 +164,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
-            {user.isLoggedIn ? (
+            {user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? (
               <div className="flex items-center gap-1.5">
 
                 <button 
@@ -193,7 +194,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
 
             <button 
               onClick={() => {
-                if (user.isLoggedIn) {
+                if (user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email)) {
                   onPageChange('Dashboard');
                 } else {
                   onPageChange('Register');
@@ -201,7 +202,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
               }}
               className="flex items-center gap-1.5 bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.98] text-white px-5 py-2.5 rounded-md font-black text-xs uppercase tracking-wider transition-all shadow-md border border-[#0B2545] cursor-pointer"
             >
-              <span>{user.isLoggedIn ? 'Go to Account' : 'GET STARTED'}</span>
+              <span>{user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? 'Go to Account' : 'GET STARTED'}</span>
               <ArrowRight size={14} />
             </button>
           </div>

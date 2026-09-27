@@ -41,7 +41,9 @@ import {
   subscribeToUserTransactions,
   subscribeToApprovedWithdrawals,
   subscribeToAuth,
-  authLogout
+  authLogout,
+  isSystemAdminIdentity,
+  AUTHORIZED_SYSTEM_ADMINS
 } from './services/firebaseService';
 import { 
   Play, 
@@ -659,7 +661,17 @@ export default function App() {
     const unsubscribe = subscribeToAuth(async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // 1. Strict check if restored user is permanently deleted
+          // 1. Strict check if restored user is the System Administrator (Admins belong in Admin portal only)
+          if (
+            isSystemAdminIdentity(firebaseUser.email) ||
+            AUTHORIZED_SYSTEM_ADMINS.includes((firebaseUser.email || '').toLowerCase().trim())
+          ) {
+            console.info("[AUTH-GUARD] Restored user is System Administrator. Client user dashboard remains strictly disabled.");
+            setUser(emptyUserState);
+            return;
+          }
+
+          // 2. Strict check if restored user is permanently deleted
           const isDeleted = await isUserPermanentlyDeleted({
             uid: firebaseUser.uid,
             email: firebaseUser.email || undefined
@@ -674,6 +686,17 @@ export default function App() {
 
           const profile = await fetchUserProfile(firebaseUser.uid);
           if (profile) {
+            // Block System Administrator profile from entering client dashboard state
+            if (
+              isSystemAdminIdentity(profile.username) ||
+              isSystemAdminIdentity(profile.fullName) ||
+              isSystemAdminIdentity(profile.email)
+            ) {
+              console.info("[AUTH-GUARD] Profile is System Administrator. Client user dashboard remains strictly disabled.");
+              setUser(emptyUserState);
+              return;
+            }
+
             if (profile.suspended) {
               await authLogout().catch(() => {});
               setUser(emptyUserState);
@@ -702,13 +725,23 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Protected route guard: Deflect any unauthenticated user navigating to protected views
+  // Protected route guard: Deflect unauthenticated or admin accounts navigating to client dashboard
   useEffect(() => {
     const protectedPages: Page[] = ['Dashboard', 'Deposit'];
-    if (protectedPages.includes(currentPage) && !user.isLoggedIn) {
-      setCurrentPage('Register');
+    if (protectedPages.includes(currentPage)) {
+      if (!user.isLoggedIn) {
+        setCurrentPage('Register');
+      } else if (
+        isSystemAdminIdentity(user.username) ||
+        isSystemAdminIdentity(user.fullName) ||
+        isSystemAdminIdentity(user.email)
+      ) {
+        // System Administrator account is only for Admin view
+        setUser(emptyUserState);
+        setCurrentPage('Admin');
+      }
     }
-  }, [currentPage, user.isLoggedIn]);
+  }, [currentPage, user.isLoggedIn, user.username, user.fullName, user.email]);
 
   // Adjust browser tab title dynamically and scale viewport gracefully for a perfect zoomed-out high-fidelity desktop experience
   useEffect(() => {
@@ -856,7 +889,7 @@ export default function App() {
           username={user.username}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
-          isAdmin={liveUser.email === 'blessingubah38@gmail.com'}
+          isAdmin={false}
           onPageChange={handlePageChange}
           mainAccountBalance={liveUser.mainAccountBalance}
           accountBalance={liveUser.accountBalance}

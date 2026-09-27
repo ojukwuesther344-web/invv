@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Page, UserState, Transaction, Withdrawal } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
 import { formatCurrency, formatAmount } from '../utils/formatters';
+import { isSystemAdminIdentity } from '../services/firebaseService';
 import { 
   addDepositRecord, 
   addWithdrawalRecord, 
@@ -76,6 +77,25 @@ export default function DashboardView({
   reloadTransactions,
   reloadDeposits
 }: DashboardViewProps) {
+  // Security guard: System Administrator account is only for the Admin Portal and must never be displayed in the client dashboard
+  useEffect(() => {
+    if (
+      isSystemAdminIdentity(user.username) ||
+      isSystemAdminIdentity(user.fullName) ||
+      isSystemAdminIdentity(user.email)
+    ) {
+      onPageChange('Admin');
+    }
+  }, [user.username, user.fullName, user.email, onPageChange]);
+
+  if (
+    isSystemAdminIdentity(user.username) ||
+    isSystemAdminIdentity(user.fullName) ||
+    isSystemAdminIdentity(user.email)
+  ) {
+    return null;
+  }
+
   const [securityNoteOpen, setSecurityNoteOpen] = useState(true);
   const [depositAmount, setDepositAmount] = useState('500.00');
   const [selectedPlanId, setSelectedPlanId] = useState('starter_plan');

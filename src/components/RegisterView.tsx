@@ -6,7 +6,8 @@ import {
   authRegister, 
   authLogin, 
   lookupEmailByUsername,
-  authLogout
+  authLogout,
+  isSystemAdminIdentity
 } from '../services/firebaseService';
 import { 
   saveUserProfile, 
@@ -86,6 +87,18 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
 
     const normUsername = normalizeIdentifier(username);
     const normEmail = normalizeIdentifier(email);
+
+    // Block System Administrator from registration
+    if (
+      isSystemAdminIdentity(normUsername) ||
+      isSystemAdminIdentity(normEmail) ||
+      isSystemAdminIdentity(fullName)
+    ) {
+      setLoadingRegister(false);
+      setSuccessMsg('');
+      setErrorMsg('This username and email are reserved for system administration.');
+      return;
+    }
 
     try {
       // Hard Permanent Deletion & Blacklist Check before attempting any operation
@@ -181,6 +194,14 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
     const isInputEmail = rawInput.includes('@');
     const normInput = normalizeIdentifier(rawInput);
 
+    // Strictly disable System Administrator credentials on the client login portal
+    if (isSystemAdminIdentity(rawInput) || isSystemAdminIdentity(normInput)) {
+      setLoadingLogin(false);
+      setSuccessMsg('');
+      setErrorMsg("The System Administrator account is reserved strictly for administrative access and cannot log in to the client user wallet. Please use the Admin Portal.");
+      return;
+    }
+
     // 1. Resolve email if username was provided
     let parsedEmail = rawInput;
     if (!isInputEmail) {
@@ -204,6 +225,14 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
     }
 
     const normResolvedEmail = normalizeIdentifier(parsedEmail);
+
+    // Strictly disable System Administrator resolved email
+    if (isSystemAdminIdentity(parsedEmail) || isSystemAdminIdentity(normResolvedEmail)) {
+      setLoadingLogin(false);
+      setSuccessMsg('');
+      setErrorMsg("The System Administrator account is reserved strictly for administrative access and cannot log in to the client user wallet. Please use the Admin Portal.");
+      return;
+    }
 
     // 2. Authenticate directly
     let uid = '';
@@ -243,6 +272,19 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
           return;
         }
 
+        // Block System Administrator if loaded from profile
+        if (
+          isSystemAdminIdentity(profile.username) ||
+          isSystemAdminIdentity(profile.fullName) ||
+          isSystemAdminIdentity(profile.email)
+        ) {
+          await authLogout().catch(() => {});
+          setLoadingLogin(false);
+          setSuccessMsg('');
+          setErrorMsg("The System Administrator account is reserved strictly for administrative access and cannot log in to the client user wallet. Please use the Admin Portal.");
+          return;
+        }
+
         // Check account suspension
         if (profile.suspended) {
           await authLogout().catch(() => {});
@@ -259,6 +301,16 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
           setLoadingLogin(false);
           setSuccessMsg('');
           setErrorMsg("Account doesn't exist or this account has been permanently disabled.");
+          return;
+        }
+        if (
+          isSystemAdminIdentity(profile.username) ||
+          isSystemAdminIdentity(profile.fullName) ||
+          isSystemAdminIdentity(profile.email)
+        ) {
+          setLoadingLogin(false);
+          setSuccessMsg('');
+          setErrorMsg("The System Administrator account is reserved strictly for administrative access and cannot log in to the client user wallet. Please use the Admin Portal.");
           return;
         }
         uid = localUid;

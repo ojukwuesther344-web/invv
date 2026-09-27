@@ -262,6 +262,19 @@ export const AUTHORIZED_SYSTEM_ADMINS = [
 ];
 
 /**
+ * Checks whether an identifier (username, email, or full name) is reserved exclusively for the System Administrator.
+ */
+export const isSystemAdminIdentity = (identity?: string | null): boolean => {
+  if (!identity || typeof identity !== 'string') return false;
+  const norm = identity.toLowerCase().trim().replace(/^@+/, '');
+  return (
+    norm === 'admin' ||
+    norm === 'system administrator' ||
+    AUTHORIZED_SYSTEM_ADMINS.includes(norm)
+  );
+};
+
+/**
  * Checks whether an identity (UID, username, or email) is permanently deleted or disabled.
  */
 export async function dbIsPermanentlyDeleted(params: {
@@ -948,9 +961,12 @@ export function subscribeToAllUsers(
       const data = docSnap.data();
       const uname = (data.username || '').toLowerCase().trim();
       const uid = docSnap.id;
-      // Permanently filter out deleted accounts, specifically blessingubah38
+      // Permanently filter out deleted accounts and administrative accounts
       if (
         uname === 'blessingubah38' ||
+        uname === 'admin' ||
+        (data.fullName || '').toLowerCase().trim() === 'system administrator' ||
+        AUTHORIZED_SYSTEM_ADMINS.includes((data.email || '').toLowerCase().trim()) ||
         uid === 'JZXOl320NRYKGgxyjBcUvxxaZhv2' ||
         data.status === 'permanently_deleted'
       ) {

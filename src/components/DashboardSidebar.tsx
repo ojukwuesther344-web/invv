@@ -246,18 +246,8 @@ export default function DashboardSidebar({
           </div>
         </div>
 
-        {/* Sidebar Footer with Admin & Logout */}
+        {/* Sidebar Footer with Website Home & Logout */}
         <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-1.5">
-          {isAdmin && onPageChange && (
-            <button
-              onClick={() => onPageChange('Admin')}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider text-purple-600 bg-purple-50 border border-purple-200 hover:bg-purple-600 hover:text-white transition-all cursor-pointer mb-1 shadow-xs"
-            >
-              <ShieldAlert size={15} className="shrink-0" />
-              <span>Admin Panel</span>
-            </button>
-          )}
-
           {onPageChange && (
             <button
               onClick={() => {

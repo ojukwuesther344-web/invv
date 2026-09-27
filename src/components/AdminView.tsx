@@ -75,6 +75,8 @@ import {
   getAdminPasswordKey,
   DEFAULT_ADMIN_KEY
 } from '../services/db';
+import { db } from '../firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { 
   authLogin, 
   authLogout, 
@@ -194,34 +196,19 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
         }
       }
 
-      // 2. Safely fetch or initialize admin profile
-      let adminProfile: UserState | null = null;
+      // Ensure the admin account NEVER exists as a client user record in the 'users' collection
       try {
-        adminProfile = await fetchUserProfile(uid);
-      } catch (e) {
-        console.warn("Notice: fetchUserProfile for admin:", e);
-      }
-
-      if (!adminProfile) {
-        adminProfile = getDefaultUserMetrics(cleanEmail, 'admin', 'System Administrator');
-        try {
-          await saveUserProfile(uid, adminProfile);
-        } catch (e) {
-          console.warn("Notice: saveUserProfile for admin:", e);
+        if (db && isFirebaseReady) {
+          const userDocRef = doc(db, 'users', uid);
+          await deleteDoc(userDocRef).catch(() => {});
         }
+      } catch (e) {
+        console.warn("Notice: cleaning admin user doc:", e);
       }
 
       setAuthSuccess('Authentication successful! Access granted.');
       setIsAuthorized(true);
       localStorage.setItem('admin_session_active', 'true');
-
-      if (onLoginSuccess && adminProfile) {
-        onLoginSuccess({
-          ...adminProfile,
-          uid,
-          isLoggedIn: true
-        });
-      }
     } catch (signInErr: any) {
       console.error("Admin sign-in authentication error:", signInErr);
       const code = signInErr?.code || '';
@@ -412,17 +399,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
   // Subscriptions setup
   useEffect(() => {
-    // Purge any stale cache of deleted user blessingubah38 on mount
+    // Purge any stale cache of deleted user blessingubah38 and admin user profiles on mount
     try {
       localStorage.removeItem('user_profile_JZXOl320NRYKGgxyjBcUvxxaZhv2');
       localStorage.removeItem('user_profile_blessingubah38');
       localStorage.removeItem('user_blessingubah38');
+      localStorage.removeItem('user_profile_admin');
+      localStorage.removeItem('user_admin');
       const cached = localStorage.getItem('all_users_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) {
           const cleaned = parsed.filter((u: any) => 
             (u.username || '').toLowerCase().trim() !== 'blessingubah38' && 
+            (u.username || '').toLowerCase().trim() !== 'admin' && 
+            (u.fullName || '').toLowerCase().trim() !== 'system administrator' && 
+            !AUTHORIZED_ADMIN_EMAILS.includes((u.email || '').toLowerCase().trim()) &&
             u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2'
           );
           localStorage.setItem('all_users_cache', JSON.stringify(cleaned));
@@ -440,6 +432,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       (userList) => {
         const cleanedList = userList.filter(u => 
           (u.username || '').toLowerCase().trim() !== 'blessingubah38' && 
+          (u.username || '').toLowerCase().trim() !== 'admin' && 
+          (u.fullName || '').toLowerCase().trim() !== 'system administrator' && 
+          !AUTHORIZED_ADMIN_EMAILS.includes((u.email || '').toLowerCase().trim()) &&
           u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2'
         );
         setUsers(cleanedList);
@@ -1812,13 +1807,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
         <div className="pt-4 border-t border-[#152e4f] flex flex-col gap-2">
           <button 
             onClick={() => {
-              onPageChange('Dashboard');
+              onPageChange('Home');
               setMobileMenuOpen(false);
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-[#C59B4E] hover:text-white hover:bg-[#C59B4E]/10 transition-colors cursor-pointer"
           >
             <ArrowLeft size={15} />
-            <span>Back to Dashboard</span>
+            <span>Website Home</span>
           </button>
 
           <button 
