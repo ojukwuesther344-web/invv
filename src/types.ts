@@ -37,7 +37,7 @@ export interface Transaction {
   amount: number;
   date: string;
   timestamp: number;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Completed';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Completed' | 'pending' | 'approved' | 'rejected' | string;
   processor: 'USDT TRC20' | 'Bitcoin' | 'Ethereum' | 'USDT ERC20' | 'Dogecoin' | 'Perfect Money' | 'Tron' | 'XRP' | 'Account Balance' | string;
   planId?: string;
   planName?: string;
@@ -47,7 +47,18 @@ export interface Transaction {
   createdAt?: number;
   approvedAt?: number | null;
   txHash?: string;
+  transactionHash?: string;
   paymentProof?: string;
+  receiptUrl?: string;
+  proofImg?: string;
+  currency?: string;
+  paymentMethod?: string;
+  network?: string;
+  submittedAt?: number;
+  reviewedAt?: number | null;
+  reviewedBy?: string | null;
+  approvedBy?: string | null;
+  rejectionReason?: string | null;
   // Audit Ledger fields:
   operationType?: LedgerOperationType | string;
   previousMainAccountBalance?: number;
@@ -59,6 +70,20 @@ export interface Transaction {
   previousTotalDeposit?: number;
   newTotalDeposit?: number;
   createdBy?: string;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  adminId: string;
+  adminEmail?: string;
+  action: 'APPROVE_DEPOSIT' | 'REJECT_DEPOSIT' | 'APPROVE_WITHDRAWAL' | 'REJECT_WITHDRAWAL' | string;
+  transactionId: string;
+  userId: string;
+  username: string;
+  amount: number;
+  currency?: string;
+  timestamp: number;
+  rejectionReason?: string;
 }
 
 export interface LedgerAdjustmentParams {

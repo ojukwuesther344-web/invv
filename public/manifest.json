@@ -1,0 +1,23 @@
+{
+  "name": "WorldVest Capital - Live Support & Admin",
+  "short_name": "WorldVest",
+  "description": "WorldVest Capital Live Support & Financial Management Platform",
+  "start_url": "/?tab=live_support",
+  "display": "standalone",
+  "background_color": "#030812",
+  "theme_color": "#C59B4E",
+  "icons": [
+    {
+      "src": "/logohead_light.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logohead.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

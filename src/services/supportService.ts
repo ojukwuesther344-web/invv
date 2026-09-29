@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { isFirebaseReady } from './firebaseService';
+import { notifyClientMessage } from './notificationService';
 
 const checkFirebaseReady = (): boolean => {
   return typeof isFirebaseReady === 'function' ? (isFirebaseReady as any)() : Boolean(isFirebaseReady);
@@ -241,6 +242,14 @@ export async function sendUserChatMessage(
       console.warn('Firestore sendUserChatMessage sync error:', err);
     }
   }
+
+  // Trigger real-time cross-device push notification to Admin
+  notifyClientMessage({
+    sessionId: updatedSession.id,
+    messageText: text,
+    clientName: updatedSession.userName,
+    clientEmail: updatedSession.userEmail
+  }).catch(() => {});
 
   return newMsg;
 }

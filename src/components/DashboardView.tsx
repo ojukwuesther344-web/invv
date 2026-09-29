@@ -13,7 +13,8 @@ import {
   getAllUsers,
   addInvestmentPlan,
   getInvestmentPlans,
-  getSystemSettings
+  getSystemSettings,
+  checkDuplicateTxHash
 } from '../services/db';
 import { 
   Bell, 
@@ -138,6 +139,10 @@ export default function DashboardView({
   const [paymentUploadDragOver, setPaymentUploadDragOver] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [submittedTxId, setSubmittedTxId] = useState<string | null>(() => {
+    return sessionStorage.getItem(`wv_last_submitted_tx_${user.uid || user.username}`) || null;
+  });
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [isCopyingAddress, setIsCopyingAddress] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -613,76 +618,114 @@ export default function DashboardView({
 
   const handleConfirmPayment = async () => {
     if (!paymentSession) return;
-    if (!paymentTxHash) {
-      setPaymentError('Required: Transaction hash (TxID/TxHash) is required for payment auditing.');
+    const cleanTxHash = (paymentTxHash || '').trim();
+
+    // User can provide either: A. Transaction hash, B. Transfer receipt image, or C. Both
+    if (!cleanTxHash && !paymentProofFile) {
+      setPaymentError('Please provide either a Transaction Hash (TxID/TxHash), an attached receipt image, or both.');
       return;
+    }
+
+    // Check transaction hash duplicate protection
+    if (cleanTxHash) {
+      setIsSubmittingPayment(true);
+      setPaymentError('');
+      try {
+        const isDuplicate = await checkDuplicateTxHash(cleanTxHash);
+        if (isDuplicate) {
+          setPaymentError('This transaction hash has already been submitted.');
+          setIsSubmittingPayment(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Duplicate check error:", err);
+      }
+    } else {
+      setIsSubmittingPayment(true);
+      setPaymentError('');
     }
 
     const uid = user.uid || `user_${user.username}`;
     const timestamp = Date.now();
     const amountNum = paymentSession.amount;
     const proc = paymentSession.processor;
-    const status = 'Pending';
+    const networkName = COMPANY_WALLET_ADDRESSES[paymentSession.sourceId]?.network || proc;
+    const depositTxId = `tx_dep_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
 
     try {
-      if (paymentSession.type === 'Deposit') {
-        // Record Deposit & matching Investment as Pending for Admin Approval
-        await addTransactionRecord(uid, {
-          username: user.username,
-          type: 'Deposit',
-          amount: amountNum,
-          date: new Date().toLocaleString(),
-          timestamp: timestamp,
-          status: status,
-          processor: proc,
-          planId: paymentSession.planId,
-          planName: paymentSession.planName,
-          txHash: paymentTxHash,
-          paymentProof: paymentProofFile || ''
-        });
+      // 1. Submit Payment Proof strictly as Pending.
+      // USER BALANCE MUST NOT CHANGE until explicitly approved by an Admin.
+      const depositRecord: Partial<Transaction> = {
+        id: depositTxId,
+        userId: uid,
+        username: user.username,
+        type: 'Deposit',
+        amount: amountNum,
+        currency: 'USD',
+        paymentMethod: proc,
+        network: networkName,
+        date: new Date().toLocaleString(),
+        timestamp: timestamp,
+        status: 'Pending',
+        processor: proc,
+        planId: paymentSession.planId || '',
+        planName: paymentSession.planName || '',
+        term: paymentSession.term || 0,
+        roi: paymentSession.roi || 0,
+        txHash: cleanTxHash,
+        transactionHash: cleanTxHash,
+        paymentProof: paymentProofFile || '',
+        receiptUrl: paymentProofFile || '',
+        proofImg: paymentProofFile || '',
+        submittedAt: timestamp,
+        reviewedAt: null,
+        reviewedBy: null,
+        approvedAt: null,
+        approvedBy: null
+      };
 
+      await addTransactionRecord(uid, depositRecord);
+
+      if (paymentSession.type === 'Deposit' && paymentSession.planId) {
+        // Record matching investment log as Pending alongside the deposit
+        const investTxId = `tx_inv_${timestamp + 20}_${Math.random().toString(36).substring(2, 9)}`;
         await addTransactionRecord(uid, {
+          id: investTxId,
+          userId: uid,
           username: user.username,
           type: 'Investment',
           amount: amountNum,
+          currency: 'USD',
+          paymentMethod: proc,
+          network: networkName,
           date: new Date().toLocaleString(),
           timestamp: timestamp + 20,
-          status: status,
+          status: 'Pending',
           processor: proc,
           planId: paymentSession.planId,
           planName: paymentSession.planName,
           term: paymentSession.term,
           roi: paymentSession.roi,
-          txHash: paymentTxHash,
-          paymentProof: paymentProofFile || ''
-        });
-      } else {
-        // Direct Account Balance funding as Pending for Admin Approval
-        await addTransactionRecord(uid, {
-          username: user.username,
-          type: 'Deposit',
-          amount: amountNum,
-          date: new Date().toLocaleString(),
-          timestamp: timestamp,
-          status: status,
-          processor: proc,
-          txHash: paymentTxHash,
-          paymentProof: paymentProofFile || ''
+          txHash: cleanTxHash,
+          transactionHash: cleanTxHash,
+          paymentProof: paymentProofFile || '',
+          receiptUrl: paymentProofFile || '',
+          proofImg: paymentProofFile || '',
+          referenceId: depositTxId,
+          submittedAt: timestamp,
+          reviewedAt: null,
+          reviewedBy: null
         });
       }
 
-      await reloadDeposits(uid);
       await reloadTransactions(uid);
-
-      setPaymentSuccess(true);
-      setTimeout(() => {
-        setPaymentSession(null);
-        setPaymentSuccess(false);
-        onSectionSelect('dashboard');
-      }, 3500);
+      setSubmittedTxId(depositTxId);
+      sessionStorage.setItem(`wv_last_submitted_tx_${uid}`, depositTxId);
+      setIsSubmittingPayment(false);
     } catch (err) {
       console.error("handleConfirmPayment error:", err);
       setPaymentError("An error occurred while saving transaction proof. Please try again.");
+      setIsSubmittingPayment(false);
     }
   };
 
@@ -758,6 +801,18 @@ export default function DashboardView({
       console.error(err);
     }
   };
+
+  const activeSubmittedTx = transactions.find(t => 
+    (submittedTxId && t.id === submittedTxId) ||
+    (paymentSession && t.type === 'Deposit' && (t.status === 'Pending' || t.status === 'pending') && Number(t.amount) === paymentSession.amount)
+  );
+  const activeTxStatus = (activeSubmittedTx?.status || '').toLowerCase();
+  const isPendingApproval = activeTxStatus === 'pending';
+  const isApproved = activeTxStatus === 'approved';
+  const isRejected = activeTxStatus === 'rejected';
+  const pendingDepositSum = transactions
+    .filter(t => t.type === 'Deposit' && (t.status === 'Pending' || t.status === 'pending'))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
   return (
     <div className="flex-1 bg-slate-100 flex flex-col overflow-y-auto overflow-x-hidden w-full relative">
@@ -925,45 +980,30 @@ export default function DashboardView({
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Invoice ID: INV_{paymentSession.type.toUpperCase()}_{Date.now().toString().substring(7)}</p>
                 </div>
               </div>
-              <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Awaiting Blockchain Transfer
-              </div>
+              {isPendingApproval ? (
+                <div className="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <Clock size={12} className="animate-spin text-amber-400" />
+                  Pending Admin Verification
+                </div>
+              ) : isApproved ? (
+                <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <Check size={12} className="stroke-[3] text-emerald-400" />
+                  Payment Verified & Approved
+                </div>
+              ) : isRejected ? (
+                <div className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <X size={12} className="stroke-[3] text-rose-400" />
+                  Payment Rejected
+                </div>
+              ) : (
+                <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Awaiting Blockchain Transfer
+                </div>
+              )}
             </div>
 
-            {paymentSuccess ? (
-              <div className="py-12 text-center flex flex-col items-center justify-center gap-4 relative z-10 animate-in fade-in zoom-in-95 duration-300">
-                <div className="w-20 h-20 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center border-2 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                  <Check size={40} className="stroke-[3]" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-xl font-black font-display text-white uppercase tracking-wider">Payment Proof Submitted!</h4>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    Your cryptocurrency transfer details have been sent to the auditing system for manual validation.
-                  </p>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-[11px] font-mono text-left max-w-md w-full space-y-2 text-slate-300">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">PAYMENT TOTAL:</span>
-                    <span className="text-white font-bold">{formatCurrency(paymentSession.amount)} USD</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">COIN PROCESSOR:</span>
-                    <span className="text-[#C59B4E] font-bold">{paymentSession.processor}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-950/80 p-2 rounded border border-slate-900">
-                    <span className="text-slate-500 uppercase tracking-wide text-[9px]">Audit Status:</span>
-                    <span className="px-2 py-0.5 rounded text-[8px] bg-amber-550/25 border border-amber-500/30 text-amber-300 uppercase font-bold tracking-wider">
-                      {paymentSession.planName ? 'Investment Review Active' : 'Account Balance Sync'}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-slate-550 italic mt-2">
-                  Redirecting back to dashboard index, please wait...
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
                 {/* Left side: Invoice Details & Wallet Address  */}
                 <div className="md:col-span-7 flex flex-col gap-6">
                   {/* Ledger summary card */}
@@ -1121,14 +1161,96 @@ export default function DashboardView({
                       <h4 className="text-xs font-black uppercase text-white tracking-wide">Blockchain Proof Link</h4>
                     </div>
 
+                    {/* STATUS BANNER (Requirements 2, 8, 9) */}
+                    {isPendingApproval && activeSubmittedTx && (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-2.5 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Payment Status</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                            <Clock size={11} className="animate-spin text-amber-400" />
+                            ⏳ Pending Approval
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                          Your transaction proof has been submitted and is currently being reviewed by our Admin team. Your balance will be updated only after the transaction has been reviewed and approved.
+                        </p>
+                        <div className="bg-slate-950/80 rounded-lg p-2.5 border border-slate-800 text-[11px] font-mono space-y-1">
+                          <div className="flex justify-between text-slate-400">
+                            <span>Amount:</span>
+                            <span className="text-white font-bold">{formatCurrency(activeSubmittedTx.amount)} USD</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>Status:</span>
+                            <span className="text-amber-400 font-bold uppercase tracking-wider">Pending Approval</span>
+                          </div>
+                          {activeSubmittedTx.txHash && (
+                            <div className="flex justify-between text-slate-400">
+                              <span>TxHash:</span>
+                              <span className="text-slate-300 truncate max-w-[200px]" title={activeSubmittedTx.txHash}>{activeSubmittedTx.txHash}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {isApproved && activeSubmittedTx && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 space-y-2.5 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Payment Status</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+                            <Check size={11} className="stroke-[3] text-emerald-400" />
+                            ✓ Payment Approved
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                          Your payment has been verified and your account balance has been updated.
+                        </p>
+                        <div className="bg-slate-950/80 rounded-lg p-2.5 border border-slate-800 text-[11px] font-mono space-y-1">
+                          <div className="flex justify-between text-slate-400">
+                            <span>Amount:</span>
+                            <span className="text-emerald-400 font-bold">{formatCurrency(activeSubmittedTx.amount)} USD</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>Status:</span>
+                            <span className="text-emerald-400 font-bold uppercase tracking-wider">Approved</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isRejected && activeSubmittedTx && (
+                      <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 space-y-2.5 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Payment Status</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">
+                            <X size={11} className="stroke-[3] text-rose-400" />
+                            ✕ Payment Rejected
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                          Payment Rejected: {activeSubmittedTx.rejectionReason || "Transaction could not be verified."}
+                        </p>
+                        <div className="bg-slate-950/80 rounded-lg p-2.5 border border-slate-800 text-[11px] font-mono space-y-1">
+                          <div className="flex justify-between text-slate-400">
+                            <span>Amount:</span>
+                            <span className="text-rose-400 font-bold">{formatCurrency(activeSubmittedTx.amount)} USD</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>Status:</span>
+                            <span className="text-rose-400 font-bold uppercase tracking-wider">Rejected</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-1">
                       <label className="block text-[8px] font-black uppercase text-slate-400 tracking-wider">Transaction hash (TxID/TxHash)</label>
                       <input 
                         type="text" 
-                        required
+                        disabled={isPendingApproval || isApproved}
                         value={paymentTxHash}
                         onChange={(e) => setPaymentTxHash(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:border-[#C59B4E] placeholder:text-slate-700 leading-none"
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:border-[#C59B4E] placeholder:text-slate-700 leading-none disabled:opacity-60 disabled:cursor-not-allowed"
                         placeholder="e.g. bc1q... / 0xca8..."
                       />
                       <span className="text-[8px] text-slate-500 block leading-tight">Paste your transaction identifier to confirm the payment on the public ledger.</span>
@@ -1137,11 +1259,11 @@ export default function DashboardView({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <label className="block text-[8px] font-black uppercase text-slate-400 tracking-wider">Upload receipt image (optional)</label>
-                        {paymentProofFile && (
+                        {paymentProofFile && !isPendingApproval && !isApproved && (
                           <button 
                             type="button" 
                             onClick={() => setPaymentProofFile('')} 
-                            className="text-[8px] font-bold text-rose-400 hover:underline uppercase leading-none"
+                            className="text-[8px] font-bold text-rose-400 hover:underline uppercase leading-none cursor-pointer"
                           >
                             Remove
                           </button>
@@ -1157,13 +1279,19 @@ export default function DashboardView({
                           />
                           <div className="overflow-hidden leading-tight">
                             <span className="text-[9px] text-[#C59B4E] block font-bold">✓ SCREENSHOT LOADED</span>
-                            <span className="text-[7px] text-slate-500 block truncate font-mono">Attachment base64 parsed</span>
+                            <span className="text-[7px] text-slate-550 block truncate font-mono">Attachment base64 parsed</span>
                           </div>
                         </div>
                       ) : (
                         <div 
-                          className="py-2.5 px-2 rounded-xl border border-dashed border-slate-800 hover:border-[#C59B4E]/30 text-center flex items-center justify-center gap-2 bg-slate-950 cursor-pointer"
-                          onClick={() => document.getElementById('payment-proof-input-elem')?.click()}
+                          className={`py-2.5 px-2 rounded-xl border border-dashed border-slate-800 text-center flex items-center justify-center gap-2 bg-slate-950 ${
+                            isPendingApproval || isApproved ? 'opacity-60 cursor-not-allowed' : 'hover:border-[#C59B4E]/30 cursor-pointer'
+                          }`}
+                          onClick={() => {
+                            if (!isPendingApproval && !isApproved) {
+                              document.getElementById('payment-proof-input-elem')?.click();
+                            }
+                          }}
                         >
                           <Upload size={11} className="text-[#C59B4E]" />
                           <div className="text-left leading-none">
@@ -1174,6 +1302,7 @@ export default function DashboardView({
                             id="payment-proof-input-elem"
                             type="file"
                             accept="image/*"
+                            disabled={isPendingApproval || isApproved}
                             className="hidden"
                             onChange={handlePaymentProofFileChange}
                           />
@@ -1186,13 +1315,54 @@ export default function DashboardView({
                     )}
 
                     <div className="space-y-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleConfirmPayment}
-                        className="w-full py-3 bg-[#C59B4E] hover:bg-[#A98035] text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-98"
-                      >
-                        <ShieldCheck size={13} className="stroke-[2.5]" /> Confirm Transfer Detail
-                      </button>
+                      {isPendingApproval ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full py-3 bg-amber-600/70 text-amber-100 font-black text-xs uppercase tracking-widest rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-amber-500/30 shadow-lg"
+                        >
+                          <Clock size={13} className="animate-spin" /> PENDING APPROVAL
+                        </button>
+                      ) : isApproved ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full py-3 bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl flex items-center justify-center gap-1.5 cursor-default border border-emerald-500/30 shadow-lg"
+                        >
+                          <Check size={13} className="stroke-[3]" /> ✓ PAYMENT APPROVED
+                        </button>
+                      ) : isRejected ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSubmittedTxId(null);
+                            sessionStorage.removeItem(`wv_last_submitted_tx_${user.uid || user.username}`);
+                            setPaymentTxHash('');
+                            setPaymentProofFile('');
+                            setPaymentError('');
+                          }}
+                          className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-widest rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-lg transition-all"
+                        >
+                          <RefreshCw size={13} /> ✕ RESUBMIT PAYMENT PROOF
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleConfirmPayment}
+                          disabled={isSubmittingPayment}
+                          className="w-full py-3 bg-[#C59B4E] hover:bg-[#A98035] text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-98 disabled:opacity-75 disabled:cursor-not-allowed"
+                        >
+                          {isSubmittingPayment ? (
+                            <>
+                              <RefreshCw size={13} className="animate-spin stroke-[2.5]" /> Verifying Proof...
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={13} className="stroke-[2.5]" /> Confirm Transfer Detail
+                            </>
+                          )}
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -1206,7 +1376,6 @@ export default function DashboardView({
                   </div>
                 </div>
               </div>
-            )}
           </div>
         )}
 
@@ -1287,9 +1456,17 @@ export default function DashboardView({
                   </span>
                   <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
                 </div>
-                <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ACTIVE DEPOSIT</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">{formatCurrency(user.activeDeposit)} USD</span>
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-1">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ACTIVE DEPOSIT</span>
+                    <span className="font-bold text-slate-800">{formatCurrency(user.activeDeposit)} USD</span>
+                  </div>
+                  {pendingDepositSum > 0 && (
+                    <div className="flex justify-between items-center text-xs bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">PENDING DEPOSIT</span>
+                      <span className="font-bold text-amber-700 font-mono">{formatCurrency(pendingDepositSum)} USD</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2074,9 +2251,21 @@ export default function DashboardView({
                           </td>
                           <td className="py-4.5 px-6 text-center">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                              t.status === 'Completed' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'
+                              (t.status || '').toLowerCase() === 'pending'
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : (t.status || '').toLowerCase() === 'rejected'
+                                ? 'bg-rose-100 text-rose-700 border border-rose-300'
+                                : t.status === 'Completed'
+                                ? 'bg-slate-100 text-slate-500'
+                                : 'bg-emerald-100 text-emerald-700'
                             }`}>
-                              {t.status || 'Approved'}
+                              {(t.status || '').toLowerCase() === 'pending'
+                                ? '⏳ Pending Approval'
+                                : (t.status || '').toLowerCase() === 'rejected'
+                                ? '✕ Rejected'
+                                : (t.status || '').toLowerCase() === 'approved'
+                                ? '✓ Approved'
+                                : (t.status || 'Approved')}
                             </span>
                           </td>
                         </tr>

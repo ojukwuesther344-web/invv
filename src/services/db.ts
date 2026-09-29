@@ -28,7 +28,11 @@ import {
   dbExecuteLedgerAdjustment,
   DEFAULT_ADMIN_KEY,
   dbGetAdminPasswordKey,
-  dbUpdateAdminPasswordKey
+  dbUpdateAdminPasswordKey,
+  dbCheckDuplicateTxHash,
+  dbApproveDepositTransaction,
+  dbRejectDepositTransaction,
+  dbFetchAdminAuditLogs
 } from './firebaseService';
 import { LedgerAdjustmentParams, LedgerAdjustmentResult } from '../types';
 
@@ -41,7 +45,11 @@ export {
   dbIsPermanentlyDeleted as isUserPermanentlyDeleted,
   dbRecordPermanentDeletion as recordPermanentDeletion,
   normalizeIdentifier,
-  DEFAULT_ADMIN_KEY
+  DEFAULT_ADMIN_KEY,
+  dbCheckDuplicateTxHash as checkDuplicateTxHash,
+  dbApproveDepositTransaction as approveDepositTransaction,
+  dbRejectDepositTransaction as rejectDepositTransaction,
+  dbFetchAdminAuditLogs as fetchAdminAuditLogs
 };
 
 export async function getAdminPasswordKey(): Promise<string> {

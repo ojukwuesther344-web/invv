@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import webpush from 'web-push';
 import { adminAuth, adminDb, adminStorage, hasAdminServiceAccount, configureServiceAccountKey } from './lib/firebase-admin';
 
 dotenv.config();
@@ -12,6 +13,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// VAPID keys for Web Push Notifications (Cross-device Android, iOS, Windows, macOS)
+export const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BMCMyoJbMGSP0mwY1nSh4C3M6xVUYL_RKVPDjMQYbMeKirB9-OV_wreCbUPKMjq5ZaXcVRjSns6bHYBiDV675qM';
+export const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'gqEVWAgcrXzFFDndlF83nE_gPwyQi-Lw8LnrO3HkRhA';
+const VAPID_SUBJECT = 'mailto:support@worldvestcapital.ltd';
+
+try {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+} catch (vErr) {
+  console.warn('[SERVER] VAPID configuration note:', vErr);
+}
+
+// Persistent file-backed and Firestore-backed admin devices storage
+const DEVICES_FILE = path.resolve(__dirname, 'admin_registered_devices.json');
+
+function loadAdminDevices(): any[] {
+  try {
+    if (fs.existsSync(DEVICES_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DEVICES_FILE, 'utf-8'));
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveAdminDevices(devices: any[]) {
+  try {
+    fs.writeFileSync(DEVICES_FILE, JSON.stringify(devices, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[SERVER] Error saving admin devices to file:', e);
+  }
+}
 
 // Read firebase-applet-config.json
 let firebaseConfig: any = {
@@ -320,6 +353,223 @@ async function startServer() {
   app.post('/api/admin/users/delete', handleDeleteUserRequest);
   app.delete('/api/admin/delete-user', handleDeleteUserRequest);
   app.post('/api/admin/delete-user', handleDeleteUserRequest);
+
+  // ==========================================
+  // Cross-Device Push Notification Endpoints
+  // ==========================================
+
+  // 1. Get VAPID Public Key for client browser PushManager subscription
+  app.get('/api/notifications/vapid-public-key', (_req, res) => {
+    return res.json({ success: true, publicKey: VAPID_PUBLIC_KEY });
+  });
+
+  // 2. Register Admin Device (Laptop, Desktop, Phone, Tablet)
+  app.post('/api/notifications/register-device', async (req, res) => {
+    try {
+      const { adminEmail, deviceId, deviceName, deviceType, browser, os, subscription } = req.body;
+      if (!adminEmail || !deviceId || !subscription) {
+        return res.status(400).json({ success: false, error: 'Missing required device registration fields.' });
+      }
+
+      const cleanEmail = adminEmail.trim().toLowerCase();
+      const now = Date.now();
+
+      const deviceRecord = {
+        id: `dev_${cleanEmail}_${deviceId}`,
+        adminEmail: cleanEmail,
+        deviceId,
+        deviceName: deviceName || `${os || 'Device'} (${browser || 'Browser'})`,
+        deviceType: deviceType || 'desktop',
+        browser: browser || 'Unknown',
+        os: os || 'Unknown',
+        subscription,
+        enabled: true,
+        createdAt: now,
+        lastActiveAt: now
+      };
+
+      // Save to local persistent storage
+      const devices = loadAdminDevices();
+      const existingIdx = devices.findIndex((d: any) => d.id === deviceRecord.id || (d.adminEmail === cleanEmail && d.deviceId === deviceId));
+      if (existingIdx >= 0) {
+        devices[existingIdx] = { ...devices[existingIdx], ...deviceRecord };
+      } else {
+        devices.push(deviceRecord);
+      }
+      saveAdminDevices(devices);
+
+      // Save to Firestore if available
+      try {
+        await adminDb.collection('admin_devices').doc(deviceRecord.id).set(deviceRecord, { merge: true });
+      } catch (fErr) {
+        console.warn('[SERVER-PUSH] Firestore device save note:', fErr);
+      }
+
+      console.log(`[SERVER-PUSH] Admin Device registered successfully: "${deviceRecord.deviceName}" (${deviceRecord.deviceType}) for ${cleanEmail}`);
+
+      return res.json({
+        success: true,
+        message: `Device "${deviceRecord.deviceName}" registered for notifications.`,
+        device: {
+          id: deviceRecord.id,
+          deviceId: deviceRecord.deviceId,
+          deviceName: deviceRecord.deviceName,
+          deviceType: deviceRecord.deviceType,
+          enabled: true
+        }
+      });
+    } catch (e: any) {
+      console.error('[SERVER-PUSH] register-device error:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 3. Unregister Admin Device
+  app.post('/api/notifications/unregister-device', async (req, res) => {
+    try {
+      const { adminEmail, deviceId } = req.body;
+      const cleanEmail = (adminEmail || '').trim().toLowerCase();
+      const devices = loadAdminDevices().filter((d: any) => !(d.adminEmail === cleanEmail && d.deviceId === deviceId));
+      saveAdminDevices(devices);
+
+      try {
+        await adminDb.collection('admin_devices').doc(`dev_${cleanEmail}_${deviceId}`).delete();
+      } catch (fErr) {}
+
+      return res.json({ success: true });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 4. List registered Admin devices
+  app.get('/api/notifications/devices', async (_req, res) => {
+    try {
+      const devices = loadAdminDevices().map((d: any) => ({
+        id: d.id,
+        deviceId: d.deviceId,
+        deviceName: d.deviceName,
+        deviceType: d.deviceType,
+        browser: d.browser,
+        os: d.os,
+        enabled: d.enabled !== false,
+        createdAt: d.createdAt,
+        lastActiveAt: d.lastActiveAt
+      }));
+      return res.json({ success: true, devices });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5. Send Test Notification Alert
+  app.post('/api/notifications/test', async (req, res) => {
+    try {
+      const { adminEmail } = req.body;
+      const cleanEmail = (adminEmail || '').trim().toLowerCase();
+      const devices = loadAdminDevices().filter((d: any) => !cleanEmail || d.adminEmail === cleanEmail);
+
+      if (devices.length === 0) {
+        return res.json({
+          success: false,
+          message: 'No registered devices found. Click "Enable Notifications" first to register this device.'
+        });
+      }
+
+      const payload = JSON.stringify({
+        title: '🔔 WorldVest Live Support',
+        body: 'Test Notification: Cross-device Live Support alerts are active on your device!',
+        icon: '/logohead_light.png',
+        badge: '/logohead_light.png',
+        tag: 'live-support-test',
+        data: {
+          url: '/?tab=live_support',
+          type: 'TEST'
+        }
+      });
+
+      let sentCount = 0;
+      for (const dev of devices) {
+        if (!dev.subscription) continue;
+        try {
+          await webpush.sendNotification(dev.subscription, payload);
+          sentCount++;
+        } catch (err: any) {
+          console.warn(`[SERVER-PUSH] Test push failed for ${dev.deviceName}:`, err.message);
+        }
+      }
+
+      return res.json({
+        success: true,
+        message: `Test notification sent to ${sentCount} device(s)!`
+      });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 6. Incoming Client Support Message Notification Trigger
+  app.post('/api/support/notify-client-message', async (req, res) => {
+    try {
+      const { sessionId, messageText, clientName, clientEmail } = req.body;
+      if (!sessionId || !messageText) {
+        return res.status(400).json({ success: false, error: 'sessionId and messageText are required.' });
+      }
+
+      const client = clientName || 'Client';
+      const previewText = messageText.length > 90 ? messageText.substring(0, 87) + '...' : messageText;
+
+      const pushPayload = JSON.stringify({
+        title: '🔔 WorldVest Live Support',
+        body: `New message from ${client}\n"${previewText}"`,
+        icon: '/logohead_light.png',
+        badge: '/logohead_light.png',
+        tag: `live-support-${sessionId}`,
+        data: {
+          sessionId,
+          clientName: client,
+          clientEmail: clientEmail || 'Guest Visitor',
+          messageText,
+          url: `/?tab=live_support&session=${sessionId}`,
+          timestamp: Date.now()
+        }
+      });
+
+      // Gather registered admin devices
+      const devices = loadAdminDevices();
+      let sentCount = 0;
+      const deadDeviceIds: string[] = [];
+
+      for (const dev of devices) {
+        if (!dev.enabled || !dev.subscription) continue;
+        try {
+          await webpush.sendNotification(dev.subscription, pushPayload);
+          sentCount++;
+          console.log(`[SERVER-PUSH] Live support push dispatched to device "${dev.deviceName}" (${dev.deviceType})`);
+        } catch (err: any) {
+          console.warn(`[SERVER-PUSH] Push delivery note for ${dev.deviceName}:`, err.statusCode || err.message);
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            deadDeviceIds.push(dev.id);
+          }
+        }
+      }
+
+      // Purge dead subscriptions if any
+      if (deadDeviceIds.length > 0) {
+        const remaining = devices.filter((d: any) => !deadDeviceIds.includes(d.id));
+        saveAdminDevices(remaining);
+      }
+
+      return res.json({
+        success: true,
+        sentCount,
+        totalDevices: devices.length
+      });
+    } catch (e: any) {
+      console.error('[SERVER-PUSH] notify-client-message error:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
 
   // Mount Vite or serve static dist
   const distPath = path.resolve(__dirname, 'dist');

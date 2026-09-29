@@ -27,7 +27,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { UserState, Deposit, Withdrawal, Transaction, InvestmentPlan, LedgerAdjustmentParams, LedgerAdjustmentResult } from '../types';
+import { UserState, Deposit, Withdrawal, Transaction, InvestmentPlan, LedgerAdjustmentParams, LedgerAdjustmentResult, AdminAuditLog } from '../types';
 
 export const isFirebaseReady = !!(firebaseConfig.apiKey && firebaseConfig.apiKey !== 'placeholder-api-key');
 
@@ -697,7 +697,18 @@ export async function dbAddTransaction(uid: string, t: Partial<Transaction>): Pr
       ...(t.roi && { roi: Number(t.roi) }),
       ...(t.referenceId && { referenceId: t.referenceId }),
       ...(t.txHash && { txHash: t.txHash }),
-      ...(t.paymentProof && { paymentProof: t.paymentProof })
+      ...(t.transactionHash && { transactionHash: t.transactionHash }),
+      ...(t.paymentProof && { paymentProof: t.paymentProof }),
+      ...(t.receiptUrl && { receiptUrl: t.receiptUrl }),
+      ...(t.proofImg && { proofImg: t.proofImg }),
+      ...(t.currency && { currency: t.currency }),
+      ...(t.paymentMethod && { paymentMethod: t.paymentMethod }),
+      ...(t.network && { network: t.network }),
+      ...(t.submittedAt && { submittedAt: Number(t.submittedAt) }),
+      ...(t.reviewedAt !== undefined && { reviewedAt: t.reviewedAt }),
+      ...(t.reviewedBy && { reviewedBy: t.reviewedBy }),
+      ...(t.approvedBy && { approvedBy: t.approvedBy }),
+      ...(t.rejectionReason && { rejectionReason: t.rejectionReason })
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -744,7 +755,7 @@ export async function dbFetchUserTransactions(uid: string): Promise<Transaction[
         amount: Number(data.amount) || 0,
         date: data.date || '',
         timestamp: Number(data.timestamp) || Date.now(),
-        status: data.status || 'Approved',
+        status: data.status || 'Pending',
         processor: data.processor || 'USDT TRC20',
         planId: data.planId,
         planName: data.planName,
@@ -753,8 +764,19 @@ export async function dbFetchUserTransactions(uid: string): Promise<Transaction[
         referenceId: data.referenceId,
         createdAt: data.createdAt || Number(data.timestamp) || Date.now(),
         approvedAt: data.approvedAt || null,
-        txHash: data.txHash,
-        paymentProof: data.paymentProof
+        txHash: data.txHash || data.transactionHash,
+        transactionHash: data.transactionHash || data.txHash,
+        paymentProof: data.paymentProof || data.receiptUrl || data.proofImg,
+        receiptUrl: data.receiptUrl || data.paymentProof || data.proofImg,
+        proofImg: data.proofImg || data.paymentProof || data.receiptUrl,
+        currency: data.currency || 'USD',
+        paymentMethod: data.paymentMethod || data.processor || 'USDT',
+        network: data.network || 'TRON (TRC20)',
+        submittedAt: data.submittedAt || data.timestamp,
+        reviewedAt: data.reviewedAt || null,
+        reviewedBy: data.reviewedBy || null,
+        approvedBy: data.approvedBy || null,
+        rejectionReason: data.rejectionReason || null
       });
     });
     return records;
@@ -1046,7 +1068,7 @@ export function subscribeToAllTransactions(
         amount: Number(data.amount) || 0,
         date: data.date || '',
         timestamp: Number(data.timestamp) || Date.now(),
-        status: data.status || 'Approved',
+        status: data.status || 'Pending',
         processor: data.processor || 'USDT TRC20',
         planId: data.planId,
         planName: data.planName,
@@ -1055,8 +1077,19 @@ export function subscribeToAllTransactions(
         referenceId: data.referenceId,
         createdAt: data.createdAt || Number(data.timestamp) || Date.now(),
         approvedAt: data.approvedAt || null,
-        txHash: data.txHash,
-        paymentProof: data.paymentProof
+        txHash: data.txHash || data.transactionHash,
+        transactionHash: data.transactionHash || data.txHash,
+        paymentProof: data.paymentProof || data.receiptUrl || data.proofImg,
+        receiptUrl: data.receiptUrl || data.paymentProof || data.proofImg,
+        proofImg: data.proofImg || data.paymentProof || data.receiptUrl,
+        currency: data.currency || 'USD',
+        paymentMethod: data.paymentMethod || data.processor || 'USDT',
+        network: data.network || 'TRON (TRC20)',
+        submittedAt: data.submittedAt || data.timestamp,
+        reviewedAt: data.reviewedAt || null,
+        reviewedBy: data.reviewedBy || null,
+        approvedBy: data.approvedBy || null,
+        rejectionReason: data.rejectionReason || null
       });
     });
     list.sort((a, b) => b.timestamp - a.timestamp);
@@ -1746,4 +1779,429 @@ export async function dbExecuteLedgerAdjustment(params: LedgerAdjustmentParams):
     updatedUser,
     transactionRecord: txData
   };
+}
+
+/**
+ * Checks whether a blockchain transaction hash has already been submitted on an active or approved deposit
+ */
+export async function dbCheckDuplicateTxHash(txHash: string): Promise<boolean> {
+  const cleanHash = (txHash || '').trim().toLowerCase();
+  if (!cleanHash) return false;
+
+  // 1. Fast local cache check
+  try {
+    const cachedStr = localStorage.getItem('all_transactions_cache');
+    if (cachedStr) {
+      const cached: Transaction[] = JSON.parse(cachedStr);
+      const exists = cached.some(t => {
+        const hash = (t.txHash || t.transactionHash || '').trim().toLowerCase();
+        return hash === cleanHash && t.status !== 'Rejected';
+      });
+      if (exists) return true;
+    }
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('transactions_')) {
+        const listStr = localStorage.getItem(key);
+        if (listStr) {
+          const list: Transaction[] = JSON.parse(listStr);
+          const found = list.some(t => {
+            const hash = (t.txHash || t.transactionHash || '').trim().toLowerCase();
+            const st = (t.status || '').toLowerCase();
+            return hash === cleanHash && st !== 'rejected';
+          });
+          if (found) return true;
+        }
+      }
+    }
+  } catch {}
+
+  // 2. Authoritative Firestore check
+  if (isFirebaseReady) {
+    try {
+      const q1 = query(collection(db, 'transactions'), where('txHash', '==', txHash.trim()));
+      const snap1 = await getDocs(q1);
+      for (const d of snap1.docs) {
+        const data = d.data();
+        if (data.status !== 'Rejected') return true;
+      }
+
+      const q2 = query(collection(db, 'transactions'), where('transactionHash', '==', txHash.trim()));
+      const snap2 = await getDocs(q2);
+      for (const d of snap2.docs) {
+        const data = d.data();
+        if (data.status !== 'Rejected') return true;
+      }
+    } catch (e) {
+      console.warn("dbCheckDuplicateTxHash query error:", e);
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Atomically approves a deposit transaction and credits user account balance & main account balance
+ * Enforces strict idempotency: if already approved, refuses to credit a second time.
+ */
+export async function dbApproveDepositTransaction(
+  transactionId: string, 
+  adminIdentifier: string = 'System Admin'
+): Promise<{ success: boolean; message: string; targetUid?: string }> {
+  if (!transactionId) throw new Error("Transaction ID is required.");
+
+  if (isFirebaseReady) {
+    try {
+      const txRef = doc(db, 'transactions', transactionId);
+
+      // Execute in atomic transaction to prevent race conditions & double-crediting
+      const result = await runTransaction(db, async (t) => {
+        const txSnap = await t.get(txRef);
+        if (!txSnap.exists()) {
+          throw new Error(`Deposit transaction "${transactionId}" was not found.`);
+        }
+
+        const txData = txSnap.data() as Transaction;
+        const currentStatus = (txData.status || '').toLowerCase();
+
+        // Idempotency check: refuse to credit if already approved or completed
+        if (currentStatus === 'approved' || currentStatus === 'completed') {
+          throw new Error("This deposit transaction is already approved and has already been credited to the user's balance.");
+        }
+
+        const targetUid = txData.userId;
+        if (!targetUid) {
+          throw new Error(`Transaction has no user association.`);
+        }
+
+        const userRef = doc(db, 'users', targetUid);
+        const userSnap = await t.get(userRef);
+        if (!userSnap.exists()) {
+          throw new Error(`Target user account for UID "${targetUid}" was not found.`);
+        }
+
+        const userData = userSnap.data();
+        const depositAmt = Number(txData.amount) || 0;
+        const currentMain = Number(userData.mainAccountBalance !== undefined ? userData.mainAccountBalance : userData.accountBalance) || 0;
+        const currentBal = Number(userData.accountBalance) || 0;
+        const currentTotal = Number(userData.totalDeposit) || 0;
+        const currentActive = Number(userData.activeDeposit) || 0;
+
+        const newMain = currentMain + depositAmt;
+        const newBal = currentBal + depositAmt;
+        const newTotal = currentTotal + depositAmt;
+        const newActive = txData.planId ? currentActive + depositAmt : currentActive;
+        const now = Date.now();
+
+        // 1. Atomically credit user balance
+        t.update(userRef, {
+          mainAccountBalance: newMain,
+          accountBalance: newBal,
+          totalDeposit: newTotal,
+          activeDeposit: newActive,
+          lastDeposit: depositAmt
+        });
+
+        // 2. Mark transaction as Approved
+        t.update(txRef, {
+          status: 'Approved',
+          approvedAt: now,
+          reviewedAt: now,
+          reviewedBy: adminIdentifier,
+          approvedBy: adminIdentifier
+        });
+
+        return {
+          targetUid,
+          depositAmt,
+          username: userData.username || txData.username,
+          planId: txData.planId,
+          planName: txData.planName,
+          processor: txData.processor,
+          roi: txData.roi,
+          term: txData.term,
+          newMain,
+          newBal
+        };
+      });
+
+      const now = Date.now();
+
+      // Check if there is a matching Investment transaction that was created alongside this deposit
+      try {
+        const invQ = query(
+          collection(db, 'transactions'),
+          where('userId', '==', result.targetUid),
+          where('type', '==', 'Investment'),
+          where('status', '==', 'Pending')
+        );
+        const invSnap = await getDocs(invQ);
+        for (const invDoc of invSnap.docs) {
+          const invData = invDoc.data();
+          if (
+            Number(invData.amount) === result.depositAmt && 
+            (invData.referenceId === transactionId || invData.planId === result.planId)
+          ) {
+            await setDoc(doc(db, 'transactions', invDoc.id), {
+              status: 'Approved',
+              approvedAt: now,
+              reviewedAt: now,
+              reviewedBy: adminIdentifier,
+              approvedBy: adminIdentifier
+            }, { merge: true });
+          }
+        }
+      } catch (e) {
+        console.warn("Updating matching investment record warning:", e);
+      }
+
+      // Add to deposits collection for deposit logs
+      try {
+        await setDoc(doc(db, 'deposits', `dep_${transactionId}`), {
+          id: `dep_${transactionId}`,
+          userId: result.targetUid,
+          username: result.username,
+          amount: result.depositAmt,
+          date: new Date().toLocaleDateString(),
+          processor: result.processor || 'USDT TRC20',
+          planId: result.planId || 'starter_plan',
+          planName: result.planName || 'Starter Plan',
+          timestamp: now,
+          roi: result.roi || 0,
+          term: result.term || 0,
+          status: 'Approved'
+        }, { merge: true });
+      } catch (e) {}
+
+      // Write Admin Audit Trail Log
+      try {
+        const auditId = `audit_appr_${now}_${Math.random().toString(36).substring(2, 6)}`;
+        await setDoc(doc(db, 'admin_audit_logs', auditId), {
+          id: auditId,
+          adminId: adminIdentifier,
+          adminEmail: adminIdentifier,
+          action: 'APPROVE_DEPOSIT',
+          transactionId: transactionId,
+          userId: result.targetUid,
+          username: result.username,
+          amount: result.depositAmt,
+          currency: 'USD',
+          timestamp: now
+        });
+      } catch (e) {}
+
+      return {
+        success: true,
+        message: `Successfully approved and credited $${result.depositAmt.toFixed(2)} to ${result.username}'s Main Account Balance and Account Balance.`,
+        targetUid: result.targetUid
+      };
+    } catch (error: any) {
+      console.error("dbApproveDepositTransaction error:", error);
+      throw error;
+    }
+  }
+
+  // Resilient Local / Offline fallback with duplicate credit protection
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('transactions_')) {
+      const listStr = localStorage.getItem(key);
+      if (listStr) {
+        try {
+          const list = JSON.parse(listStr);
+          const tx = list.find((t: any) => t.id === transactionId);
+          if (tx) {
+            if (tx.status === 'Approved' || tx.status === 'Completed') {
+              throw new Error("This deposit transaction is already approved and has already been credited to the user's balance.");
+            }
+            tx.status = 'Approved';
+            tx.approvedAt = Date.now();
+            tx.reviewedAt = Date.now();
+            tx.reviewedBy = adminIdentifier;
+            tx.approvedBy = adminIdentifier;
+            localStorage.setItem(key, JSON.stringify(list));
+
+            // Credit target user profile
+            const uKey = `user_profile_${tx.userId}`;
+            const uStr = localStorage.getItem(uKey);
+            if (uStr) {
+              const u = JSON.parse(uStr);
+              const depAmt = Number(tx.amount) || 0;
+              u.accountBalance = (Number(u.accountBalance) || 0) + depAmt;
+              u.mainAccountBalance = (Number(u.mainAccountBalance !== undefined ? u.mainAccountBalance : u.accountBalance) || 0) + depAmt;
+              u.totalDeposit = (Number(u.totalDeposit) || 0) + depAmt;
+              u.lastDeposit = depAmt;
+              if (tx.planId) {
+                u.activeDeposit = (Number(u.activeDeposit) || 0) + depAmt;
+              }
+              localStorage.setItem(uKey, JSON.stringify(u));
+            }
+            return {
+              success: true,
+              message: `Successfully approved and credited deposit of $${tx.amount}.`,
+              targetUid: tx.userId
+            };
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message.includes('already approved')) throw e;
+        }
+      }
+    }
+  }
+
+  throw new Error(`Deposit transaction "${transactionId}" was not found.`);
+}
+
+/**
+ * Rejects a deposit transaction. User balances remain strictly unchanged.
+ */
+export async function dbRejectDepositTransaction(
+  transactionId: string,
+  adminIdentifier: string = 'System Admin',
+  rejectionReason: string = 'Transaction could not be verified.'
+): Promise<{ success: boolean; message: string; targetUid?: string }> {
+  if (!transactionId) throw new Error("Transaction ID is required.");
+
+  if (isFirebaseReady) {
+    try {
+      const txRef = doc(db, 'transactions', transactionId);
+      const txSnap = await getDoc(txRef);
+      if (!txSnap.exists()) {
+        throw new Error(`Transaction with ID "${transactionId}" was not found.`);
+      }
+      const txData = txSnap.data() as Transaction;
+      const currentStatus = (txData.status || '').toLowerCase();
+
+      if (currentStatus === 'approved' || currentStatus === 'completed') {
+        throw new Error("Cannot reject a transaction that has already been approved and credited.");
+      }
+
+      const now = Date.now();
+      await setDoc(txRef, {
+        status: 'Rejected',
+        reviewedAt: now,
+        reviewedBy: adminIdentifier,
+        rejectionReason: rejectionReason || 'Transaction could not be verified.'
+      }, { merge: true });
+
+      // If matching pending investment transaction exists, also reject it
+      if (txData.userId) {
+        try {
+          const invQ = query(
+            collection(db, 'transactions'),
+            where('userId', '==', txData.userId),
+            where('type', '==', 'Investment'),
+            where('status', '==', 'Pending')
+          );
+          const invSnap = await getDocs(invQ);
+          for (const invDoc of invSnap.docs) {
+            const invData = invDoc.data();
+            if (
+              Number(invData.amount) === Number(txData.amount) &&
+              (invData.referenceId === transactionId || invData.planId === txData.planId)
+            ) {
+              await setDoc(doc(db, 'transactions', invDoc.id), {
+                status: 'Rejected',
+                reviewedAt: now,
+                reviewedBy: adminIdentifier,
+                rejectionReason: rejectionReason
+              }, { merge: true });
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Record Admin Audit Trail
+      try {
+        const auditId = `audit_rej_${now}_${Math.random().toString(36).substring(2, 6)}`;
+        await setDoc(doc(db, 'admin_audit_logs', auditId), {
+          id: auditId,
+          adminId: adminIdentifier,
+          adminEmail: adminIdentifier,
+          action: 'REJECT_DEPOSIT',
+          transactionId: transactionId,
+          userId: txData.userId,
+          username: txData.username,
+          amount: txData.amount,
+          currency: 'USD',
+          rejectionReason: rejectionReason,
+          timestamp: now
+        });
+      } catch (e) {}
+
+      return {
+        success: true,
+        message: `Deposit rejected successfully. User balance remains unchanged.`,
+        targetUid: txData.userId
+      };
+    } catch (err) {
+      console.error("dbRejectDepositTransaction error:", err);
+      throw err;
+    }
+  }
+
+  // Local fallback
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('transactions_')) {
+      const listStr = localStorage.getItem(key);
+      if (listStr) {
+        try {
+          const list = JSON.parse(listStr);
+          const tx = list.find((t: any) => t.id === transactionId);
+          if (tx) {
+            if (tx.status === 'Approved' || tx.status === 'Completed') {
+              throw new Error("Cannot reject an already approved transaction.");
+            }
+            tx.status = 'Rejected';
+            tx.reviewedAt = Date.now();
+            tx.reviewedBy = adminIdentifier;
+            tx.rejectionReason = rejectionReason;
+            localStorage.setItem(key, JSON.stringify(list));
+            return {
+              success: true,
+              message: `Deposit rejected. User balance remains unchanged.`,
+              targetUid: tx.userId
+            };
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message.includes('already approved')) throw e;
+        }
+      }
+    }
+  }
+
+  throw new Error(`Deposit transaction "${transactionId}" was not found.`);
+}
+
+/**
+ * Retrieves direct list of admin audit trail logs from Firestore
+ */
+export async function dbFetchAdminAuditLogs(): Promise<AdminAuditLog[]> {
+  if (!isFirebaseReady) return [];
+  try {
+    const q = query(collection(db, 'admin_audit_logs'), orderBy('timestamp', 'desc'), limit(100));
+    const snap = await getDocs(q);
+    const logs: AdminAuditLog[] = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      logs.push({
+        id: data.id || d.id,
+        adminId: data.adminId || '',
+        adminEmail: data.adminEmail || '',
+        action: data.action || '',
+        transactionId: data.transactionId || '',
+        userId: data.userId || '',
+        username: data.username || '',
+        amount: Number(data.amount) || 0,
+        currency: data.currency || 'USD',
+        timestamp: Number(data.timestamp) || Date.now(),
+        rejectionReason: data.rejectionReason
+      });
+    });
+    return logs;
+  } catch (e) {
+    console.warn("dbFetchAdminAuditLogs error:", e);
+    return [];
+  }
 }

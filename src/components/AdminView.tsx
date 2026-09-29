@@ -8,6 +8,7 @@ import {
   Settings, 
   CheckCircle, 
   XCircle, 
+  Clock, 
   Plus, 
   Trash2, 
   Edit, 
@@ -73,7 +74,10 @@ import {
   deleteUserProfile,
   executeLedgerAdjustment,
   getAdminPasswordKey,
-  DEFAULT_ADMIN_KEY
+  DEFAULT_ADMIN_KEY,
+  approveDepositTransaction,
+  rejectDepositTransaction,
+  fetchAdminAuditLogs
 } from '../services/db';
 import { db } from '../firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
@@ -301,6 +305,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
   // New Sidebar Feature State variables
   const [overviewSubTab, setOverviewSubTab] = useState<'registered_users' | 'live_deposits' | 'live_withdrawals' | 'referrals'>('registered_users');
+  const [depositFilterStatus, setDepositFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+  const [previewReceiptUrl, setPreviewReceiptUrl] = useState<string | null>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
   const [deductUser, setDeductUser] = useState('');
   const [deductAmount, setDeductAmount] = useState('');
   const [deductProcessor, setDeductProcessor] = useState<'USDT TRC20' | 'Bitcoin' | 'Ethereum' | 'USDT ERC20' | 'Account Balance'>('Account Balance');
@@ -379,6 +387,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
   const [showConsoleGuideModal, setShowConsoleGuideModal] = useState(false);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+
+  // Deposit Management Tab States (Requirement 4)
+  const [depositStatusFilter, setDepositStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+  const [depositSearchQuery, setDepositSearchQuery] = useState('');
+  const [previewReceiptModal, setPreviewReceiptModal] = useState<{ url: string; title: string } | null>(null);
+  const [copiedTxHash, setCopiedTxHash] = useState<string | null>(null);
 
   // States for Adding New User manually
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
@@ -706,88 +720,83 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     }
   };
 
-  // Handle Deposit Approval (if pending)
+  // Handle Deposit Approval (Requirements 4, 5, 6, 10)
   const handleApproveDeposit = async (tx: Transaction) => {
-    if (confirm(`Approve deposit of $${tx.amount} for ${tx.username}? This will add the sum to their account balance, main account balance & total deposits.`)) {
+    const curStatus = (tx.status || '').toLowerCase();
+    if (curStatus === 'approved' || curStatus === 'completed') {
+      alert("This deposit transaction is already approved and has already been credited to the user's balance.");
+      return;
+    }
+
+    if (confirm(`Approve deposit of $${Number(tx.amount).toFixed(2)} for ${tx.username}? This will atomically credit their Main Account Balance, Account Balance & Total Deposit.`)) {
       try {
-        await updateTransactionStatus(tx.id, 'Approved');
+        const adminIdentifier = currentUser?.email || adminEmail || 'blessingubah38@gmail.com';
+        const res = await approveDepositTransaction(tx.id, adminIdentifier);
 
-        // Locate target user from loaded users or fetch from Firestore
-        let targetUser = users.find(u => u.uid === tx.userId || u.username?.toLowerCase() === tx.username?.toLowerCase());
-        const targetUid = targetUser?.uid || tx.userId || (tx.username ? `user_${tx.username}` : '');
-
-        if (!targetUser && targetUid) {
-          try {
-            targetUser = await fetchUserProfile(targetUid);
-          } catch (e) {
-            console.warn("fetchUserProfile error:", e);
-          }
-        }
-
-        if (targetUser && targetUid) {
+        // Update local user state immediately for fluid UI
+        if (res.targetUid) {
           const depositAmt = Number(tx.amount) || 0;
-          const currentBal = Number(targetUser.accountBalance) || 0;
-          const currentMain = Number(targetUser.mainAccountBalance !== undefined ? targetUser.mainAccountBalance : currentBal);
-          const currentTotal = Number(targetUser.totalDeposit) || 0;
-          const currentActive = Number(targetUser.activeDeposit) || 0;
-
-          const updatedProfile: UserState = {
-            ...targetUser,
-            accountBalance: currentBal + depositAmt,
-            mainAccountBalance: currentMain + depositAmt,
-            totalDeposit: currentTotal + depositAmt,
-            activeDeposit: currentActive + depositAmt,
-            lastDeposit: depositAmt
-          };
-
-          await saveUserProfile(targetUid, updatedProfile);
-          localStorage.setItem(`user_profile_${targetUid}`, JSON.stringify(updatedProfile));
-
-          // Update local state in AdminView so table updates immediately
-          setUsers(prev => prev.map(u => (u.uid === targetUid || u.username === tx.username) ? updatedProfile : u));
-
-          // Also record standard deposit record
-          await addDepositRecord(targetUid, {
-            username: targetUser.username || tx.username || '',
-            amount: depositAmt,
-            date: new Date().toLocaleDateString(),
-            processor: (tx.processor || 'USDT TRC20') as any,
-            planId: tx.planId || 'starter_plan',
-            planName: tx.planName || 'Starter Plan',
-            timestamp: Date.now(),
-            roi: tx.roi || 0,
-            term: tx.term || 0
-          });
-
-          // Check if there is a matching pending investment transaction to approve as well
-          const matchingInvestment = transactions.find(t => 
-            (t.userId === targetUid || t.username === tx.username) &&
-            t.type === 'Investment' &&
-            t.status === 'Pending' &&
-            Number(t.amount) === depositAmt
-          );
-          if (matchingInvestment) {
-            await updateTransactionStatus(matchingInvestment.id, 'Approved');
-          }
+          setUsers(prev => prev.map(u => {
+            if (u.uid === res.targetUid || u.username === tx.username) {
+              const currentBal = Number(u.accountBalance) || 0;
+              const currentMain = Number(u.mainAccountBalance !== undefined ? u.mainAccountBalance : currentBal);
+              const currentTotal = Number(u.totalDeposit) || 0;
+              const currentActive = Number(u.activeDeposit) || 0;
+              return {
+                ...u,
+                accountBalance: currentBal + depositAmt,
+                mainAccountBalance: currentMain + depositAmt,
+                totalDeposit: currentTotal + depositAmt,
+                activeDeposit: tx.planId ? currentActive + depositAmt : currentActive,
+                lastDeposit: depositAmt
+              };
+            }
+            return u;
+          }));
         }
-        alert(`Deposit of $${tx.amount} successfully approved! Total deposit, Account balance, and Main account balance have been credited.`);
-      } catch (err) {
+
+        // Refresh audit logs
+        loadAuditLogs();
+
+        alert(res.message || `Deposit of $${tx.amount} successfully approved and credited!`);
+      } catch (err: any) {
         console.error("Deposit approval error:", err);
-        alert("Error approving deposit: " + err);
+        alert(err?.message || "Failed approving deposit.");
       }
     }
   };
 
-  // Handle Deposit Rejection
+  // Handle Deposit Rejection (Requirements 4, 7, 10)
   const handleRejectDeposit = async (tx: Transaction) => {
-    if (confirm(`Reject deposit request of $${tx.amount} from ${tx.username}?`)) {
+    const curStatus = (tx.status || '').toLowerCase();
+    if (curStatus === 'approved' || curStatus === 'completed') {
+      alert("Cannot reject a deposit that has already been approved and credited.");
+      return;
+    }
+
+    const reason = prompt(`Enter rejection reason for ${tx.username}'s deposit of $${tx.amount}:`, "Transaction could not be verified on the public ledger.");
+    if (reason !== null) {
       try {
-        await updateTransactionStatus(tx.id, 'Rejected');
-        alert("Deposit request successfully rejected.");
-      } catch (err) {
+        const adminIdentifier = currentUser?.email || adminEmail || 'blessingubah38@gmail.com';
+        const res = await rejectDepositTransaction(tx.id, adminIdentifier, reason.trim() || "Transaction could not be verified.");
+        loadAuditLogs();
+        alert(res.message || "Deposit request successfully rejected.");
+      } catch (err: any) {
         console.error("Deposit rejection error:", err);
-        alert("Failed rejecting deposit: " + err);
+        alert(err?.message || "Failed rejecting deposit.");
       }
+    }
+  };
+
+  const loadAuditLogs = async () => {
+    setLoadingAuditLogs(true);
+    try {
+      const logs = await fetchAdminAuditLogs();
+      setAuditLogs(logs);
+    } catch (e) {
+      console.warn("fetchAdminAuditLogs error:", e);
+    } finally {
+      setLoadingAuditLogs(false);
     }
   };
 
@@ -1683,12 +1692,19 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setActiveTab('deposits_pending');
               setMobileMenuOpen(false);
             }}
-            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-2 cursor-pointer ${
               activeTab === 'deposits_pending' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
             }`}
           >
-            <TrendingUp size={14} className="text-green-400" />
-            <span>Pending Deposits</span>
+            <div className="flex items-center gap-2.5">
+              <TrendingUp size={14} className="text-green-400" />
+              <span>Deposit Management</span>
+            </div>
+            {transactions.filter(t => t.type === 'Deposit' && (t.status || '').toLowerCase() === 'pending').length > 0 && (
+              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold">
+                {transactions.filter(t => t.type === 'Deposit' && (t.status || '').toLowerCase() === 'pending').length}
+              </span>
+            )}
           </button>
 
           <button 
@@ -1838,7 +1854,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               {activeTab === 'blacklist' && "Accounts Blacklist & Suspension"}
               {activeTab === 'referrals' && "Referral Performance & Bonuses"}
               {activeTab === 'withdrawals_pending' && "Pending Withdrawal Requests"}
-              {activeTab === 'deposits_pending' && "Pending Deposit Requests"}
+              {activeTab === 'deposits_pending' && "Deposit Management & Blockchain Proof Review"}
               {activeTab === 'deduct_balance' && "Deduct User Balances"}
               {activeTab === 'payment_gateways' && "Payment Gateways Configuration"}
               {activeTab === 'ip_check' && "IP Detection & Device Auditing"}
@@ -2437,63 +2453,313 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               </div>
             )}
 
-            {/* D. PENDING DEPOSITS DECK */}
-            {activeTab === 'deposits_pending' && (
-              <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 w-full">
-                <div className="text-xs font-black uppercase tracking-wider text-green-500 mb-4">Pending Depositors Waiting Verification</div>
-                <div className="w-full overflow-x-auto font-sans">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-wider bg-slate-900/40">
-                        <th className="p-3">Reference Ref</th>
-                        <th className="p-3">Client Username</th>
-                        <th className="p-3">Deposit Value</th>
-                        <th className="p-3">Crypto Currency Gateway</th>
-                        <th className="p-3">Verification Details</th>
-                        <th className="p-3 text-right">Gateway Functions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#10243d] font-mono">
-                      {transactions.filter(t => t.type === 'Deposit' && t.status === 'Pending').map((tx) => (
-                        <tr key={tx.id} className="hover:bg-slate-900/20 transition-all">
-                          <td className="p-3 text-slate-400 font-semibold">{tx.id}</td>
-                          <td className="p-3 text-[#D4A856] font-sans font-bold">{tx.username}</td>
-                          <td className="p-3 text-green-400 font-black">{formatCurrency(tx.amount)}</td>
-                          <td className="p-3 text-slate-200">{tx.processor}</td>
-                          <td className="p-3 text-slate-400 text-[10px]">
-                            {tx.proofImg ? (
-                              <a href={tx.proofImg} target="_blank" rel="noopener noreferrer" className="text-[#C59B4E] font-extrabold hover:underline block mb-1">View Receipt Image</a>
-                            ) : null}
-                            <span className="text-slate-500">Hash/Memo:</span> {tx.txHash || "Unspecified Ledger Code"}
-                          </td>
-                          <td className="p-3 text-right">
-                            <div className="flex justify-end gap-2 font-sans font-bold">
-                              <button 
-                                onClick={() => handleApproveDeposit(tx)}
-                                className="bg-[#C59B4E] text-slate-950 text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-sm transition-colors cursor-pointer"
-                              >
-                                Approve
-                              </button>
-                              <button 
-                                onClick={() => handleRejectDeposit(tx)}
-                                className="bg-red-600 text-white text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-sm transition-colors cursor-pointer"
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          </td>
+            {/* D. DEPOSIT MANAGEMENT & BLOCKCHAIN PROOF APPROVAL SYSTEM (Requirement 4) */}
+            {activeTab === 'deposits_pending' && (() => {
+              const depositList = transactions.filter(t => t.type === 'Deposit');
+              const pendingDeposits = depositList.filter(t => (t.status || '').toLowerCase() === 'pending');
+              const approvedDeposits = depositList.filter(t => (t.status || '').toLowerCase() === 'approved' || (t.status || '').toLowerCase() === 'completed');
+              const rejectedDeposits = depositList.filter(t => (t.status || '').toLowerCase() === 'rejected');
+
+              let displayedDeposits = depositList;
+              if (depositStatusFilter === 'PENDING') displayedDeposits = pendingDeposits;
+              else if (depositStatusFilter === 'APPROVED') displayedDeposits = approvedDeposits;
+              else if (depositStatusFilter === 'REJECTED') displayedDeposits = rejectedDeposits;
+
+              if (depositSearchQuery.trim()) {
+                const q = depositSearchQuery.trim().toLowerCase();
+                displayedDeposits = displayedDeposits.filter(t => 
+                  (t.username || '').toLowerCase().includes(q) ||
+                  (t.userId || '').toLowerCase().includes(q) ||
+                  (t.id || '').toLowerCase().includes(q) ||
+                  (t.txHash || t.transactionHash || '').toLowerCase().includes(q) ||
+                  (t.processor || '').toLowerCase().includes(q)
+                );
+              }
+
+              return (
+                <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 w-full space-y-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#142d4a] pb-4">
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-wider text-green-400 flex items-center gap-2">
+                        <TrendingUp size={16} />
+                        Deposit Management & Blockchain Proof Review
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-sans">
+                        Verify cryptocurrency transaction hashes and receipts. Balances update ONLY when approved. Idempotency prevents double crediting.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="relative flex-1 sm:w-60">
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                          type="text"
+                          value={depositSearchQuery}
+                          onChange={(e) => setDepositSearchQuery(e.target.value)}
+                          placeholder="Search user, ID, or txHash..."
+                          className="w-full bg-[#06101c] text-xs py-2 pl-8 pr-3 rounded-lg text-slate-200 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDepositStatusFilter('PENDING')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                        depositStatusFilter === 'PENDING'
+                          ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                          : 'bg-[#0e2138] text-amber-300 hover:bg-[#152e4d]'
+                      }`}
+                    >
+                      <span>⏳ PENDING ({pendingDeposits.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDepositStatusFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                        depositStatusFilter === 'ALL'
+                          ? 'bg-[#C59B4E] text-slate-950 font-black shadow-md'
+                          : 'bg-[#0e2138] text-slate-300 hover:bg-[#152e4d]'
+                      }`}
+                    >
+                      <span>ALL DEPOSITS ({depositList.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDepositStatusFilter('APPROVED')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                        depositStatusFilter === 'APPROVED'
+                          ? 'bg-emerald-600 text-white font-black shadow-md'
+                          : 'bg-[#0e2138] text-emerald-400 hover:bg-[#152e4d]'
+                      }`}
+                    >
+                      <span>✓ APPROVED ({approvedDeposits.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDepositStatusFilter('REJECTED')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                        depositStatusFilter === 'REJECTED'
+                          ? 'bg-rose-600 text-white font-black shadow-md'
+                          : 'bg-[#0e2138] text-rose-400 hover:bg-[#152e4d]'
+                      }`}
+                    >
+                      <span>✕ REJECTED ({rejectedDeposits.length})</span>
+                    </button>
+                  </div>
+
+                  {/* Deposits Table */}
+                  <div className="w-full overflow-x-auto font-sans">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-wider bg-slate-900/50">
+                          <th className="p-3">User & UID</th>
+                          <th className="p-3">Deposit Amount</th>
+                          <th className="p-3">Method & Network</th>
+                          <th className="p-3">Blockchain TxHash</th>
+                          <th className="p-3">Receipt Image</th>
+                          <th className="p-3">Submission Date</th>
+                          <th className="p-3">Current Status</th>
+                          <th className="p-3 text-right">Admin Actions</th>
                         </tr>
-                      ))}
-                      {transactions.filter(t => t.type === 'Deposit' && t.status === 'Pending').length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="p-12 text-center text-slate-500 font-sans font-semibold uppercase tracking-wider">No pending manual deposit records waiting.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-[#10243d] font-mono">
+                        {displayedDeposits.map((tx) => {
+                          const statusLower = (tx.status || '').toLowerCase();
+                          const isPending = statusLower === 'pending';
+                          const isApproved = statusLower === 'approved' || statusLower === 'completed';
+                          const isRejected = statusLower === 'rejected';
+                          const receiptImg = tx.receiptUrl || tx.proofImg || tx.paymentProof;
+                          const hash = tx.txHash || tx.transactionHash;
+
+                          return (
+                            <tr key={tx.id} className="hover:bg-slate-900/30 transition-colors">
+                              {/* User Info */}
+                              <td className="p-3 font-sans">
+                                <div className="font-bold text-[#D4A856] text-xs leading-tight">
+                                  {tx.username || 'Anonymous'}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1">
+                                  <span className="truncate max-w-[100px]" title={tx.userId}>{tx.userId || tx.id}</span>
+                                  {tx.userId && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(tx.userId || '');
+                                        setCopiedTxHash(`uid_${tx.id}`);
+                                        setTimeout(() => setCopiedTxHash(null), 2000);
+                                      }}
+                                      className="text-slate-500 hover:text-slate-200 transition-colors cursor-pointer"
+                                      title="Copy UID"
+                                    >
+                                      {copiedTxHash === `uid_${tx.id}` ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Amount & Currency */}
+                              <td className="p-3">
+                                <span className={`font-black text-sm block ${isApproved ? 'text-emerald-400' : isPending ? 'text-amber-400' : 'text-slate-400'}`}>
+                                  {formatCurrency(tx.amount)}
+                                </span>
+                                <span className="text-[9px] text-slate-500 uppercase font-sans font-bold">{tx.currency || 'USD'}</span>
+                              </td>
+
+                              {/* Method & Network */}
+                              <td className="p-3 font-sans">
+                                <span className="text-slate-200 font-bold block text-xs">{tx.paymentMethod || tx.processor || 'USDT'}</span>
+                                <span className="text-[10px] text-[#C59B4E] font-mono block">
+                                  {tx.network || 'TRON (TRC20)'}
+                                </span>
+                              </td>
+
+                              {/* Blockchain Hash */}
+                              <td className="p-3 text-[10px]">
+                                {hash ? (
+                                  <div className="flex items-center gap-1.5 bg-[#06101c] px-2 py-1 rounded border border-[#163356] max-w-[190px]">
+                                    <span className="truncate font-mono text-slate-300 font-medium" title={hash}>
+                                      {hash}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(hash);
+                                        setCopiedTxHash(`hash_${tx.id}`);
+                                        setTimeout(() => setCopiedTxHash(null), 2000);
+                                      }}
+                                      className="text-slate-400 hover:text-white transition-colors shrink-0 cursor-pointer"
+                                      title="Copy Hash"
+                                    >
+                                      {copiedTxHash === `hash_${tx.id}` ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-500 italic text-[10px] font-sans">None (Receipt Only)</span>
+                                )}
+                              </td>
+
+                              {/* Receipt Image */}
+                              <td className="p-3">
+                                {receiptImg ? (
+                                  <div className="flex items-center gap-2">
+                                    <img
+                                      src={receiptImg}
+                                      alt="Receipt proof"
+                                      onClick={() => setPreviewReceiptModal({ url: receiptImg, title: `Receipt Proof - ${tx.username} ($${tx.amount})` })}
+                                      className="w-10 h-10 object-cover rounded-md border border-[#1a385e] hover:border-[#C59B4E] cursor-pointer transition-all shadow-sm shrink-0"
+                                      title="Click to zoom receipt"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewReceiptModal({ url: receiptImg, title: `Receipt Proof - ${tx.username} ($${tx.amount})` })}
+                                      className="text-[#C59B4E] text-[10px] font-sans font-bold hover:underline cursor-pointer"
+                                    >
+                                      View
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-500 text-[10px] font-sans">No Receipt</span>
+                                )}
+                              </td>
+
+                              {/* Submission Date / Time */}
+                              <td className="p-3 text-[10px] text-slate-400 font-sans">
+                                <div className="font-semibold text-slate-300">{tx.date || new Date(tx.timestamp || tx.submittedAt || Date.now()).toLocaleDateString()}</div>
+                                <div className="text-slate-500 text-[9px] font-mono">
+                                  {new Date(tx.timestamp || tx.submittedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                {tx.reviewedBy && (
+                                  <div className="text-[9px] text-slate-500 mt-1 italic">
+                                    Audited by: {tx.reviewedBy}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Current Status */}
+                              <td className="p-3 font-sans">
+                                {isPending && (
+                                  <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
+                                    <Clock size={11} className="animate-spin text-amber-400" />
+                                    PENDING
+                                  </span>
+                                )}
+                                {isApproved && (
+                                  <div>
+                                    <span className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
+                                      <Check size={11} className="stroke-[3]" />
+                                      APPROVED
+                                    </span>
+                                  </div>
+                                )}
+                                {isRejected && (
+                                  <div>
+                                    <span className="inline-flex items-center gap-1 bg-rose-500/15 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
+                                      <X size={11} className="stroke-[3]" />
+                                      REJECTED
+                                    </span>
+                                    {tx.rejectionReason && (
+                                      <p className="text-[9px] text-rose-400/80 mt-1 max-w-[150px] truncate" title={tx.rejectionReason}>
+                                        {tx.rejectionReason}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Admin Actions */}
+                              <td className="p-3 text-right font-sans">
+                                {isPending ? (
+                                  <div className="flex justify-end gap-1.5 font-bold">
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleApproveDeposit(tx)}
+                                      className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all shadow cursor-pointer flex items-center gap-1"
+                                      title="Approve deposit and credit balance"
+                                    >
+                                      <CheckCircle size={12} />
+                                      <span>APPROVE</span>
+                                    </button>
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleRejectDeposit(tx)}
+                                      className="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all shadow cursor-pointer flex items-center gap-1"
+                                      title="Reject deposit (balance unchanged)"
+                                    >
+                                      <XCircle size={12} />
+                                      <span>REJECT</span>
+                                    </button>
+                                  </div>
+                                ) : isApproved ? (
+                                  <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider inline-flex items-center gap-1">
+                                    <Check size={12} /> Credited
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                                    Rejected
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        {displayedDeposits.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="p-12 text-center text-slate-500 font-sans font-semibold uppercase tracking-wider">
+                              No deposit records matching filter.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* E. DEDUCT USER ACTIVE MONEY BALANCE (Item 5) */}
             {activeTab === 'deduct_balance' && (
@@ -3558,12 +3824,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   </div>
                                 )}
                                 {isPending && isDeposit && (
-                                  <button 
-                                    onClick={() => handleApproveDeposit(tx)}
-                                    className="bg-green-600 hover:bg-green-700 text-white text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider cursor-pointer"
-                                  >
-                                    Approve Deposit
-                                  </button>
+                                  <div className="flex gap-1.5 justify-end">
+                                    <button 
+                                      onClick={() => handleApproveDeposit(tx)}
+                                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2.5 py-1 rounded font-black uppercase tracking-wider cursor-pointer transition-colors shadow"
+                                      title="Approve Deposit and Credit Balance"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button 
+                                      onClick={() => handleRejectDeposit(tx)}
+                                      className="bg-rose-600 hover:bg-rose-500 text-white text-[10px] px-2.5 py-1 rounded font-black uppercase tracking-wider cursor-pointer transition-colors shadow"
+                                      title="Reject Deposit"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
                                 )}
                                 {!isPending && (
                                   <span className="text-[10px] text-slate-500 italic font-semibold">Audited</span>
@@ -3668,13 +3944,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 </>
                               )}
                               {isDeposit && (
-                                <button 
-                                  onClick={() => handleApproveDeposit(tx)}
-                                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px]"
-                                >
-                                  <CheckCircle size={13} />
-                                  <span>Approve Deposit</span>
-                                </button>
+                                <div className="flex gap-2 w-full">
+                                  <button 
+                                    onClick={() => handleApproveDeposit(tx)}
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] shadow"
+                                  >
+                                    <CheckCircle size={13} />
+                                    <span>Approve</span>
+                                  </button>
+                                  <button 
+                                    onClick={() => handleRejectDeposit(tx)}
+                                    className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] shadow"
+                                  >
+                                    <XCircle size={13} />
+                                    <span>Reject</span>
+                                  </button>
+                                </div>
                               )}
                             </div>
                           )}
@@ -5471,6 +5756,57 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Proof Preview Lightbox Modal */}
+      {previewReceiptModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#091527] border border-[#163356] rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-[#142d4a] flex justify-between items-center bg-slate-900/60">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-[#C59B4E]" />
+                <h3 className="text-xs font-black uppercase text-white tracking-wider font-display">
+                  {previewReceiptModal.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewReceiptModal(null)}
+                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-[#030810] flex items-center justify-center max-h-[70vh] overflow-auto">
+              <img 
+                src={previewReceiptModal.url} 
+                alt="Receipt proof full size" 
+                className="max-h-[65vh] w-auto max-w-full object-contain rounded-lg border border-[#163356] shadow-lg"
+              />
+            </div>
+
+            <div className="p-4 border-t border-[#142d4a] flex justify-between items-center bg-slate-900/40">
+              <a
+                href={previewReceiptModal.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-[#C59B4E] hover:underline font-bold flex items-center gap-1.5"
+              >
+                <ExternalLink size={13} />
+                <span>Open in New Tab</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setPreviewReceiptModal(null)}
+                className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-2 rounded-lg cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}
