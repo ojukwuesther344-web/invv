@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type Theme = 'dark' | 'light';
+export type Theme = 'light';
 
 interface ThemeContextType {
   theme: Theme;
@@ -8,55 +8,26 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void;
 }
 
-const THEME_STORAGE_KEY = 'worldvest_theme';
-
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Dark mode is default
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(THEME_STORAGE_KEY);
-        if (saved === 'light' || saved === 'dark') {
-          return saved;
-        }
-      } catch (e) {
-        // LocalStorage access may be restricted
-      }
-    }
-    return 'dark';
-  });
+  const [theme] = useState<Theme>('light');
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-      root.style.colorScheme = 'dark';
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
-      root.style.colorScheme = 'light';
-    }
+    root.classList.remove('dark');
+    root.classList.remove('light');
+    root.style.colorScheme = 'light';
 
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch (e) {
-      // Storage might be unavailable
-    }
+      localStorage.removeItem('worldvest_theme');
+    } catch (e) {}
 
-    // Broadcast event for any external listeners or chart canvas adapters
-    window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
-  }, [theme]);
+    window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: 'light' } }));
+  }, []);
 
-  const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-  };
+  const toggleTheme = () => {};
+  const setTheme = () => {};
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
@@ -68,7 +39,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    return {
+      theme: 'light',
+      toggleTheme: () => {},
+      setTheme: () => {}
+    };
   }
   return context;
 }

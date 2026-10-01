@@ -6,20 +6,10 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('worldvest_theme');
-          var theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
-          if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-            document.documentElement.classList.remove('light');
-            document.documentElement.style.colorScheme = 'dark';
-          } else {
-            document.documentElement.classList.add('light');
-            document.documentElement.classList.remove('dark');
-            document.documentElement.style.colorScheme = 'light';
-          }
-        } catch (e) {
-          document.documentElement.classList.add('dark');
-        }
+          localStorage.removeItem('worldvest_theme');
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+        } catch (e) {}
       })();
     </script>
     <title>WorldvestCapital | Home - crypto investment & Exchange platform</title>

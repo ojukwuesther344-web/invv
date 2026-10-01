@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import ThemeToggle from './ThemeToggle';
 import { 
   ShieldAlert, 
   Users, 
@@ -1561,7 +1560,6 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
         </div>
         
         <div className="flex items-center gap-2.5">
-          <ThemeToggle variant="minimal" />
           <div className="flex items-center gap-1.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] px-2.5 py-1 rounded-full text-[9px] font-bold text-[#C59B4E] uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-[#C59B4E] animate-pulse"></span>
             LIVE
@@ -1820,11 +1818,6 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             <span>Password & Security</span>
           </button>
         </nav>
-
-        {/* Appearance Theme Toggle in Admin Sidebar (Requirement 16) */}
-        <div className="pt-2">
-          <ThemeToggle variant="sidebar" />
-        </div>
 
         {/* Foot exit link */}
         <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-2">

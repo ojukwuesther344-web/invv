@@ -1,8 +1,6 @@
 import React from 'react';
 import logoheadImg from '../assets/images/logohead.png';
 import { formatCurrency } from '../utils/formatters';
-import ThemeToggle from './ThemeToggle';
-import { useTheme } from '../context/ThemeContext';
 import { 
   LayoutDashboard, 
   Wallet, 
@@ -52,9 +50,6 @@ export default function DashboardSidebar({
   mainAccountBalance,
   accountBalance = 0
 }: SidebarProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-
   // Primary menu matching screenshot exactly
   const primaryMenuItems = [
     { 
@@ -248,11 +243,6 @@ export default function DashboardSidebar({
               </div>
             )}
           </div>
-        </div>
-
-        {/* Appearance Theme Toggle inside left sidebar menu (Requirements 3, 4, 8, 9) */}
-        <div className="px-4 pb-2">
-          <ThemeToggle variant="sidebar" />
         </div>
 
         {/* Sidebar Footer with Website Home & Logout */}

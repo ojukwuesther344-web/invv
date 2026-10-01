@@ -3,7 +3,6 @@ import { Phone, Mail, MapPin, ChevronDown, User, LogOut, Menu, X, ArrowRight } f
 import { Page, UserState } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
 import CryptoTickerBar from './CryptoTickerBar';
-import ThemeToggle from './ThemeToggle';
 import { isSystemAdminIdentity } from '../services/firebaseService';
 
 interface HeaderProps {
@@ -163,11 +162,8 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
             })}
           </div>
 
-          {/* Action Buttons & Desktop Theme Toggle */}
+          {/* Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
-            {/* Quick theme toggle */}
-            <ThemeToggle variant="minimal" />
-
             {user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? (
               <div className="flex items-center gap-1.5">
                 <button 
@@ -212,7 +208,6 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
 
           {/* Mobile hamburger button */}
           <div className="flex sm:hidden items-center gap-2">
-            <ThemeToggle variant="minimal" />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-elevated)] transition-colors"
@@ -285,11 +280,6 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
                 <span>{user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? 'Go to Account' : 'GET STARTED'}</span>
                 <ArrowRight size={14} />
               </button>
-            </div>
-
-            {/* Mobile Appearance Theme Toggle */}
-            <div className="pt-2 border-t border-[var(--border-subtle)]">
-              <ThemeToggle variant="sidebar" />
             </div>
           </div>
         )}

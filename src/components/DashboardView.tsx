@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Page, UserState, Transaction, Withdrawal } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
-import ThemeToggle from './ThemeToggle';
 import { formatCurrency, formatAmount } from '../utils/formatters';
 import { isSystemAdminIdentity } from '../services/firebaseService';
 import { 
@@ -866,9 +865,6 @@ export default function DashboardView({
         </div>
         
         <div className="flex items-center gap-2 sm:gap-3.5">
-          {/* Theme toggle switch in dashboard header */}
-          <ThemeToggle variant="minimal" />
-
           {/* Home Icon button */}
           <button 
             type="button"
