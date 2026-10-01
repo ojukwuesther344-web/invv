@@ -1,6 +1,48 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+:root {
+  --bg-main: #080B10;
+  --bg-secondary: #0D1117;
+  --bg-card: #11161D;
+  --bg-card-elevated: #151B23;
+  --text-primary: #F5F7FA;
+  --text-secondary: #9AA4B2;
+  --text-muted: #667085;
+  --border-subtle: #212836;
+  --accent-emerald: #19B86B;
+  --accent-gold: #D6B25E;
+  color-scheme: dark;
+}
+
+html.dark {
+  --bg-main: #080B10;
+  --bg-secondary: #0D1117;
+  --bg-card: #11161D;
+  --bg-card-elevated: #151B23;
+  --text-primary: #F5F7FA;
+  --text-secondary: #9AA4B2;
+  --text-muted: #667085;
+  --border-subtle: #212836;
+  --accent-emerald: #19B86B;
+  --accent-gold: #D6B25E;
+  color-scheme: dark;
+}
+
+html.light {
+  --bg-main: #F7F9FC;
+  --bg-secondary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-elevated: #FFFFFF;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
+  --border-subtle: #E5E7EB;
+  --accent-emerald: #19B86B;
+  --accent-gold: #B8943E;
+  color-scheme: light;
+}
+
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Inter', sans-serif;
@@ -33,12 +75,62 @@ html, body, #root {
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #fcfdfe;
-  color: #1a2530;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
   overflow-x: hidden;
   width: 100%;
   margin: 0;
   padding: 0;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* Global theme utility classes */
+.theme-bg-main {
+  background-color: var(--bg-main);
+}
+
+.theme-bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.theme-bg-card {
+  background-color: var(--bg-card);
+}
+
+.theme-bg-elevated {
+  background-color: var(--bg-card-elevated);
+}
+
+.theme-text-primary {
+  color: var(--text-primary);
+}
+
+.theme-text-secondary {
+  color: var(--text-secondary);
+}
+
+.theme-text-muted {
+  color: var(--text-muted);
+}
+
+.theme-border {
+  border-color: var(--border-subtle);
+}
+
+.theme-accent-emerald {
+  color: var(--accent-emerald);
+}
+
+.theme-bg-emerald {
+  background-color: var(--accent-emerald);
+}
+
+.theme-accent-gold {
+  color: var(--accent-gold);
+}
+
+.theme-transition {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 button, input, select, textarea {

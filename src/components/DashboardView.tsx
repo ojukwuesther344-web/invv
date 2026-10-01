@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Page, UserState, Transaction, Withdrawal } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
+import ThemeToggle from './ThemeToggle';
 import { formatCurrency, formatAmount } from '../utils/formatters';
 import { isSystemAdminIdentity } from '../services/firebaseService';
 import { 
@@ -815,15 +816,15 @@ export default function DashboardView({
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
   return (
-    <div className="flex-1 bg-slate-100 flex flex-col overflow-y-auto overflow-x-hidden w-full relative">
+    <div className="flex-1 bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col overflow-y-auto overflow-x-hidden w-full relative transition-colors duration-200">
       {/* Top dashboard header matching screenshot style */}
-      <header className="bg-white border-b border-slate-200/80 py-3 px-4 sm:px-6 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-xs">
+      <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] py-3 px-4 sm:px-6 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-xs transition-colors duration-200">
         <div className="flex items-center gap-3">
           {onToggleSidebar && (
             <button 
               type="button"
               onClick={onToggleSidebar}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md md:hidden transition-colors cursor-pointer mr-1"
+              className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] rounded-md md:hidden transition-colors cursor-pointer mr-1"
               aria-label="Toggle Navigation Menu"
             >
               <Menu size={20} />
@@ -846,18 +847,18 @@ export default function DashboardView({
 
           {/* Backspace icon button on header when on any sub menu page */}
           {(activeSection !== 'dashboard' || paymentSession) && (
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 ml-1">
+            <div className="flex items-center gap-2 pl-2 border-l border-[var(--border-subtle)] ml-1">
               <button
                 type="button"
                 onClick={handleGoBack}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-bold transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--bg-card)] hover:bg-[var(--bg-card-elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-lg text-xs font-bold transition-colors cursor-pointer"
                 title="Go back to previous page"
                 aria-label="Go back to previous page"
               >
-                <Delete size={14} className="text-slate-600" />
+                <Delete size={14} className="text-[#D6B25E]" />
                 <span>Back</span>
               </button>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden md:inline truncate max-w-[220px]">
+              <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider hidden md:inline truncate max-w-[220px]">
                 / {getSectionTitle()}
               </span>
             </div>
@@ -865,15 +866,18 @@ export default function DashboardView({
         </div>
         
         <div className="flex items-center gap-2 sm:gap-3.5">
+          {/* Theme toggle switch in dashboard header */}
+          <ThemeToggle variant="minimal" />
+
           {/* Home Icon button */}
           <button 
             type="button"
             onClick={() => onPageChange('Home')}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+            className="p-1.5 sm:px-2.5 sm:py-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
             title="Go to Website Homepage"
             aria-label="Go to Website Homepage"
           >
-            <Home size={15} className="text-slate-500" />
+            <Home size={15} className="text-[var(--text-muted)]" />
             <span className="hidden sm:inline">Home</span>
           </button>
 
@@ -881,18 +885,18 @@ export default function DashboardView({
           <div className="relative">
             <div 
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-colors select-none"
+              className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-[var(--bg-card)] transition-colors select-none"
               title="User profile menu"
             >
-              <div className="w-8 h-8 rounded-full bg-[#1677ff] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#19B86B] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                 <User size={16} className="text-white" />
               </div>
 
               <div className="flex flex-col text-left">
-                <span className="text-[10px] text-emerald-500 font-bold leading-none">Verified</span>
-                <span className="text-xs font-bold text-slate-700 flex items-center gap-0.5 mt-0.5 leading-tight">
+                <span className="text-[10px] text-[#19B86B] font-bold leading-none">Verified</span>
+                <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-0.5 mt-0.5 leading-tight">
                   {user.username}
-                  <ChevronDown size={11} className="text-slate-400" />
+                  <ChevronDown size={11} className="text-[var(--text-muted)]" />
                 </span>
               </div>
             </div>
@@ -900,35 +904,35 @@ export default function DashboardView({
             {/* Dropdown Menu */}
             {userMenuOpen && (
               <div 
-                className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in duration-150"
+                className="absolute right-0 mt-2 w-48 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in duration-150 text-[var(--text-primary)]"
                 onClick={() => setUserMenuOpen(false)}
               >
-                <div className="px-3.5 py-2 border-b border-slate-100">
-                  <div className="text-xs font-black text-slate-800">{user.fullName || user.username}</div>
-                  <div className="text-[10px] text-slate-400 truncate">{user.email}</div>
+                <div className="px-3.5 py-2 border-b border-[var(--border-subtle)]">
+                  <div className="text-xs font-black text-[var(--text-primary)]">{user.fullName || user.username}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">{user.email}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => onSectionSelect('edit-profile')}
-                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] flex items-center gap-2 cursor-pointer"
                 >
-                  <User size={14} className="text-slate-400" />
+                  <User size={14} className="text-[var(--text-muted)]" />
                   <span>My Profile</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onSectionSelect('security')}
-                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] flex items-center gap-2 cursor-pointer"
                 >
-                  <ShieldCheck size={14} className="text-slate-400" />
+                  <ShieldCheck size={14} className="text-[var(--text-muted)]" />
                   <span>Security</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onSectionSelect('referrals')}
-                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] flex items-center gap-2 cursor-pointer"
                 >
-                  <Share2 size={14} className="text-slate-400" />
+                  <Share2 size={14} className="text-[var(--text-muted)]" />
                   <span>Referrals</span>
                 </button>
               </div>
@@ -1385,11 +1389,11 @@ export default function DashboardView({
             {/* Welcome banner matching screenshot */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <span className="text-xs sm:text-sm text-slate-400 font-normal">Welcome!</span>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display mt-0.5">
+                <span className="text-xs sm:text-sm text-[var(--text-muted)] font-normal">Welcome!</span>
+                <h1 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display mt-0.5">
                   {user.fullName || user.username}
                 </h1>
-                <p className="text-xs text-slate-400 font-normal mt-0.5">
+                <p className="text-xs text-[var(--text-muted)] font-normal mt-0.5">
                   Here's a summary of your account. Have fun!
                 </p>
               </div>
@@ -1398,7 +1402,7 @@ export default function DashboardView({
                 <button
                   type="button"
                   onClick={() => onSectionSelect('make-deposit')}
-                  className="bg-[#232f3e] hover:bg-[#1a252f] active:scale-95 text-white font-bold text-xs px-4.5 py-2.5 rounded-md flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  className="bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-bold text-xs px-4.5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <span>Invest & Earn</span>
                   <span className="text-sm leading-none">&rarr;</span>
@@ -1406,7 +1410,7 @@ export default function DashboardView({
                 <button
                   type="button"
                   onClick={() => onSectionSelect('deposit-list')}
-                  className="bg-[#1677ff] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs px-4.5 py-2.5 rounded-md flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  className="bg-[var(--bg-card)] hover:bg-[var(--bg-card-elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] active:scale-95 font-bold text-xs px-4.5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <span>Your Deposits</span>
                   <span className="text-sm leading-none">&rarr;</span>
@@ -1417,122 +1421,127 @@ export default function DashboardView({
             {/* Three Stat Cards matching exact screenshot layout and colored bottom borders */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Card 1: Account Balance */}
-              <div className="bg-white rounded-lg p-5 border border-slate-200/80 border-b-4 border-b-[#1677ff] shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+              <div className="bg-[var(--bg-card)] rounded-xl p-5 border border-[var(--border-subtle)] border-b-4 border-b-[#19B86B] shadow-xs flex flex-col justify-between hover:shadow-sm transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-600">Account Balance</span>
-                  <span className="w-4 h-4 rounded-full border border-slate-300 text-slate-400 flex items-center justify-center text-[10px] font-serif italic select-none">
+                  <span className="text-sm font-semibold text-[var(--text-secondary)]">Account Balance</span>
+                  <span className="w-4 h-4 rounded-full border border-[var(--border-subtle)] text-[var(--text-muted)] flex items-center justify-center text-[10px] font-serif italic select-none">
                     i
                   </span>
                 </div>
                 <div className="my-4">
-                  <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
+                  <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
                     {formatCurrency(user.accountBalance)}
                   </span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
+                  <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
                 </div>
-                <div className="pt-3 border-t border-slate-100 flex flex-col gap-1">
+                <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-1">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">MAIN ACCOUNT BALANCE</span>
-                    <span className="font-bold text-slate-800">{formatCurrency(user.mainAccountBalance !== undefined ? user.mainAccountBalance : user.accountBalance)} USD</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">MAIN ACCOUNT BALANCE</span>
+                    <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.mainAccountBalance !== undefined ? user.mainAccountBalance : user.accountBalance)} USD</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EARNED TOTAL</span>
-                    <span className="font-bold text-slate-800">{formatCurrency(user.earnedTotal)} USD</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">EARNED TOTAL</span>
+                    <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.earnedTotal)} USD</span>
                   </div>
                 </div>
               </div>
 
               {/* Card 2: Total Deposit */}
-              <div className="bg-white rounded-lg p-5 border border-slate-200/80 border-b-4 border-b-[#232f3e] shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+              <div className="bg-[var(--bg-card)] rounded-xl p-5 border border-[var(--border-subtle)] border-b-4 border-b-[#D6B25E] shadow-xs flex flex-col justify-between hover:shadow-sm transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-600">Total Deposit</span>
-                  <span className="w-4 h-4 rounded-full border border-slate-300 text-slate-400 flex items-center justify-center text-[10px] font-serif italic select-none">
+                  <span className="text-sm font-semibold text-[var(--text-secondary)]">Total Deposit</span>
+                  <span className="w-4 h-4 rounded-full border border-[var(--border-subtle)] text-[var(--text-muted)] flex items-center justify-center text-[10px] font-serif italic select-none">
                     i
                   </span>
                 </div>
                 <div className="my-4">
-                  <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
+                  <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
                     {formatCurrency(user.totalDeposit)}
                   </span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
+                  <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
                 </div>
-                <div className="pt-3 border-t border-slate-100 flex flex-col gap-1">
+                <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-1">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ACTIVE DEPOSIT</span>
-                    <span className="font-bold text-slate-800">{formatCurrency(user.activeDeposit)} USD</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">ACTIVE DEPOSIT</span>
+                    <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.activeDeposit)} USD</span>
                   </div>
-                  {pendingDepositSum > 0 && (
-                    <div className="flex justify-between items-center text-xs bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">PENDING DEPOSIT</span>
-                      <span className="font-bold text-amber-700 font-mono">{formatCurrency(pendingDepositSum)} USD</span>
+                  {pendingDepositSum > 0 ? (
+                    <div className="flex justify-between items-center text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">PENDING DEPOSIT</span>
+                      <span className="font-bold text-amber-500 font-mono">{formatCurrency(pendingDepositSum)} USD</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">PENDING DEPOSIT</span>
+                      <span className="font-bold text-[var(--text-primary)] font-mono">$0.00 USD</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Card 3: Total Withdraw */}
-              <div className="bg-white rounded-lg p-5 border border-slate-200/80 border-b-4 border-b-[#f59e0b] shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+              <div className="bg-[var(--bg-card)] rounded-xl p-5 border border-[var(--border-subtle)] border-b-4 border-b-[#f59e0b] shadow-xs flex flex-col justify-between hover:shadow-sm transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-600">Total Withdraw</span>
-                  <span className="w-4 h-4 rounded-full border border-slate-300 text-slate-400 flex items-center justify-center text-[10px] font-serif italic select-none">
+                  <span className="text-sm font-semibold text-[var(--text-secondary)]">Total Withdraw</span>
+                  <span className="w-4 h-4 rounded-full border border-[var(--border-subtle)] text-[var(--text-muted)] flex items-center justify-center text-[10px] font-serif italic select-none">
                     i
                   </span>
                 </div>
                 <div className="my-4">
-                  <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight font-display">
+                  <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
                     {formatCurrency(user.totalWithdrew)}
                   </span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">USD</span>
+                  <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
                 </div>
-                <div className="pt-3 border-t border-slate-100 flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">PENDING WITHDRAWAL</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">{formatCurrency(user.pendingWithdrawal)} USD</span>
+                <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">PENDING WITHDRAWAL</span>
+                  <span className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">{formatCurrency(user.pendingWithdrawal)} USD</span>
                 </div>
               </div>
             </div>
 
             {/* Refer Us & Earn Card matching screenshot */}
-            <div className="bg-white rounded-lg p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col gap-1">
-              <h3 className="text-base sm:text-lg font-bold text-slate-800 font-display">
+            <div className="bg-[var(--bg-card)] rounded-xl p-5 sm:p-6 border border-[var(--border-subtle)] shadow-xs flex flex-col gap-1">
+              <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] font-display">
                 Refer Us & Earn
               </h3>
-              <p className="text-xs text-slate-400 font-normal">
+              <p className="text-xs text-[var(--text-muted)] font-normal">
                 Use the below link to invite your friends.
               </p>
 
-              <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 border border-slate-200/80 rounded-md px-3.5 py-2.5">
-                <div className="flex items-center gap-2 min-w-0 text-slate-600 text-xs font-mono truncate">
-                  <span className="text-slate-400 font-sans text-sm select-none">@</span>
-                  <span className="truncate select-all text-slate-700 font-semibold" title={officialReferralLink}>
+              <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-lg px-3.5 py-2.5">
+                <div className="flex items-center gap-2 min-w-0 text-[var(--text-secondary)] text-xs font-mono truncate">
+                  <span className="text-[var(--text-muted)] font-sans text-sm select-none">@</span>
+                  <span className="truncate select-all text-[var(--text-primary)] font-semibold" title={officialReferralLink}>
                     {officialReferralLink}
                   </span>
                 </div>
                 <button 
                   type="button"
                   onClick={() => handleCopyRefLink(officialReferralLink)}
-                  className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#1677ff] hover:text-blue-700 transition-colors cursor-pointer shrink-0"
+                  className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#19B86B] hover:text-[#159a59] transition-colors cursor-pointer shrink-0"
                 >
-                  <Copy size={14} className="text-[#1677ff]" />
+                  <Copy size={14} className="text-[#19B86B]" />
                   <span>{copiedRef ? 'Copied!' : 'Copy Link'}</span>
                 </button>
               </div>
             </div>
 
             {/* Live Investment Performance Tracks */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col gap-4 p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-4">
+            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] shadow-sm overflow-hidden flex flex-col gap-4 p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[var(--border-subtle)] pb-4">
                 <div>
-                  <h3 className="font-extrabold text-slate-800 text-base font-display flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#C59B4E] animate-pulse"></span>
+                  <h3 className="font-extrabold text-[var(--text-primary)] text-base font-display flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#19B86B] animate-pulse"></span>
                     ACTIVE TRACK PERFORMANCE
                   </h3>
-                  <p className="text-xs text-slate-400 font-normal">Accruing live passive block dividends and return of capital parameters.</p>
+                  <p className="text-xs text-[var(--text-muted)] font-normal">Accruing live passive block dividends and return of capital parameters.</p>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-[#C59B4E] px-2.5 py-1 rounded-md font-black uppercase tracking-wider">
+                  <span className="text-[10px] bg-[#19B86B]/15 border border-[#19B86B]/30 text-[#19B86B] px-2.5 py-1 rounded-md font-black uppercase tracking-wider">
                     {activeTracks.filter((t: any) => t.active).length} Active Ticks
                   </span>
-                  <span className="text-[10px] bg-slate-50 border border-slate-200 text-slate-500 px-2.5 py-1 rounded-md font-black uppercase tracking-wider">
+                  <span className="text-[10px] bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] text-[var(--text-muted)] px-2.5 py-1 rounded-md font-black uppercase tracking-wider">
                     {activeTracks.filter((t: any) => !t.active).length} Matured
                   </span>
                 </div>
@@ -1540,11 +1549,11 @@ export default function DashboardView({
 
               {activeTracks.length === 0 ? (
                 <div className="py-10 text-center flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
+                  <div className="w-12 h-12 rounded-full bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)]">
                     <Clock size={20} />
                   </div>
-                  <div className="text-slate-400 text-xs font-bold uppercase">No Active Tracks Located</div>
-                  <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+                  <div className="text-[var(--text-muted)] text-xs font-bold uppercase">No Active Tracks Located</div>
+                  <p className="text-[11px] text-[var(--text-muted)] max-w-xs leading-relaxed">
                     Once you activate a smart micro plan in the **Make Deposit** section, your live ledger metrics will track here.
                   </p>
                 </div>
@@ -1557,52 +1566,52 @@ export default function DashboardView({
                         key={track.id} 
                         className={`border rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden transition-all duration-300 ${
                           track.active 
-                            ? 'border-emerald-200/60 bg-emerald-50/[0.04] hover:shadow-md' 
-                            : 'border-slate-150 bg-slate-50/10'
+                            ? 'border-[#19B86B]/30 bg-[#19B86B]/5 hover:shadow-md' 
+                            : 'border-[var(--border-subtle)] bg-[var(--bg-card-elevated)]'
                         }`}
                       >
                         {/* Top plan detail header */}
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-xs font-black text-slate-800 font-display block uppercase">{track.planName}</span>
-                            <span className="text-[9px] text-slate-400 font-mono">ID: {track.id.substring(0, 14)} • {track.date}</span>
+                            <span className="text-xs font-black text-[var(--text-primary)] font-display block uppercase">{track.planName}</span>
+                            <span className="text-[9px] text-[var(--text-muted)] font-mono">ID: {track.id.substring(0, 14)} • {track.date}</span>
                           </div>
                           <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded border leading-none ${
                             track.active 
-                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 animate-pulse' 
-                              : 'bg-indigo-50 border-indigo-100 text-indigo-500'
+                              ? 'bg-[#19B86B]/15 border-[#19B86B]/30 text-[#19B86B] animate-pulse' 
+                              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] text-[var(--text-muted)]'
                           }`}>
                             {track.active ? '● Live Yield' : 'Matured'}
                           </span>
                         </div>
 
                         {/* Principal & Accrued Profits */}
-                        <div className="grid grid-cols-2 gap-2 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100/50 font-mono">
+                        <div className="grid grid-cols-2 gap-2 bg-[var(--bg-card-elevated)] p-2.5 rounded-lg border border-[var(--border-subtle)] font-mono">
                           <div>
-                            <span className="text-[8px] text-slate-400 block uppercase tracking-wider font-semibold">Active Capital</span>
-                            <span className="text-sm font-black text-slate-800">{formatCurrency(track.amount)}</span>
-                            <span className="text-[8px] text-slate-400 block uppercase font-medium mt-0.5">{track.processor}</span>
+                            <span className="text-[8px] text-[var(--text-muted)] block uppercase tracking-wider font-semibold">Active Capital</span>
+                            <span className="text-sm font-black text-[var(--text-primary)]">{formatCurrency(track.amount)}</span>
+                            <span className="text-[8px] text-[var(--text-muted)] block uppercase font-medium mt-0.5">{track.processor}</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[8px] text-emerald-500 block uppercase tracking-wider font-semibold">Live Accrued Profit</span>
-                            <span className="text-sm font-black text-[#C59B4E] tracking-tight">
+                            <span className="text-[8px] text-[#19B86B] block uppercase tracking-wider font-semibold">Live Accrued Profit</span>
+                            <span className="text-sm font-black text-[#D6B25E] tracking-tight">
                               ${track.profit.toFixed(6)}
                             </span>
-                            <span className="text-[8px] text-slate-450 block uppercase mt-0.5 font-medium">Secs: {track.elapsedSec}</span>
+                            <span className="text-[8px] text-[var(--text-muted)] block uppercase mt-0.5 font-medium">Secs: {track.elapsedSec}</span>
                           </div>
                         </div>
 
                         {/* Progress Bar */}
                         <div className="flex flex-col gap-1">
-                          <div className="flex justify-between text-[9px] font-bold text-slate-400 font-mono">
+                          <div className="flex justify-between text-[9px] font-bold text-[var(--text-muted)] font-mono">
                             <span>PROGRESS CONTRACT TERM</span>
                             <span>{track.progress.toFixed(2)}%</span>
                           </div>
-                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30">
+                          <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
                             <div 
                               className={`h-full rounded-full transition-all duration-1000 ${
                                 track.active 
-                                  ? 'bg-gradient-to-r from-[#D4A856] to-[#B3873B]' 
+                                  ? 'bg-[#19B86B]' 
                                   : 'bg-slate-400'
                               }`}
                               style={{ width: `${track.progress}%` }}
@@ -1611,12 +1620,12 @@ export default function DashboardView({
                         </div>
 
                         {/* Footer contract info */}
-                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 font-mono uppercase border-t border-slate-100/50 pt-2 mt-0.5">
+                        <div className="flex justify-between items-center text-[9px] font-bold text-[var(--text-muted)] font-mono uppercase border-t border-[var(--border-subtle)] pt-2 mt-0.5">
                           <span>Span: {track.termDays} Days</span>
                           {track.active ? (
-                            <span className="text-emerald-500 font-semibold animate-pulse">Accruing dividends</span>
+                            <span className="text-[#19B86B] font-semibold animate-pulse">Accruing dividends</span>
                           ) : (
-                            <span className="text-slate-500">Fully Matured</span>
+                            <span className="text-[var(--text-muted)]">Fully Matured</span>
                           )}
                         </div>
                       </div>
@@ -1627,27 +1636,27 @@ export default function DashboardView({
             </div>
 
             {/* ===== UNIFIED TRANSACTION REGISTRY (REQUIREMENT 5) ===== */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col gap-4 p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-4">
+            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] shadow-sm overflow-hidden flex flex-col gap-4 p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[var(--border-subtle)] pb-4">
                 <div>
-                  <h3 className="font-extrabold text-slate-800 text-base font-display flex items-center gap-2 uppercase tracking-wider">
-                    <History className="text-[#C59B4E]" size={18} />
+                  <h3 className="font-extrabold text-[var(--text-primary)] text-base font-display flex items-center gap-2 uppercase tracking-wider">
+                    <History className="text-[#D6B25E]" size={18} />
                     UNIFIED TRANSACTION REGISTER
                   </h3>
-                  <p className="text-xs text-slate-400 font-normal">Real-time audit records of all deposits, investments, profits, withdrawals, and bonuses.</p>
+                  <p className="text-xs text-[var(--text-muted)] font-normal">Real-time audit records of all deposits, investments, profits, withdrawals, and bonuses.</p>
                 </div>
-                <div className="text-[10px] bg-slate-50 border border-slate-200 text-slate-500 px-2.5 py-1 rounded-md font-black uppercase tracking-wider">
+                <div className="text-[10px] bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] text-[var(--text-muted)] px-2.5 py-1 rounded-md font-black uppercase tracking-wider">
                   {transactions.length} Total records
                 </div>
               </div>
 
               {transactions.length === 0 ? (
                 <div className="py-10 text-center flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
+                  <div className="w-12 h-12 rounded-full bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)]">
                     <FileSpreadsheet size={20} />
                   </div>
-                  <div className="text-slate-400 text-xs font-bold uppercase">No Transaction Logs Recorded</div>
-                  <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+                  <div className="text-[var(--text-muted)] text-xs font-bold uppercase">No Transaction Logs Recorded</div>
+                  <p className="text-[11px] text-[var(--text-muted)] max-w-xs leading-relaxed">
                     Once you execute any financial action on WorldvestCapital ledger, its secure receipt trail will update here instantly.
                   </p>
                 </div>
@@ -1655,7 +1664,7 @@ export default function DashboardView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                      <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">
                         <th className="py-3 px-4">TX ID</th>
                         <th className="py-3 px-3">Type</th>
                         <th className="py-3 px-3">Processor / Plan</th>
@@ -1664,40 +1673,40 @@ export default function DashboardView({
                         <th className="py-3 px-4 text-center">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50 text-xs text-slate-600 font-medium font-mono">
+                    <tbody className="divide-y divide-[var(--border-subtle)] text-xs text-[var(--text-secondary)] font-medium font-mono">
                       {transactions.slice(0, 10).map((t) => {
                         const isInflow = t.type === 'Deposit' || t.type === 'Profit' || t.type === 'Bonus';
-                        const amountColor = isInflow ? 'text-emerald-600' : 'text-rose-600';
+                        const amountColor = isInflow ? 'text-[#19B86B]' : 'text-rose-500';
                         const sign = isInflow ? '+' : '-';
                         
                         return (
-                          <tr key={t.id} className="hover:bg-slate-50/50">
-                            <td className="py-3.5 px-4 font-bold text-slate-900">{t.id.substring(0, 16)}...</td>
+                          <tr key={t.id} className="hover:bg-[var(--bg-card-elevated)] transition-colors">
+                            <td className="py-3.5 px-4 font-bold text-[var(--text-primary)]">{t.id.substring(0, 16)}...</td>
                             <td className="py-3.5 px-3">
                               <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                                t.type === 'Deposit' ? 'bg-emerald-50 text-emerald-600' :
-                                t.type === 'Investment' ? 'bg-indigo-50 text-indigo-600' :
-                                t.type === 'Profit' ? 'bg-amber-50 text-[#B3873B]' :
-                                t.type === 'Withdrawal' ? 'bg-rose-50 text-rose-600' :
-                                'bg-amber-50 text-amber-600'
+                                t.type === 'Deposit' ? 'bg-[#19B86B]/15 text-[#19B86B]' :
+                                t.type === 'Investment' ? 'bg-indigo-500/15 text-indigo-400' :
+                                t.type === 'Profit' ? 'bg-amber-500/15 text-[#D6B25E]' :
+                                t.type === 'Withdrawal' ? 'bg-rose-500/15 text-rose-400' :
+                                'bg-amber-500/15 text-amber-400'
                               }`}>
                                 {t.type}
                               </span>
                             </td>
-                            <td className="py-3.5 px-3 font-sans text-slate-700 font-bold max-w-[120px] truncate">
+                            <td className="py-3.5 px-3 font-sans text-[var(--text-primary)] font-bold max-w-[120px] truncate">
                               {t.type === 'Investment' ? (t.planName || 'Investment Plan') : t.processor}
                             </td>
                             <td className={`py-3.5 px-3 text-right font-black ${amountColor}`}>
                               {sign}{formatCurrency(t.amount)}
                             </td>
-                            <td className="py-3.5 px-4 text-right text-[10px] text-slate-400 font-sans">
+                            <td className="py-3.5 px-4 text-right text-[10px] text-[var(--text-muted)] font-sans">
                               {new Date(t.timestamp).toLocaleString()}
                             </td>
                             <td className="py-3.5 px-4 text-center">
                               <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                t.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                                t.status === 'Approved' || t.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
-                                'bg-rose-100 text-rose-700'
+                                t.status === 'Pending' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                                t.status === 'Approved' || t.status === 'Completed' ? 'bg-[#19B86B]/15 text-[#19B86B] border border-[#19B86B]/30' :
+                                'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                               }`}>
                                 {t.status || 'Approved'}
                               </span>
@@ -1708,10 +1717,10 @@ export default function DashboardView({
                     </tbody>
                   </table>
                   {transactions.length > 10 && (
-                    <div className="p-3 text-center border-t border-slate-50 bg-slate-50/10">
+                    <div className="p-3 text-center border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
                       <button 
                         onClick={() => onSectionSelect('deposit-history')}
-                        className="text-[10px] font-black uppercase tracking-widest text-[#C59B4E] hover:underline"
+                        className="text-[10px] font-black uppercase tracking-widest text-[#D6B25E] hover:underline"
                       >
                         Search & View All {transactions.length} Transactions Registry
                       </button>
@@ -1722,14 +1731,14 @@ export default function DashboardView({
             </div>
 
             {/* Quick action buttons block */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border-subtle)] shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="text-center sm:text-left">
-                <h4 className="font-bold text-slate-800 text-base font-display">Increase Your Wallet Power</h4>
-                <p className="text-xs text-slate-500 font-normal">Select a plan to invest immediate funds into your balance ledger.</p>
+                <h4 className="font-bold text-[var(--text-primary)] text-base font-display">Increase Your Wallet Power</h4>
+                <p className="text-xs text-[var(--text-muted)] font-normal">Select a plan to invest immediate funds into your balance ledger.</p>
               </div>
               <button 
                 onClick={() => onSectionSelect('make-deposit')}
-                className="px-6 py-3 bg-[#0B2545] hover:bg-[#07192F] text-white font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform border border-[#0B2545]"
+                className="px-6 py-3 bg-[#19B86B] hover:bg-[#159a59] text-white font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform"
               >
                 Launch Make Deposit Section &gt;
               </button>
@@ -1742,19 +1751,19 @@ export default function DashboardView({
           <div className="flex flex-col gap-6 animate-in fade-in duration-300">
             {renderBackButton()}
             
-            <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="bg-[var(--bg-card)] p-6 rounded-xl border border-[var(--border-subtle)] shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h3 className="font-black text-slate-800 font-display text-xl sm:text-2xl">
+                <h3 className="font-black text-[var(--text-primary)] font-display text-xl sm:text-2xl">
                   Investment Plans & Packages
                 </h3>
-                <p className="text-slate-500 text-xs mt-1">
+                <p className="text-[var(--text-muted)] text-xs mt-1">
                   Choose a high-performing investment tier tailored to your financial goals. Principal returned upon maturity.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onSectionSelect('make-deposit')}
-                className="bg-[#1677ff] hover:bg-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer shrink-0"
+                className="bg-[#19B86B] hover:bg-[#159a59] text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer shrink-0"
               >
                 Deposit & Activate Plan &rarr;
               </button>
@@ -1774,51 +1783,51 @@ export default function DashboardView({
                 return (
                   <div 
                     key={pl.id}
-                    className="bg-white rounded-xl border border-slate-200/80 shadow-xs hover:border-[#1677ff] transition-all p-5 flex flex-col justify-between"
+                    className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-subtle)] shadow-xs hover:border-[#19B86B] transition-all p-5 flex flex-col justify-between"
                   >
                     <div className="flex flex-col">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{pl.name}</span>
-                        <span className="text-xs font-bold text-[#1677ff] bg-blue-50 px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">{pl.name}</span>
+                        <span className="text-xs font-bold text-[#19B86B] bg-[#19B86B]/10 px-2 py-0.5 rounded-full">
                           {dailyRoiVal}% Daily
                         </span>
                       </div>
                       <div className="mt-3 mb-1">
-                        <span className="text-2xl font-black text-slate-800 font-display">
+                        <span className="text-2xl font-black text-[var(--text-primary)] font-display">
                           {dailyRoiVal}%
                         </span>
-                        <span className="text-xs text-slate-500 ml-1">/ 24 Hours</span>
+                        <span className="text-xs text-[var(--text-muted)] ml-1">/ 24 Hours</span>
                       </div>
-                      <div className="text-xs text-slate-500 mb-4">
-                        Duration: <strong className="text-slate-700">{durationDays} Days</strong>
+                      <div className="text-xs text-[var(--text-muted)] mb-4">
+                        Duration: <strong className="text-[var(--text-primary)]">{durationDays} Days</strong>
                       </div>
 
-                      <div className="space-y-2 py-3 border-t border-b border-slate-100 text-xs">
+                      <div className="space-y-2 py-3 border-t border-b border-[var(--border-subtle)] text-xs">
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Min Deposit:</span>
-                          <span className="font-bold text-slate-700">{formatCurrency(pl.min)}</span>
+                          <span className="text-[var(--text-muted)]">Min Deposit:</span>
+                          <span className="font-bold text-[var(--text-primary)]">{formatCurrency(pl.min)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Max Deposit:</span>
-                          <span className="font-bold text-slate-700">{pl.max >= 1000000 ? 'Unlimited' : formatCurrency(pl.max)}</span>
+                          <span className="text-[var(--text-muted)]">Max Deposit:</span>
+                          <span className="font-bold text-[var(--text-primary)]">{pl.max >= 1000000 ? 'Unlimited' : formatCurrency(pl.max)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Earnings:</span>
-                          <span className="font-bold text-emerald-600">{pl.dailyRateText || `${dailyRoiVal}% 24 Hours`}</span>
+                          <span className="text-[var(--text-muted)]">Earnings:</span>
+                          <span className="font-bold text-[#19B86B]">{pl.dailyRateText || `${dailyRoiVal}% 24 Hours`}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Investment Duration:</span>
-                          <span className="font-bold text-slate-700">{durationDays} Days</span>
+                          <span className="text-[var(--text-muted)]">Investment Duration:</span>
+                          <span className="font-bold text-[var(--text-primary)]">{durationDays} Days</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400 font-semibold">Total Return:</span>
-                          <span className="font-black text-[#C59B4E] font-mono text-sm">
+                          <span className="text-[var(--text-muted)] font-semibold">Total Return:</span>
+                          <span className="font-black text-[#D6B25E] font-mono text-sm">
                             {totalRoiText}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Payouts:</span>
-                          <span className="font-medium text-slate-600">Instant Withdrawals</span>
+                          <span className="text-[var(--text-muted)]">Payouts:</span>
+                          <span className="font-medium text-[var(--text-secondary)]">Instant Withdrawals</span>
                         </div>
                       </div>
                     </div>
@@ -1829,7 +1838,7 @@ export default function DashboardView({
                         setActivePlanSelected(pl.id);
                         onSectionSelect('make-deposit');
                       }}
-                      className="mt-4 w-full py-2.5 bg-[#232f3e] hover:bg-[#1677ff] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer uppercase tracking-wider"
+                      className="mt-4 w-full py-2.5 bg-[#19B86B] hover:bg-[#159a59] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer uppercase tracking-wider shadow-sm"
                     >
                       Select & Invest
                     </button>
@@ -1846,11 +1855,11 @@ export default function DashboardView({
             {renderBackButton()}
             
             {/* Heading section */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm text-center">
-              <h3 className="font-black text-slate-800 font-display text-lg md:text-xl uppercase tracking-wider mb-1">
+            <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-subtle)] shadow-xs text-center">
+              <h3 className="font-black text-[var(--text-primary)] font-display text-lg md:text-xl uppercase tracking-wider mb-1">
                 SELECT ANY PLAN YOU INTEREST
               </h3>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Configure your micro deposit parameters block below</p>
+              <p className="text-[var(--text-muted)] text-xs font-bold uppercase tracking-wider">Configure your micro deposit parameters block below</p>
             </div>
 
             {/* Grid of 8 plan input selectors representing screenshot 6 exactly */}
@@ -1863,39 +1872,39 @@ export default function DashboardView({
                     key={pl.id}
                     type="button"
                     onClick={() => setActivePlanSelected(pl.id)}
-                    className={`bg-white rounded-xl p-5 border text-left flex flex-col gap-3 relative overflow-hidden transition-all duration-300 hover:border-[#C59B4E] hover:-translate-y-0.5 cursor-pointer ${
+                    className={`bg-[var(--bg-card)] rounded-xl p-5 border text-left flex flex-col gap-3 relative overflow-hidden transition-all duration-300 hover:border-[#D6B25E] hover:-translate-y-0.5 cursor-pointer ${
                       isSelected 
-                        ? 'border-[#C59B4E] ring-2 ring-[#C59B4E]/10 shadow-premium' 
-                        : 'border-slate-200/80 shadow-sm'
+                        ? 'border-[#D6B25E] ring-2 ring-[#D6B25E]/20 shadow-md bg-[var(--bg-card-elevated)]' 
+                        : 'border-[var(--border-subtle)] shadow-xs'
                     }`}
                   >
                     {/* Top checked circle */}
-                    <div className="flex justify-between items-center border-b border-slate-150 pb-2.5 w-full">
-                      <span className="text-[11px] font-black text-slate-800 font-display tracking-wide">{pl.name}</span>
+                    <div className="flex justify-between items-center border-b border-[var(--border-subtle)] pb-2.5 w-full">
+                      <span className="text-[11px] font-black text-[var(--text-primary)] font-display tracking-wide">{pl.name}</span>
                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-[#C59B4E] border-[#C59B4E]' : 'border-slate-300 bg-white'
+                        isSelected ? 'bg-[#D6B25E] border-[#D6B25E]' : 'border-[var(--border-subtle)] bg-[var(--bg-card)]'
                       }`}>
-                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950"></div>}
                       </div>
                     </div>
 
                     {/* Numeric details list */}
-                    <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 uppercase tracking-wild w-full font-mono">
+                    <div className="flex flex-col gap-1 text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider w-full font-mono">
                       <div className="flex justify-between">
-                        <span>MIN :</span>
-                        <span className="text-slate-800">${pl.min}</span>
+                        <span className="text-[var(--text-muted)]">MIN :</span>
+                        <span className="text-[var(--text-primary)]">${pl.min}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>MAX :</span>
-                        <span className="text-slate-800">{pl.max >= 1000000 ? 'UNLIMITED' : `$${pl.max}`}</span>
+                        <span className="text-[var(--text-muted)]">MAX :</span>
+                        <span className="text-[var(--text-primary)]">{pl.max >= 1000000 ? 'UNLIMITED' : `$${pl.max}`}</span>
                       </div>
-                      <div className="flex justify-between text-[#C59B4E]">
+                      <div className="flex justify-between text-[#D6B25E]">
                         <span>ROI :</span>
                         <span>{pl.roi}%</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>TERM :</span>
-                        <span className="text-[#9333ea]">
+                        <span className="text-[var(--text-muted)]">TERM :</span>
+                        <span className="text-purple-400">
                           {pl.id.startsWith('plan_') ? `${Math.round(pl.term * 24)} HOURS` : `${pl.term} DAYS`}
                         </span>
                       </div>
@@ -1906,7 +1915,7 @@ export default function DashboardView({
             </div>
 
             {/* Big green action stripe panel "MAKE YOUR DEPOSIT" */}
-            <div className="bg-emerald-500 text-white p-4.5 rounded-xl font-black text-center text-xs md:text-sm tracking-widest uppercase shadow-md leading-none">
+            <div className="bg-[#19B86B] text-white p-4.5 rounded-xl font-black text-center text-xs md:text-sm tracking-widest uppercase shadow-md leading-none">
               MAKE YOUR DEPOSIT
             </div>
 
@@ -1916,27 +1925,27 @@ export default function DashboardView({
               <div className="lg:col-span-8 flex flex-col gap-6">
                 
                 {/* Purple header row exact: Account Balance panel */}
-                <div className="bg-[#9333ea] text-white rounded-xl p-5.5 shadow-md flex justify-between items-center text-xs md:text-sm font-black tracking-wide leading-none">
+                <div className="bg-purple-600 text-white rounded-xl p-5.5 shadow-md flex justify-between items-center text-xs md:text-sm font-black tracking-wide leading-none">
                   <span>ACCOUNT BALANCE</span>
                   <span>{formatCurrency(user.accountBalance)} USD</span>
                 </div>
 
                 {/* Sub amount input block */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1.5">Enter Amount ($)</span>
+                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-subtle)] shadow-xs flex flex-col gap-2">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider pl-1.5">Enter Amount ($)</span>
                   <input 
                     type="number" 
                     value={depositAmount} 
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#C59B4E] bg-slate-50 font-mono font-bold"
+                    className="w-full p-3 border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none focus:border-[#D6B25E] bg-[var(--bg-card-elevated)] text-[var(--text-primary)] font-mono font-bold"
                     placeholder="100.00"
                     required
                   />
                 </div>
 
                 {/* Radios inputs matching screenshot 6 */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col gap-3.5">
-                  <div className="text-xs text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100 pb-2 mb-1.5">
+                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-subtle)] shadow-xs flex flex-col gap-3.5">
+                  <div className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider border-b border-[var(--border-subtle)] pb-2 mb-1.5">
                     Select Funds Source
                   </div>
 
@@ -1952,7 +1961,7 @@ export default function DashboardView({
                       <label 
                         key={src.id} 
                         className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
-                          isSelected ? 'bg-slate-50 border-[#C59B4E] text-slate-800 font-bold' : 'border-slate-100 text-slate-600 hover:bg-slate-50/50'
+                          isSelected ? 'bg-[var(--bg-card-elevated)] border-[#D6B25E] text-[var(--text-primary)] font-bold' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-elevated)]'
                         }`}
                       >
                         <input 
@@ -1961,7 +1970,7 @@ export default function DashboardView({
                           value={src.id} 
                           checked={isSelected}
                           onChange={() => setSelectedSpendSource(src.id)}
-                          className="text-[#C59B4E] focus:ring-[#C59B4E]" 
+                          className="text-[#D6B25E] focus:ring-[#D6B25E]" 
                         />
                         <span className="text-xs md:text-sm tracking-wide font-medium">{src.label}</span>
                       </label>
@@ -1972,33 +1981,33 @@ export default function DashboardView({
 
               {/* Right Column: Dynamic deposit summary card with proceed button */}
               <div className="lg:col-span-4 flex flex-col gap-6">
-                <div className="bg-[#0a1626] text-slate-300 rounded-2xl p-6 border border-[#122845] shadow-lg flex flex-col justify-between relative h-full min-h-[400px]">
+                <div className="bg-[var(--bg-card-elevated)] text-[var(--text-secondary)] rounded-2xl p-6 border border-[var(--border-subtle)] shadow-lg flex flex-col justify-between relative h-full min-h-[400px]">
                   <div>
-                    <div className="text-xs font-black text-[#C59B4E] uppercase tracking-widest border-b border-[#122845] pb-3 mb-4 flex items-center gap-2">
-                      <ShieldCheck size={14} className="text-[#C59B4E]" /> Secure Blueprint Sum
+                    <div className="text-xs font-black text-[#D6B25E] uppercase tracking-widest border-b border-[var(--border-subtle)] pb-3 mb-4 flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-[#D6B25E]" /> Secure Blueprint Sum
                     </div>
 
                     {/* Dynamic plan information display based on radios */}
                     <div className="flex flex-col gap-4 text-xs font-semibold uppercase tracking-wider mt-2">
-                      <div className="flex justify-between border-b border-[#122845] pb-2">
-                        <span className="text-slate-500">Plan Code:</span>
-                        <span className="text-white">
+                      <div className="flex justify-between border-b border-[var(--border-subtle)] pb-2">
+                        <span className="text-[var(--text-muted)]">Plan Code:</span>
+                        <span className="text-[var(--text-primary)]">
                           {depositPlans.find(p => p.id === activePlanSelected)?.name || 'Generic'}
                         </span>
                       </div>
-                      <div className="flex justify-between border-b border-[#122845] pb-2">
-                        <span className="text-slate-500">Selected Capital:</span>
-                        <span className="text-[#C59B4E] font-black font-mono">{formatCurrency(parseFloat(depositAmount || '0'))}</span>
+                      <div className="flex justify-between border-b border-[var(--border-subtle)] pb-2">
+                        <span className="text-[var(--text-muted)]">Selected Capital:</span>
+                        <span className="text-[#D6B25E] font-black font-mono">{formatCurrency(parseFloat(depositAmount || '0'))}</span>
                       </div>
-                      <div className="flex justify-between border-b border-[#122845] pb-2">
-                        <span className="text-slate-500">Expected ROI:</span>
-                        <span className="text-emerald-400">
+                      <div className="flex justify-between border-b border-[var(--border-subtle)] pb-2">
+                        <span className="text-[var(--text-muted)]">Expected ROI:</span>
+                        <span className="text-[#19B86B]">
                           {depositPlans.find(p => p.id === activePlanSelected)?.roi || 0}%
                         </span>
                       </div>
                       <div className="flex justify-between pb-2">
-                        <span className="text-slate-500">Contract Span:</span>
-                        <span className="text-[#9333ea]">
+                        <span className="text-[var(--text-muted)]">Contract Span:</span>
+                        <span className="text-purple-400">
                           {depositPlans.find(p => p.id === activePlanSelected)?.term || 0} DAYS
                         </span>
                       </div>
@@ -2006,17 +2015,17 @@ export default function DashboardView({
                   </div>
 
                   {/* Proceed submit trigger inside card bottom */}
-                  <div className="mt-8 pt-4 border-t border-[#122845]">
+                  <div className="mt-8 pt-4 border-t border-[var(--border-subtle)]">
                     <button 
                       type="submit"
-                      className="w-full py-4 px-6 bg-[#C59B4E] hover:bg-[#A98035] active:scale-[0.98] text-[#050e18] font-black text-xs uppercase tracking-widest rounded-xl shadow-premium cursor-pointer transition-transform"
+                      className="w-full py-4 px-6 bg-[#D6B25E] hover:bg-[#c4a14f] active:scale-[0.98] text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl shadow-md cursor-pointer transition-transform"
                     >
                       MAKE DEPOSIT
                     </button>
                     <button
                       type="button"
                       onClick={() => onSectionSelect('dashboard')}
-                      className="w-full text-center text-[10px] text-slate-500 hover:text-white uppercase tracking-wider font-bold mt-4 block"
+                      className="w-full text-center text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] uppercase tracking-wider font-bold mt-4 block transition-colors"
                     >
                       &lt; Back to dashboard indices
                     </button>
@@ -2033,41 +2042,41 @@ export default function DashboardView({
         {activeSection === 'deposit-to-account' && !paymentSession && (
           <div className="max-w-3xl mx-auto w-full p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {renderBackButton()}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="p-6 bg-slate-950 text-white flex justify-between items-center">
+            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] shadow-xs overflow-hidden mb-6">
+              <div className="p-6 bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] text-[var(--text-primary)] flex justify-between items-center">
                 <div>
-                  <h3 className="text-lg font-black tracking-wider uppercase font-display text-emerald-400">
+                  <h3 className="text-lg font-black tracking-wider uppercase font-display text-[#19B86B]">
                     Deposit to Account Balance
                   </h3>
-                  <p className="text-xs text-slate-400 font-medium">Add available liquid cash to your standard internal account balance.</p>
+                  <p className="text-xs text-[var(--text-muted)] font-medium">Add available liquid cash to your standard internal account balance.</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current Balance</div>
-                  <div className="text-xl font-black font-mono text-white">{formatCurrency(user.accountBalance)}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Current Balance</div>
+                  <div className="text-xl font-black font-mono text-[var(--text-primary)]">{formatCurrency(user.accountBalance)}</div>
                 </div>
               </div>
 
               <div className="p-6 md:p-8">
                 <form onSubmit={(e) => handleFundingDeposit(e, false)} className="space-y-6">
                   <div>
-                    <label className="block text-xs font-black uppercase text-slate-500 tracking-wider mb-2">
+                    <label className="block text-xs font-black uppercase text-[var(--text-muted)] tracking-wider mb-2">
                       Funding Amount (USD)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black font-mono text-lg">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] font-black font-mono text-lg">$</span>
                       <input 
                         type="number"
                         step="0.01"
                         value={fundingAmount}
                         onChange={(e) => setFundingAmount(e.target.value)}
-                        className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-lg font-bold text-slate-800 focus:outline-none focus:border-[#C59B4E] focus:bg-white"
+                        className="w-full pl-8 pr-4 py-3 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-xl font-mono text-lg font-bold text-[var(--text-primary)] focus:outline-none focus:border-[#D6B25E]"
                         placeholder="0.00"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase text-slate-500 tracking-wider mb-3">
+                    <label className="block text-xs font-black uppercase text-[var(--text-muted)] tracking-wider mb-3">
                       Select Crypto Payment Gateway
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -2084,8 +2093,8 @@ export default function DashboardView({
                             onClick={() => setSelectedFundingMethod(m.id)}
                             className={`p-3 rounded-xl border text-center cursor-pointer transition-colors ${
                               isSelected 
-                                ? 'bg-[#0a1626] border-[#C59B4E] text-white font-bold' 
-                                : 'border-slate-100 text-slate-600 hover:bg-slate-50'
+                                ? 'bg-[var(--bg-card-elevated)] border-[#D6B25E] text-[var(--text-primary)] font-bold shadow-xs' 
+                                : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-elevated)]'
                             }`}
                           >
                             <div className="text-xs uppercase tracking-wider font-semibold">{m.label}</div>
@@ -2098,14 +2107,14 @@ export default function DashboardView({
                   <div className="flex flex-col md:flex-row gap-4 pt-4">
                     <button 
                       type="submit"
-                      className="flex-1 py-3.5 bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl transition-transform shadow-md border border-[#0B2545]"
+                      className="flex-1 py-3.5 bg-[#19B86B] hover:bg-[#159a59] active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl transition-transform shadow-md cursor-pointer"
                     >
                       Process Simulated funding
                     </button>
                     <button 
                       type="button"
                       onClick={(e) => handleFundingDeposit(e, true)}
-                      className="py-3.5 px-6 bg-slate-900 border border-slate-700 text-amber-400 hover:text-white font-black text-xs uppercase tracking-widest rounded-xl transition-colors hover:bg-slate-800"
+                      className="py-3.5 px-6 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] text-[#D6B25E] hover:text-[var(--text-primary)] font-black text-xs uppercase tracking-widest rounded-xl transition-colors cursor-pointer"
                     >
                       + Credit $50.00 Test Bonus
                     </button>
@@ -2116,7 +2125,7 @@ export default function DashboardView({
             
             <button 
               onClick={() => onSectionSelect('dashboard')}
-              className="text-xs font-black uppercase text-[#C59B4E] tracking-wider hover:underline"
+              className="text-xs font-black uppercase text-[#D6B25E] tracking-wider hover:underline"
             >
               &larr; Back to performance metrics
             </button>
@@ -2127,48 +2136,48 @@ export default function DashboardView({
         {activeSection === 'withdraw' && (
           <div className="max-w-3xl mx-auto w-full p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {renderBackButton()}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="p-6 bg-[#0a1626] text-white flex justify-between items-center">
+            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] shadow-xs overflow-hidden mb-6">
+              <div className="p-6 bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] text-[var(--text-primary)] flex justify-between items-center">
                 <div>
-                  <h3 className="text-lg font-black tracking-wider uppercase font-display text-violet-400">
+                  <h3 className="text-lg font-black tracking-wider uppercase font-display text-purple-400">
                     Withdrawal cashout request
                   </h3>
-                  <p className="text-xs text-slate-400 font-medium">Submit a request to withdraw active ledger funds to external wallets.</p>
+                  <p className="text-xs text-[var(--text-muted)] font-medium">Submit a request to withdraw active ledger funds to external wallets.</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Available Balance</div>
-                  <div className="text-xl font-black font-mono text-[#C59B4E]">{formatCurrency(user.accountBalance)}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Available Balance</div>
+                  <div className="text-xl font-black font-mono text-[#D6B25E]">{formatCurrency(user.accountBalance)}</div>
                 </div>
               </div>
 
               <div className="p-6 md:p-8">
                 <form onSubmit={handleWithdrawalSubmit} className="space-y-6">
                   <div>
-                    <label className="block text-xs font-black uppercase text-slate-500 tracking-wider mb-2">
+                    <label className="block text-xs font-black uppercase text-[var(--text-muted)] tracking-wider mb-2">
                       Cashout Amount (USD)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black font-mono text-lg">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] font-black font-mono text-lg">$</span>
                       <input 
                         type="number"
                         step="0.01"
                         max={user.accountBalance}
                         value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
-                        className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-lg font-bold text-slate-800 focus:outline-none focus:border-violet-500 focus:bg-white"
+                        className="w-full pl-8 pr-4 py-3 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-xl font-mono text-lg font-bold text-[var(--text-primary)] focus:outline-none focus:border-purple-500"
                         placeholder="0.00"
                       />
                     </div>
-                    <div className="text-[11px] text-slate-400 font-semibold mt-1.5 flex justify-between">
+                    <div className="text-[11px] text-[var(--text-muted)] font-semibold mt-1.5 flex justify-between">
                       <span>Minimum payout: $2.00</span>
-                      <span className="text-emerald-500 cursor-pointer hover:underline" onClick={() => setWithdrawAmount(user.accountBalance.toFixed(2))}>
+                      <span className="text-[#19B86B] cursor-pointer hover:underline" onClick={() => setWithdrawAmount(user.accountBalance.toFixed(2))}>
                         Set Maximum Available ({formatCurrency(user.accountBalance)})
                       </span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase text-slate-500 tracking-wider mb-2">
+                    <label className="block text-xs font-black uppercase text-[var(--text-muted)] tracking-wider mb-2">
                       Destination Wallet Address (USDT TRC20)
                     </label>
                     <input 
@@ -2176,15 +2185,15 @@ export default function DashboardView({
                       required
                       value={customWithdrawalAddress}
                       onChange={(e) => setCustomWithdrawalAddress(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm font-bold text-slate-800 focus:outline-none focus:border-violet-500 focus:bg-white"
+                      className="w-full px-4 py-3 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-xl font-mono text-sm font-bold text-[var(--text-primary)] focus:outline-none focus:border-purple-500"
                       placeholder="TFc1S7BvXU..."
                     />
-                    <p className="text-[10px] text-slate-400 font-medium mt-1">Please ensure your network is TRC-20, or update this in Profile Settings.</p>
+                    <p className="text-[10px] text-[var(--text-muted)] font-medium mt-1">Please ensure your network is TRC-20, or update this in Profile Settings.</p>
                   </div>
 
                   <button 
                     type="submit"
-                    className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl transition-transform shadow-md cursor-pointer"
+                    className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl transition-transform shadow-md cursor-pointer"
                   >
                     Confirm & Submit Payout Request
                   </button>
@@ -2205,15 +2214,15 @@ export default function DashboardView({
         {(activeSection === 'deposit-list' || activeSection === 'deposit-history') && (
           <div className="w-full p-4 md:p-8 animate-in fade-in duration-300">
             {renderBackButton()}
-            <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest mb-6 font-display flex items-center gap-2">
-              <History className="text-[#C59B4E]" size={20} /> Deposit & Investment Logs
+            <h3 className="text-xl font-black text-[var(--text-primary)] uppercase tracking-widest mb-6 font-display flex items-center gap-2">
+              <History className="text-[#D6B25E]" size={20} /> Deposit & Investment Logs
             </h3>
 
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                    <tr className="bg-[var(--bg-card-elevated)] border-b border-[var(--border-subtle)] text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">
                       <th className="py-4 px-6">Log ID</th>
                       <th className="py-4 px-3">Category</th>
                       <th className="py-4 px-3">Plan / Tier</th>
@@ -2223,41 +2232,41 @@ export default function DashboardView({
                       <th className="py-4 px-6 text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50 text-xs text-slate-600 font-medium font-mono">
+                  <tbody className="divide-y divide-[var(--border-subtle)] text-xs text-[var(--text-secondary)] font-medium font-mono">
                     {transactions.filter(t => t.type === 'Deposit' || t.type === 'Investment').length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 px-6 text-center text-slate-400 font-sans text-xs">
+                        <td colSpan={7} className="py-12 px-6 text-center text-[var(--text-muted)] font-sans text-xs">
                           No deposit or investment records located yet. Initiate a transaction to begin.
                         </td>
                       </tr>
                     ) : (
                       transactions.filter(t => t.type === 'Deposit' || t.type === 'Investment').map((t) => (
-                        <tr key={t.id} className="hover:bg-slate-50/50">
-                          <td className="py-4.5 px-6 font-bold text-slate-900">{t.id}</td>
+                        <tr key={t.id} className="hover:bg-[var(--bg-card-elevated)] transition-colors">
+                          <td className="py-4.5 px-6 font-bold text-[var(--text-primary)]">{t.id}</td>
                           <td className="py-4.5 px-3">
                             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                              t.type === 'Deposit' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'
+                              t.type === 'Deposit' ? 'bg-[#19B86B]/15 text-[#19B86B]' : 'bg-indigo-500/15 text-indigo-400'
                             }`}>
                               {t.type}
                             </span>
                           </td>
-                          <td className="py-4.5 px-3 text-slate-800 text-[11px] font-sans font-bold">
+                          <td className="py-4.5 px-3 text-[var(--text-primary)] text-[11px] font-sans font-bold">
                             {t.planName || 'N/A'}
                           </td>
                           <td className="py-4.5 px-3">{t.processor}</td>
-                          <td className="py-4.5 px-3 text-right font-black text-slate-950">{formatCurrency(t.amount)}</td>
-                          <td className="py-4.5 px-6 text-right text-[10px] text-slate-400">
+                          <td className="py-4.5 px-3 text-right font-black text-[var(--text-primary)]">{formatCurrency(t.amount)}</td>
+                          <td className="py-4.5 px-6 text-right text-[10px] text-[var(--text-muted)] font-sans">
                             {new Date(t.timestamp).toLocaleString()}
                           </td>
                           <td className="py-4.5 px-6 text-center">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
                               (t.status || '').toLowerCase() === 'pending'
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
                                 : (t.status || '').toLowerCase() === 'rejected'
-                                ? 'bg-rose-100 text-rose-700 border border-rose-300'
+                                ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                                 : t.status === 'Completed'
-                                ? 'bg-slate-100 text-slate-500'
-                                : 'bg-emerald-100 text-emerald-700'
+                                ? 'bg-[var(--bg-card-elevated)] text-[var(--text-muted)]'
+                                : 'bg-[#19B86B]/15 text-[#19B86B] border border-[#19B86B]/30'
                             }`}>
                               {(t.status || '').toLowerCase() === 'pending'
                                 ? '⏳ Pending Approval'
@@ -2282,15 +2291,15 @@ export default function DashboardView({
         {activeSection === 'earnings-history' && (
           <div className="w-full p-4 md:p-8 animate-in fade-in duration-300">
             {renderBackButton()}
-            <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest mb-6 font-display flex items-center gap-2">
-              <TrendingUp className="text-emerald-500" size={20} /> Accrued Profits & Bonus Registry
+            <h3 className="text-xl font-black text-[var(--text-primary)] uppercase tracking-widest mb-6 font-display flex items-center gap-2">
+              <TrendingUp className="text-[#19B86B]" size={20} /> Accrued Profits & Bonus Registry
             </h3>
 
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                    <tr className="bg-[var(--bg-card-elevated)] border-b border-[var(--border-subtle)] text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">
                       <th className="py-4 px-6">Transaction ID</th>
                       <th className="py-4 px-3">Source Category</th>
                       <th className="py-4 px-3">Original Asset Group</th>
@@ -2299,31 +2308,31 @@ export default function DashboardView({
                       <th className="py-4 px-6 text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50 text-xs text-slate-600 font-medium font-mono">
+                  <tbody className="divide-y divide-[var(--border-subtle)] text-xs text-[var(--text-secondary)] font-medium font-mono">
                     {transactions.filter(t => t.type === 'Profit' || t.type === 'Bonus').length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 px-6 text-center text-slate-400 font-sans text-xs">
+                        <td colSpan={6} className="py-12 px-6 text-center text-[var(--text-muted)] font-sans text-xs">
                           No profit outcomes recorded. Your investment returns generate and record here in real-time.
                         </td>
                       </tr>
                     ) : (
                       transactions.filter(t => t.type === 'Profit' || t.type === 'Bonus').map((t) => (
-                        <tr key={t.id} className="hover:bg-slate-50/50">
-                          <td className="py-4.5 px-6 font-bold text-slate-900">{t.id}</td>
+                        <tr key={t.id} className="hover:bg-[var(--bg-card-elevated)] transition-colors">
+                          <td className="py-4.5 px-6 font-bold text-[var(--text-primary)]">{t.id}</td>
                           <td className="py-4.5 px-3">
                             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                              t.type === 'Profit' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                              t.type === 'Profit' ? 'bg-[#19B86B]/15 text-[#19B86B]' : 'bg-amber-500/15 text-[#D6B25E]'
                             }`}>
                               {t.type === 'Profit' ? 'Interest profit' : 'Welcome Credit'}
                             </span>
                           </td>
-                          <td className="py-4.5 px-3 font-sans font-bold text-slate-800">{t.processor}</td>
-                          <td className="py-4.5 px-3 text-right font-black text-emerald-600">+${t.amount.toFixed(4)}</td>
-                          <td className="py-4.5 px-6 text-right text-[10px] text-slate-400">
+                          <td className="py-4.5 px-3 font-sans font-bold text-[var(--text-primary)]">{t.processor}</td>
+                          <td className="py-4.5 px-3 text-right font-black text-[#19B86B]">+${t.amount.toFixed(4)}</td>
+                          <td className="py-4.5 px-6 text-right text-[10px] text-[var(--text-muted)] font-sans">
                             {new Date(t.timestamp).toLocaleString()}
                           </td>
                           <td className="py-4.5 px-6 text-center">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#19B86B]/15 text-[#19B86B] border border-[#19B86B]/30">
                               Approved
                             </span>
                           </td>
@@ -2343,24 +2352,24 @@ export default function DashboardView({
             {renderBackButton()}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div>
-                <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest font-display flex items-center gap-2">
-                  <CreditCard className="text-violet-500" size={20} /> Withdrawal Registry & Backoffice Simulator
+                <h3 className="text-xl font-black text-[var(--text-primary)] uppercase tracking-widest font-display flex items-center gap-2">
+                  <CreditCard className="text-purple-400" size={20} /> Withdrawal Registry & Backoffice Simulator
                 </h3>
-                <p className="text-xs text-slate-400 font-medium mt-1">Review payout records and approve/reject pending mock-ups for verification testing.</p>
+                <p className="text-xs text-[var(--text-muted)] font-medium mt-1">Review payout records and approve/reject pending mock-ups for verification testing.</p>
               </div>
               <button 
                 onClick={() => onSectionSelect('withdraw')}
-                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-[10px] text-white font-black uppercase tracking-widest rounded-lg shadow-sm transition-colors cursor-pointer"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-[10px] text-white font-black uppercase tracking-widest rounded-lg shadow-sm transition-colors cursor-pointer"
               >
                 + Request Cashout
               </button>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                    <tr className="bg-[var(--bg-card-elevated)] border-b border-[var(--border-subtle)] text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">
                       <th className="py-4 px-6">Payout ID</th>
                       <th className="py-4 px-3">Gateway Network</th>
                       <th className="py-4 px-3 text-right">Sum requested</th>
@@ -2369,27 +2378,27 @@ export default function DashboardView({
                       <th className="py-4 px-6 text-center">Simulator Operations</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50 text-xs text-slate-600 font-medium font-mono">
+                  <tbody className="divide-y divide-[var(--border-subtle)] text-xs text-[var(--text-secondary)] font-medium font-mono">
                     {transactions.filter(t => t.type === 'Withdrawal').length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 px-6 text-center text-slate-400 font-sans text-xs">
+                        <td colSpan={6} className="py-12 px-6 text-center text-[var(--text-muted)] font-sans text-xs">
                           No cashout withdrawals recorded. Utilize the "Withdraw" section to create a ledger check.
                         </td>
                       </tr>
                     ) : (
                       transactions.filter(t => t.type === 'Withdrawal').map((t) => (
-                        <tr key={t.id} className="hover:bg-slate-50/50">
-                          <td className="py-4.5 px-6 font-bold text-slate-900">{t.id}</td>
-                          <td className="py-4.5 px-3 uppercase text-slate-800">{t.processor}</td>
-                          <td className="py-4.5 px-3 text-right font-black text-rose-600">-{formatCurrency(t.amount)}</td>
-                          <td className="py-4.5 px-6 text-right text-[10px] text-slate-400">
+                        <tr key={t.id} className="hover:bg-[var(--bg-card-elevated)] transition-colors">
+                          <td className="py-4.5 px-6 font-bold text-[var(--text-primary)]">{t.id}</td>
+                          <td className="py-4.5 px-3 uppercase text-[var(--text-primary)]">{t.processor}</td>
+                          <td className="py-4.5 px-3 text-right font-black text-rose-500">-{formatCurrency(t.amount)}</td>
+                          <td className="py-4.5 px-6 text-right text-[10px] text-[var(--text-muted)] font-sans">
                             {new Date(t.timestamp).toLocaleString()}
                           </td>
                           <td className="py-4.5 px-6 text-center">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                              t.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                              t.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
-                              'bg-rose-100 text-rose-700'
+                              t.status === 'Pending' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                              t.status === 'Approved' ? 'bg-[#19B86B]/15 text-[#19B86B] border border-[#19B86B]/30' :
+                              'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                             }`}>
                               {t.status || 'Pending'}
                             </span>
@@ -2399,19 +2408,19 @@ export default function DashboardView({
                               <div className="flex justify-center gap-1.5 font-sans">
                                 <button 
                                   onClick={() => handleUpdateStatusSimulate(t.id, 'Approved')}
-                                  className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider rounded-md"
+                                  className="px-2.5 py-1 bg-[#19B86B] hover:bg-[#159a59] text-white text-[9px] font-black uppercase tracking-wider rounded-md cursor-pointer"
                                 >
                                   Approve
                                 </button>
                                 <button 
                                   onClick={() => handleUpdateStatusSimulate(t.id, 'Rejected')}
-                                  className="px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-black uppercase tracking-wider rounded-md"
+                                  className="px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-black uppercase tracking-wider rounded-md cursor-pointer"
                                 >
                                   Reject
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-[10px] text-slate-400 font-medium font-sans">Immutable logs archived</span>
+                              <span className="text-[10px] text-[var(--text-muted)] font-medium font-sans">Immutable logs archived</span>
                             )}
                           </td>
                         </tr>
@@ -2426,22 +2435,22 @@ export default function DashboardView({
 
         {/* ===== EDIT PROFILE MODULE WITH LIVE CAMERA PORTRAIT CAPTURE ===== */}
         {activeSection === 'edit-profile' && (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] p-6 md:p-8 shadow-xs max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
             {renderBackButton()}
-            <div className="border-b border-slate-100 pb-5 mb-6">
-              <h2 className="text-xl font-black font-display text-slate-800 tracking-tight uppercase">Edit Account Profile</h2>
-              <p className="text-xs text-slate-400 mt-1">Configure your personal credentials and customize your secure backoffice avatar.</p>
+            <div className="border-b border-[var(--border-subtle)] pb-5 mb-6">
+              <h2 className="text-xl font-black font-display text-[var(--text-primary)] tracking-tight uppercase">Edit Account Profile</h2>
+              <p className="text-xs text-[var(--text-muted)] mt-1">Configure your personal credentials and customize your secure backoffice avatar.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
               {/* Left Column: Portrait capturing */}
               <div className="md:col-span-5 flex flex-col gap-6 items-center">
-                <div className="w-full text-center md:text-left border-b border-slate-100 pb-2">
-                  <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider font-sans">Account Personal Avatar</h3>
+                <div className="w-full text-center md:text-left border-b border-[var(--border-subtle)] pb-2">
+                  <h3 className="text-xs font-black text-[var(--text-secondary)] uppercase tracking-wider font-sans">Account Personal Avatar</h3>
                 </div>
 
                 <div className="flex flex-col items-center gap-4 w-full">
-                  <div className="relative w-48 h-48 rounded-xl border border-slate-200 overflow-hidden bg-slate-950 flex items-center justify-center group shadow-inner">
+                  <div className="relative w-48 h-48 rounded-xl border border-[var(--border-subtle)] overflow-hidden bg-slate-950 flex items-center justify-center group shadow-inner">
                     {cameraActive ? (
                       <video
                         ref={videoRef}
@@ -2457,9 +2466,9 @@ export default function DashboardView({
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center text-slate-400/80">
+                      <div className="flex flex-col items-center justify-center text-slate-500">
                         <User size={64} className="opacity-30" />
-                        <span className="text-[10px] font-black mt-2 uppercase tracking-widest text-slate-400">No Custom Avatar</span>
+                        <span className="text-[10px] font-black mt-2 uppercase tracking-widest text-[var(--text-muted)]">No Custom Avatar</span>
                       </div>
                     )}
 
@@ -2478,7 +2487,7 @@ export default function DashboardView({
                         <button
                           type="button"
                           onClick={captureSnapshot}
-                          className="px-4 py-2 flex-1 bg-[#C59B4E] hover:bg-[#A98035] text-[#0a1626] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          className="px-4 py-2 flex-1 bg-[#D6B25E] hover:bg-[#c4a14f] text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                         >
                           <Camera size={14} /> Snap Portrait
                         </button>
@@ -2494,9 +2503,9 @@ export default function DashboardView({
                       <button
                         type="button"
                         onClick={startCamera}
-                        className="w-full px-4 py-2.5 bg-[#0a1626] hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                        className="w-full px-4 py-2.5 bg-[#19B86B] hover:bg-[#159a59] text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
                       >
-                        <Camera size={14} className="text-[#C59B4E]" /> Capture Device Camera
+                        <Camera size={14} /> Capture Device Camera
                       </button>
                     )}
                     
@@ -2504,7 +2513,7 @@ export default function DashboardView({
                       <button
                         type="button"
                         onClick={() => setProfilePhoto('')}
-                        className="w-full px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-rose-200"
+                        className="w-full px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-rose-500/30"
                       >
                         <Trash2 size={13} /> Delete Portrait
                       </button>
@@ -2512,7 +2521,7 @@ export default function DashboardView({
                   </div>
 
                   {cameraError && (
-                    <p className="text-[10px] text-rose-500 text-center font-bold max-w-xs bg-rose-50 py-2 px-3 rounded-lg border border-rose-100">{cameraError}</p>
+                    <p className="text-[10px] text-rose-500 text-center font-bold max-w-xs bg-rose-500/10 py-2 px-3 rounded-lg border border-rose-500/20">{cameraError}</p>
                   )}
                 </div>
 
@@ -2523,17 +2532,17 @@ export default function DashboardView({
                   onDrop={handleDrop}
                   className={`w-full py-6 px-4 rounded-xl border-2 border-dashed text-center flex flex-col items-center gap-2 cursor-pointer transition-colors max-w-sm mt-3 ${
                     dragOver 
-                      ? 'border-[#C59B4E] bg-[#C59B4E]/5' 
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                      ? 'border-[#D6B25E] bg-[#D6B25E]/5' 
+                      : 'border-[var(--border-subtle)] hover:border-[#D6B25E]/50 bg-[var(--bg-card-elevated)]'
                   }`}
                   onClick={() => document.getElementById('avatar-file-input')?.click()}
                 >
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                  <div className="w-10 h-10 rounded-full bg-[var(--bg-card)] flex items-center justify-center text-[var(--text-muted)]">
                     <Camera size={18} />
                   </div>
                   <div className="text-center">
-                    <p className="text-[11px] font-black text-slate-700 uppercase tracking-wide font-sans">Drag & Drop Profile Photo</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">Or click to select image from storage</p>
+                    <p className="text-[11px] font-black text-[var(--text-primary)] uppercase tracking-wide font-sans">Drag & Drop Profile Photo</p>
+                    <p className="text-[9px] text-[var(--text-muted)] mt-0.5">Or click to select image from storage</p>
                   </div>
                   <input
                     id="avatar-file-input"
@@ -2549,92 +2558,92 @@ export default function DashboardView({
               <div className="md:col-span-7">
                 <form onSubmit={handleSaveProfile} className="space-y-5">
                   {/* Account Credentials Group */}
-                  <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-150 space-y-3">
-                    <h3 className="text-[10px] font-black text-[#C59B4E] uppercase tracking-widest leading-none mb-1">Account Credentials</h3>
+                  <div className="bg-[var(--bg-card-elevated)] p-5 rounded-2xl border border-[var(--border-subtle)] space-y-3">
+                    <h3 className="text-[10px] font-black text-[#D6B25E] uppercase tracking-widest leading-none mb-1">Account Credentials</h3>
                     
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Username</label>
+                      <label className="block text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">Username</label>
                       <input
                         type="text"
                         value={user.username}
                         disabled
-                        className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-400 cursor-not-allowed opacity-80 font-mono"
+                        className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl text-xs font-bold text-[var(--text-muted)] cursor-not-allowed opacity-80 font-mono"
                       />
-                      <span className="text-[9px] text-slate-400 mt-1 block">Account identity username cannot be altered post-registration.</span>
+                      <span className="text-[9px] text-[var(--text-muted)] mt-1 block">Account identity username cannot be altered post-registration.</span>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Full Signature Name</label>
+                      <label className="block text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">Full Signature Name</label>
                       <input
                         type="text"
                         required
                         value={profileFullName}
                         onChange={(e) => setProfileFullName(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-[#C59B4E] focus:outline-none rounded-xl text-xs font-bold text-[#0a1626]"
+                        className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[#D6B25E] focus:outline-none rounded-xl text-xs font-bold text-[var(--text-primary)]"
                         placeholder="e.g. Alex Adams"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Registered Email Address</label>
+                      <label className="block text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">Registered Email Address</label>
                       <input
                         type="email"
                         required
                         value={profileEmail}
                         onChange={(e) => setProfileEmail(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-[#C59B4E] focus:outline-none rounded-xl text-xs font-bold text-[#0a1626]"
+                        className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[#D6B25E] focus:outline-none rounded-xl text-xs font-bold text-[var(--text-primary)]"
                         placeholder="e.g. email@domain.com"
                       />
                     </div>
                   </div>
 
                   {/* Cryptographic Payment Wallets */}
-                  <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-150 space-y-3">
+                  <div className="bg-[var(--bg-card-elevated)] p-5 rounded-2xl border border-[var(--border-subtle)] space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[10px] font-black text-purple-600 uppercase tracking-widest leading-none">Configured Payment Addresses</h3>
-                      <span className="text-[9px] text-slate-400 font-semibold">Automatic payout routing</span>
+                      <h3 className="text-[10px] font-black text-purple-400 uppercase tracking-widest leading-none">Configured Payment Addresses</h3>
+                      <span className="text-[9px] text-[var(--text-muted)] font-semibold">Automatic payout routing</span>
                     </div>
                     
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">USDT TRC20 Address</label>
+                      <label className="block text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">USDT TRC20 Address</label>
                       <input
                         type="text"
                         value={profileTrc20}
                         onChange={(e) => setProfileTrc20(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-[#C59B4E] focus:outline-none rounded-xl text-xs font-bold text-[#0a1626] font-mono"
+                        className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[#D6B25E] focus:outline-none rounded-xl text-xs font-bold text-[var(--text-primary)] font-mono"
                         placeholder="Starts with T..."
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Bitcoin (BTC) Address</label>
+                      <label className="block text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">Bitcoin (BTC) Address</label>
                       <input
                         type="text"
                         value={profileBtc}
                         onChange={(e) => setProfileBtc(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-[#C59B4E] focus:outline-none rounded-xl text-xs font-bold text-[#0a1626] font-mono"
+                        className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[#D6B25E] focus:outline-none rounded-xl text-xs font-bold text-[var(--text-primary)] font-mono"
                         placeholder="e.g. 1A1z..."
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Ethereum (ETH) Address</label>
+                      <label className="block text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">Ethereum (ETH) Address</label>
                       <input
                         type="text"
                         value={profileEth}
                         onChange={(e) => setProfileEth(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-[#C59B4E] focus:outline-none rounded-xl text-xs font-bold text-[#0a1626] font-mono"
+                        className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[#D6B25E] focus:outline-none rounded-xl text-xs font-bold text-[var(--text-primary)] font-mono"
                         placeholder="Starts with 0x..."
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">USDT ERC20 Address</label>
+                      <label className="block text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">USDT ERC20 Address</label>
                       <input
                         type="text"
                         value={profileErc20}
                         onChange={(e) => setProfileErc20(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-[#C59B4E] focus:outline-none rounded-xl text-xs font-bold text-[#0a1626] font-mono"
+                        className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[#D6B25E] focus:outline-none rounded-xl text-xs font-bold text-[var(--text-primary)] font-mono"
                         placeholder="Starts with 0x..."
                       />
                     </div>
@@ -2642,7 +2651,7 @@ export default function DashboardView({
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#C59B4E] hover:bg-[#A98035] text-[#0a1626] font-black text-xs uppercase tracking-widest rounded-xl shadow-premium cursor-pointer transition-transform duration-150 transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 animate-in fade-in"
+                    className="w-full py-3 bg-[#19B86B] hover:bg-[#159a59] text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-md cursor-pointer transition-transform duration-150 transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 animate-in fade-in"
                   >
                     <Check size={16} /> Save Profile Changes
                   </button>
@@ -2658,15 +2667,15 @@ export default function DashboardView({
             <div className="flex items-center justify-between">
               {renderBackButton()}
               <div className="text-right">
-                <span className="text-xs font-semibold text-slate-400">Host Domain</span>
-                <p className="text-xs font-mono font-bold text-slate-700">www.worldvestcapital.ltd</p>
+                <span className="text-xs font-semibold text-[var(--text-muted)]">Host Domain</span>
+                <p className="text-xs font-mono font-bold text-[var(--text-secondary)]">www.worldvestcapital.ltd</p>
               </div>
             </div>
 
             {/* Top Affiliate Overview Banner */}
             <div className="bg-gradient-to-r from-[#071625] via-[#0d223a] to-[#071625] text-white rounded-2xl p-6 sm:p-8 border border-slate-800 shadow-xl relative overflow-hidden">
               <div className="relative z-10 max-w-2xl">
-                <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#C59B4E]/20 text-[#C59B4E] border border-[#C59B4E]/30 mb-3">
+                <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#D6B25E]/20 text-[#D6B25E] border border-[#D6B25E]/30 mb-3">
                   Affiliate Partnership Program
                 </span>
                 <h2 className="text-xl sm:text-2xl font-bold font-display text-white mb-2">
@@ -2680,59 +2689,59 @@ export default function DashboardView({
 
             {/* Quick Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              <div className="bg-[var(--bg-card)] rounded-xl p-5 border border-[var(--border-subtle)] shadow-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] block mb-1">
                   Active Referrals
                 </span>
-                <div className="text-2xl font-extrabold text-slate-800 font-display">
+                <div className="text-2xl font-extrabold text-[var(--text-primary)] font-display">
                   {user.referralsCount || 0}
                 </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">Registered via your link</span>
+                <span className="text-[11px] text-[var(--text-muted)] mt-1 block">Registered via your link</span>
               </div>
 
-              <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs border-b-2 border-b-[#C59B4E]">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              <div className="bg-[var(--bg-card)] rounded-xl p-5 border border-[var(--border-subtle)] shadow-xs border-b-2 border-b-[#D6B25E]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] block mb-1">
                   Total Referral Yield
                 </span>
-                <div className="text-2xl font-extrabold text-[#C59B4E] font-display">
+                <div className="text-2xl font-extrabold text-[#D6B25E] font-display">
                   {formatCurrency(user.referralEarnings || 0)}
                 </div>
-                <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Available for instant withdrawal</span>
+                <span className="text-[11px] text-[#19B86B] font-semibold mt-1 block">Available for instant withdrawal</span>
               </div>
 
-              <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              <div className="bg-[var(--bg-card)] rounded-xl p-5 border border-[var(--border-subtle)] shadow-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] block mb-1">
                   Affiliate Tier Level
                 </span>
-                <div className="text-2xl font-extrabold text-[#1677ff] font-display">
+                <div className="text-2xl font-extrabold text-[#19B86B] font-display">
                   Tier 1 (7%)
                 </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">Multi-level: 7% - 2% - 1%</span>
+                <span className="text-[11px] text-[var(--text-muted)] mt-1 block">Multi-level: 7% - 2% - 1%</span>
               </div>
             </div>
 
             {/* Primary Referral Link Copy Box */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-4">
+            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] shadow-xs p-6 space-y-4">
               <div>
-                <h3 className="text-base font-bold text-slate-800 font-display">
+                <h3 className="text-base font-bold text-[var(--text-primary)] font-display">
                   Your Personal Referral Link
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Hosted on official Namecheap cPanel domain: <code className="text-slate-700 font-bold bg-slate-100 px-1 py-0.5 rounded">www.worldvestcapital.ltd</code>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Hosted on official Namecheap cPanel domain: <code className="text-[var(--text-primary)] font-bold bg-[var(--bg-card-elevated)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">www.worldvestcapital.ltd</code>
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                <div className="flex items-center gap-2 min-w-0 text-slate-700 text-xs sm:text-sm font-mono truncate">
-                  <span className="text-[#C59B4E] font-sans font-bold select-none text-base">@</span>
-                  <span className="truncate select-all font-semibold text-slate-800" title={officialReferralLink}>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 min-w-0 text-[var(--text-secondary)] text-xs sm:text-sm font-mono truncate">
+                  <span className="text-[#D6B25E] font-sans font-bold select-none text-base">@</span>
+                  <span className="truncate select-all font-semibold text-[var(--text-primary)]" title={officialReferralLink}>
                     {officialReferralLink}
                   </span>
                 </div>
                 <button 
                   type="button"
                   onClick={() => handleCopyRefLink(officialReferralLink)}
-                  className="px-4 py-2 bg-[#1677ff] hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                  className="px-4 py-2 bg-[#19B86B] hover:bg-[#159a59] text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer"
                 >
                   <Copy size={14} />
                   <span>{copiedRef ? 'Copied to Clipboard!' : 'Copy Referral Link'}</span>
@@ -2740,13 +2749,13 @@ export default function DashboardView({
               </div>
 
               {/* Quick Social Sharing Links */}
-              <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold text-slate-500 mr-1">Share link directly:</span>
+              <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-[var(--text-muted)] mr-1">Share link directly:</span>
                 <a 
                   href={`https://wa.me/?text=${encodeURIComponent(`Join me on WorldVest Capital LTD and earn daily yields! Register here: ${officialReferralLink}`)}`}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-[#19B86B] border border-emerald-500/30 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
                 >
                   WhatsApp
                 </a>
@@ -2754,7 +2763,7 @@ export default function DashboardView({
                   href={`https://t.me/share/url?url=${encodeURIComponent(officialReferralLink)}&text=${encodeURIComponent('Invest with WorldVest Capital LTD — certified returns & daily compounding.')}`}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
                 >
                   Telegram
                 </a>
@@ -2762,13 +2771,13 @@ export default function DashboardView({
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Earn certified crypto and capital yields on WorldVest Capital LTD! ${officialReferralLink}`)}`}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-[var(--bg-card-elevated)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
                 >
                   Twitter / X
                 </a>
                 <a 
                   href={`mailto:?subject=${encodeURIComponent('Invitation to WorldVest Capital LTD')}&body=${encodeURIComponent(`Hello,\n\nI recommend joining WorldVest Capital LTD for secure investment management:\n${officialReferralLink}\n\nBest regards,\n${user.username}`)}`}
-                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-[#D6B25E] border border-amber-500/30 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5"
                 >
                   Email Invite
                 </a>
@@ -2776,21 +2785,21 @@ export default function DashboardView({
             </div>
 
             {/* HTML Banner Code Snippet */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-3">
-              <h3 className="text-sm font-bold text-slate-800 font-display">
+            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] shadow-xs p-6 space-y-3">
+              <h3 className="text-sm font-bold text-[var(--text-primary)] font-display">
                 HTML Embed Code for Blogs & Forums
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--text-muted)]">
                 Copy and paste this HTML code into your website or signature to display a clickable banner:
               </p>
-              <div className="bg-slate-900 text-slate-200 rounded-xl p-3.5 font-mono text-xs overflow-x-auto border border-slate-800 flex items-center justify-between gap-3">
-                <code className="select-all text-[11px] text-amber-300">
+              <div className="bg-[var(--bg-card-elevated)] text-[var(--text-secondary)] rounded-xl p-3.5 font-mono text-xs overflow-x-auto border border-[var(--border-subtle)] flex items-center justify-between gap-3">
+                <code className="select-all text-[11px] text-[#D6B25E]">
                   {`<a href="${officialReferralLink}" target="_blank"><img src="https://www.worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`}
                 </code>
                 <button
                   type="button"
                   onClick={() => handleCopyRefLink(`<a href="${officialReferralLink}" target="_blank"><img src="https://www.worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`)}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-[11px] font-bold shrink-0 cursor-pointer"
+                  className="px-2.5 py-1 bg-[#19B86B] hover:bg-[#159a59] text-white rounded text-[11px] font-bold shrink-0 cursor-pointer"
                 >
                   Copy Code
                 </button>
@@ -2814,22 +2823,22 @@ export default function DashboardView({
          activeSection !== 'referrals' && 
          activeSection !== 'ref-links' && 
          activeSection !== 'tell-a-friend' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center flex flex-col items-center gap-4 animate-in fade-in max-w-lg mx-auto mt-12">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-subtle)] p-12 text-center flex flex-col items-center gap-4 animate-in fade-in max-w-lg mx-auto mt-12 shadow-xs">
             <div className="w-full flex justify-start">
               {renderBackButton()}
             </div>
-            <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center text-[#C59B4E] mb-2">
+            <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[#D6B25E] mb-2">
               <ShieldCheck size={32} />
             </div>
-            <h3 className="font-bold text-slate-800 text-lg font-display uppercase tracking-wider leading-none">
+            <h3 className="font-bold text-[var(--text-primary)] text-lg font-display uppercase tracking-wider leading-none">
               {activeSection.replace('-', ' ')} Live Module
             </h3>
-            <p className="text-xs text-slate-400 font-normal leading-relaxed">
+            <p className="text-xs text-[var(--text-muted)] font-normal leading-relaxed">
               This financial segment is sandbox-configured to the Cloud Firebase database. Feel free to use the sidebar options to manage your virtual investment backoffice.
             </p>
             <button 
               onClick={() => onSectionSelect('dashboard')}
-              className="px-5 py-2.5 bg-[#C59B4E] text-xs font-black text-white uppercase tracking-wider rounded-lg shadow-premium cursor-pointer transition-transform mt-2"
+              className="px-5 py-2.5 bg-[#19B86B] text-xs font-black text-white uppercase tracking-wider rounded-lg shadow-md cursor-pointer transition-transform mt-2 hover:bg-[#159a59]"
             >
               Return to Dashboard Index
             </button>

@@ -26,6 +26,7 @@ import {
   getUserWithdrawals,
   updateWithdrawalStatus,
   addTransactionRecord,
+  deleteTransactionRecord,
   getUserTransactions,
   updateTransactionStatus,
   isFirebaseReady,
@@ -356,16 +357,101 @@ export default function App() {
   }, [user.isLoggedIn, user.uid, user.username]);
 
   // Autonomous profit checking & crediting loop running in real-time
+  // Strictly gated on deposit/investment approval status
   useEffect(() => {
     if (!user.isLoggedIn || transactions.length === 0) return;
     const uid = user.uid || `user_${user.username}`;
     
     let hasCreatedProfit = false;
-    const investments = transactions.filter(t => t.type === 'Investment');
-    
+
+    // Check for approved deposits and unapproved deposits
+    const approvedDeposits = transactions.filter(t => 
+      t.type === 'Deposit' && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
+    );
+    const unapprovedDepositIds = new Set(
+      transactions
+        .filter(t => t.type === 'Deposit' && (t.status === 'Pending' || t.status === 'pending' || t.status === 'Rejected' || t.status === 'rejected'))
+        .map(t => t.id)
+    );
+
+    // Only investments that are Approved or Completed are eligible for earnings
+    const approvedInvestments = transactions.filter(t => 
+      t.type === 'Investment' && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
+    );
+
+    // 1. Data Integrity & Cleanup Check:
+    // If user has no approved deposits and no approved investments, but has Profit transactions or earnedTotal > 0, purge them!
+    const cleanErroneousRecords = async () => {
+      let needsReload = false;
+      const profitTransactions = transactions.filter(t => t.type === 'Profit');
+
+      for (const pTx of profitTransactions) {
+        let isErroneous = false;
+        if (pTx.referenceId) {
+          const parent = transactions.find(t => t.id === pTx.referenceId);
+          if (!parent) {
+            isErroneous = true;
+          } else {
+            const pStatus = (parent.status || '').toLowerCase();
+            if (pStatus !== 'approved' && pStatus !== 'completed') {
+              isErroneous = true;
+            }
+          }
+        } else if (approvedInvestments.length === 0 && approvedDeposits.length === 0) {
+          isErroneous = true;
+        }
+
+        if (isErroneous) {
+          await deleteTransactionRecord(pTx.id, uid);
+          needsReload = true;
+        }
+      }
+
+      // If user has NO approved deposits and NO approved investments, reset user.earnedTotal to 0!
+      if (approvedInvestments.length === 0 && approvedDeposits.length === 0 && (user.earnedTotal > 0 || user.activeDeposit > 0)) {
+        await saveUserProfile(uid, {
+          ...user,
+          earnedTotal: 0,
+          activeDeposit: 0
+        });
+        setUser(prev => ({ ...prev, earnedTotal: 0, activeDeposit: 0 }));
+      }
+
+      if (needsReload) {
+        await reloadTransactions(uid);
+      }
+    };
+
+    cleanErroneousRecords().catch(console.error);
+
     const checkAndSyncInvestmentProfits = async () => {
-      for (const inv of investments) {
-        const elapsed = Date.now() - inv.timestamp;
+      for (const inv of approvedInvestments) {
+        const invStatus = (inv.status || '').toLowerCase();
+        // RULE 3: Authoritative condition - verify deposit.status === 'approved'
+        if (invStatus !== 'approved' && invStatus !== 'completed') {
+          // Pending or rejected deposit. Generate ZERO earnings.
+          continue;
+        }
+
+        // If this investment references a deposit transaction, verify parent deposit is also approved
+        if (inv.referenceId && unapprovedDepositIds.has(inv.referenceId)) {
+          // Matching deposit is pending or rejected -> ZERO earnings!
+          continue;
+        }
+
+        // RULE 2: The earning start time MUST be based on the approval time, not the time user submitted
+        const startTime = inv.approvedAt || (invStatus === 'approved' ? inv.timestamp : null);
+        if (!startTime) {
+          // No approval timestamp -> NOT eligible for earnings
+          continue;
+        }
+
+        const elapsed = Date.now() - startTime;
+        if (elapsed <= 0) {
+          // Future or zero elapsed time
+          continue;
+        }
+
         const termMs = (inv.term || 10) * 24 * 3600 * 1000;
         const isMatured = elapsed >= termMs;
         
@@ -421,7 +507,7 @@ export default function App() {
           });
         }
         
-        if (isMatured && inv.status === 'Approved') {
+        if (isMatured && (inv.status === 'Approved' || inv.status === 'approved')) {
           hasCreatedProfit = true;
           await updateTransactionStatus(inv.id, 'Completed');
         }
@@ -447,44 +533,75 @@ export default function App() {
       return { liveUser: user, activeTracks: [] };
     }
 
-    const investments = transactions.filter(t => t.type === 'Investment');
+    // Only approved/completed investments
+    const approvedInvestments = transactions.filter(t => 
+      t.type === 'Investment' && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
+    );
+
+    const approvedDeposits = transactions.filter(t => 
+      t.type === 'Deposit' && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
+    );
+
+    const hasApprovedDepositsOrInvestments = approvedInvestments.length > 0 || approvedDeposits.length > 0;
 
     // Aggregate values
-    const totalDeposits = transactions
-      .filter(t => t.type === 'Deposit' && t.status === 'Approved')
+    const totalDeposits = approvedDeposits
       .reduce((sum, t) => sum + t.amount, 0);
 
     const totalBonuses = transactions
-      .filter(t => t.type === 'Bonus' && t.status === 'Approved')
+      .filter(t => t.type === 'Bonus' && (t.status === 'Approved' || t.status === 'approved'))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const activeInvestments = transactions
-      .filter(t => t.type === 'Investment' && t.status === 'Approved')
+      .filter(t => t.type === 'Investment' && (t.status === 'Approved' || t.status === 'approved'))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const approvedWithdrawals = transactions
-      .filter(t => t.type === 'Withdrawal' && t.status === 'Approved')
+      .filter(t => t.type === 'Withdrawal' && (t.status === 'Approved' || t.status === 'approved'))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const pendingWithdrawalVals = transactions
-      .filter(t => t.type === 'Withdrawal' && t.status === 'Pending')
+      .filter(t => t.type === 'Withdrawal' && (t.status === 'Pending' || t.status === 'pending'))
       .reduce((sum, t) => sum + t.amount, 0);
 
     // Sort transactions by timestamp to obtain latest deposit
-    const approvedDeposits = transactions
-      .filter(t => t.type === 'Deposit' && t.status === 'Approved')
-      .sort((a, b) => b.timestamp - a.timestamp);
-    const lastDeposit = approvedDeposits.length > 0 ? approvedDeposits[0].amount : 0;
+    const sortedApprovedDeposits = [...approvedDeposits].sort((a, b) => b.timestamp - a.timestamp);
+    const lastDeposit = sortedApprovedDeposits.length > 0 ? sortedApprovedDeposits[0].amount : 0;
 
     const lastWithdrawalStr = formatCurrency(lastApprovedWithdrawal || 0);
 
     const activeTracks: any[] = [];
     let liveEarnedTotal = 0;
 
-    investments.forEach((inv, idx) => {
+    // Process all investments for UI tracking, but ONLY approved investments accrue profit!
+    transactions.filter(t => t.type === 'Investment').forEach((inv) => {
       const amt = Number(inv.amount) || 0;
-      const t = inv.timestamp || currentTime;
-      const elapsed = currentTime - t;
+      const invStatus = (inv.status || '').toLowerCase();
+      const isApproved = invStatus === 'approved' || invStatus === 'completed';
+
+      // CRITICAL: Pending or rejected investments generate ZERO earnings!
+      if (!isApproved) {
+        activeTracks.push({
+          id: inv.id,
+          amount: amt,
+          planId: inv.planId || 'p1',
+          planName: inv.planName || '10 DAYS 6% DAILY',
+          processor: inv.processor,
+          date: inv.date,
+          timestamp: inv.timestamp,
+          termDays: inv.term || 10,
+          progress: 0,
+          profit: 0,
+          active: false,
+          status: inv.status || 'Pending',
+          elapsedSec: 0
+        });
+        return;
+      }
+
+      // For approved investments: earning start time is based on approvedAt
+      const startTime = inv.approvedAt || inv.timestamp || currentTime;
+      const elapsed = Math.max(0, currentTime - startTime);
       const termDays = inv.term || 10;
       const termMs = termDays * 24 * 3600 * 1000;
 
@@ -508,7 +625,7 @@ export default function App() {
           rate = interest / 100 / (inv.term || 10);
       }
 
-      const isCompleted = elapsed >= termMs || inv.status === 'Completed';
+      const isCompleted = elapsed >= termMs || invStatus === 'completed';
       const totalROI = inv.roi || 160;
       const interestRatio = totalROI > 100 ? ((totalROI - 100) / 100) : (totalROI / 100);
       const maxProfit = amt * interestRatio;
@@ -533,14 +650,35 @@ export default function App() {
         planName: inv.planName || '10 DAYS 6% DAILY',
         processor: inv.processor,
         date: inv.date,
-        timestamp: t,
+        timestamp: startTime,
         termDays,
         progress: progressPercent,
         profit: profit,
         active: !isCompleted,
+        status: 'Approved',
         elapsedSec: Math.floor(elapsed / 1000)
       });
     });
+
+    // Sum legitimate approved Profit transactions
+    const validProfitTxTotal = transactions
+      .filter(t => {
+        if (t.type !== 'Profit') return false;
+        if (!hasApprovedDepositsOrInvestments) return false;
+        if (t.referenceId) {
+          const parent = transactions.find(p => p.id === t.referenceId);
+          if (!parent) return false;
+          const pStatus = (parent.status || '').toLowerCase();
+          return pStatus === 'approved' || pStatus === 'completed';
+        }
+        return true;
+      })
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    // If user has NO approved deposits and NO approved investments: Earned Total MUST BE 0.00!
+    const resolvedEarnedTotal = !hasApprovedDepositsOrInvestments 
+      ? 0 
+      : (validProfitTxTotal > 0 ? validProfitTxTotal : Number(liveEarnedTotal.toFixed(4)));
 
     const finalMainAccountBalance = typeof user.mainAccountBalance === 'number' && !isNaN(user.mainAccountBalance)
       ? user.mainAccountBalance
@@ -559,8 +697,8 @@ export default function App() {
       mainAccountBalance: finalMainAccountBalance,
       accountBalance: finalAccountBalance,
       totalDeposit: finalTotalDeposit,
-      earnedTotal: user.earnedTotal > 0 ? user.earnedTotal : Number(liveEarnedTotal.toFixed(4)),
-      activeDeposit: user.activeDeposit > 0 ? user.activeDeposit : Number(activeInvestments.toFixed(2)),
+      earnedTotal: resolvedEarnedTotal,
+      activeDeposit: hasApprovedDepositsOrInvestments ? Number(activeInvestments.toFixed(2)) : 0,
       lastDeposit: user.lastDeposit > 0 ? user.lastDeposit : Number(lastDeposit.toFixed(2)),
       pendingWithdrawal: Number(pendingWithdrawalVals.toFixed(2)),
       totalWithdrew: user.totalWithdrew > 0 ? user.totalWithdrew : Number(approvedWithdrawals.toFixed(2)),
@@ -881,7 +1019,7 @@ export default function App() {
     }
 
     return (
-      <div className="flex h-screen overflow-hidden bg-slate-100 font-sans w-full">
+      <div className="flex h-screen overflow-hidden bg-[var(--bg-main)] text-[var(--text-primary)] font-sans w-full transition-colors duration-200">
         <DashboardSidebar 
           activeSection={dashboardSection}
           onSectionChange={setDashboardSection}
@@ -912,7 +1050,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fcfdfe] relative w-full">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)] relative w-full transition-colors duration-200">
       
       {/* Absolute top global Header */}
       <Header 
@@ -936,20 +1074,20 @@ export default function App() {
               <div className="col-span-6 flex flex-col gap-4 text-left">
                 
                 {/* Visual Accent Title Banner */}
-                <div className="flex items-center gap-1.5 self-start bg-amber-50/80 text-[#B3873B] px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest leading-none border border-[#C59B4E]/30 shadow-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#C59B4E] animate-ping"></span>
+                <div className="flex items-center gap-1.5 self-start bg-amber-500/10 text-[#D6B25E] px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest leading-none border border-[#D6B25E]/30 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#19B86B] animate-ping"></span>
                   Open up a new world of investments
                 </div>
 
                 {/* Big Display Title Exactly */}
-                <h1 className="text-3xl md:text-4xl lg:text-[38px] font-extrabold text-slate-800 tracking-tight leading-[1.2] uppercase font-display">
+                <h1 className="text-3xl md:text-4xl lg:text-[38px] font-extrabold text-[var(--text-primary)] tracking-tight leading-[1.2] uppercase font-display">
                   Join the unique<br />
-                  <span className="text-[#C59B4E]">investment</span> offer and<br />
+                  <span className="text-[#D6B25E]">investment</span> offer and<br />
                   profit opportunities
                 </h1>
 
                 {/* Body paragraph */}
-                <p className="text-slate-500 font-normal text-sm leading-relaxed max-w-xl mx-auto lg:mx-0">
+                <p className="text-[var(--text-secondary)] font-normal text-sm leading-relaxed max-w-xl mx-auto lg:mx-0">
                   The main direction of the company is the auditing of cryptocurrency coins and tokens, primarily the security and economic audits.
                 </p>
 
@@ -957,7 +1095,7 @@ export default function App() {
                 <div className="flex flex-wrap justify-start items-center gap-3 mt-1">
                   <button 
                     onClick={() => handlePageChange('Register')}
-                    className="flex items-center gap-2 bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.98] text-white px-6 py-3.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md transition-all border border-[#0B2545] cursor-pointer"
+                    className="flex items-center gap-2 bg-[#19B86B] hover:bg-[#159a59] active:scale-[0.98] text-white px-6 py-3.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md transition-all cursor-pointer"
                   >
                     <span>Contact Us</span>
                     <ArrowRight size={14} className="stroke-[2.5]" />
@@ -965,9 +1103,9 @@ export default function App() {
 
                   <button 
                     onClick={() => handlePageChange('FAQs')}
-                    className="flex items-center gap-2.5 px-5 py-3.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-black text-xs uppercase tracking-widest rounded-lg transition-all"
+                    className="flex items-center gap-2.5 px-5 py-3.5 border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-elevated)] text-[var(--text-primary)] font-black text-xs uppercase tracking-widest rounded-lg transition-all"
                   >
-                    <div className="w-5 h-5 rounded-full bg-amber-50 border border-amber-200 text-[#C59B4E] flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[#D6B25E] flex items-center justify-center">
                       <Play size={10} fill="currentColor" className="ml-0.5" />
                     </div>
                     <span>Watch Video</span>
@@ -975,7 +1113,7 @@ export default function App() {
                 </div>
 
                 {/* Micro Support segment */}
-                <div className="flex flex-row items-center gap-3 border-t border-slate-100 pt-5 mt-2 max-w-md">
+                <div className="flex flex-row items-center gap-3 border-t border-[var(--border-subtle)] pt-5 mt-2 max-w-md">
                   <div className="flex -space-x-3">
                     {[
                       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop',
@@ -986,16 +1124,16 @@ export default function App() {
                         key={index}
                         src={av} 
                         alt="Support Face" 
-                        className="w-8 h-8 rounded-full border border-white object-cover shadow-sm bg-slate-100" 
+                        className="w-8 h-8 rounded-full border-2 border-[var(--bg-main)] object-cover shadow-sm bg-slate-800" 
                         referrerPolicy="no-referrer"
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-slate-500 font-semibold leading-normal text-left">
+                  <p className="text-xs text-[var(--text-secondary)] font-semibold leading-normal text-left">
                     Need Help? Contact our{' '}
                     <span 
                       onClick={() => handlePageChange('FAQs')}
-                      className="text-[#C59B4E] cursor-pointer hover:underline font-bold"
+                      className="text-[#D6B25E] cursor-pointer hover:underline font-bold"
                     >
                       WorldVest support
                     </span>{' '}
@@ -1009,7 +1147,7 @@ export default function App() {
               <div className="col-span-6 relative flex justify-center items-center h-[420px]">
                 
                 {/* Top/Back Photo Frame (smiling woman agent) */}
-                <div className="absolute right-0 top-0 w-1/2 aspect-[3/4] rounded-2xl bg-slate-100 border border-slate-200/50 shadow-2xl overflow-hidden transform hover:scale-[1.01] transition-transform duration-500 z-10">
+                <div className="absolute right-0 top-0 w-1/2 aspect-[3/4] rounded-2xl bg-slate-900 border border-[var(--border-subtle)] shadow-2xl overflow-hidden transform hover:scale-[1.01] transition-transform duration-500 z-10">
                   <img 
                     src={ASSETS_IMAGES.hero_woman_phone} 
                     alt="Corporate support specialist" 
@@ -1017,28 +1155,28 @@ export default function App() {
                     referrerPolicy="no-referrer"
                   />
                   {/* Decorative glowing overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
                 </div>
 
                 {/* Bottom/Front Photo Frame (Asian man looking down at tablet) */}
-                <div className="absolute left-0 bottom-0 w-2/3 aspect-[4/3] rounded-3xl bg-slate-100 border-4 border-white shadow-2xl overflow-hidden transform hover:-rotate-1 hover:scale-[1.01] transition-transform duration-300 z-20">
+                <div className="absolute left-0 bottom-0 w-2/3 aspect-[4/3] rounded-3xl bg-slate-900 border-4 border-[var(--bg-card)] shadow-2xl overflow-hidden transform hover:-rotate-1 hover:scale-[1.01] transition-transform duration-300 z-20">
                   <img 
                     src={ASSETS_IMAGES.hero_man_tablet} 
                     alt="Fintech investment analyst" 
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 via-transparent to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
                 </div>
 
                 {/* Floating "49 Active Users" badge */}
-                <div className="absolute right-4 bottom-12 bg-white rounded-xl shadow-premium border border-[#C59B4E]/20 p-3 flex items-center gap-2 transform rotate-1 hover:scale-105 transition-all z-30">
-                  <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-[#C59B4E]">
+                <div className="absolute right-4 bottom-12 bg-[var(--bg-card)] rounded-xl shadow-premium border border-[var(--border-subtle)] p-3 flex items-center gap-2 transform rotate-1 hover:scale-105 transition-all z-30">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[#D6B25E]">
                     <Users size={14} />
                   </div>
                   <div>
-                    <div className="text-xl font-black font-display text-slate-800 leading-none">49</div>
-                    <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 whitespace-nowrap">Active Users</div>
+                    <div className="text-xl font-black font-display text-[var(--text-primary)] leading-none">49</div>
+                    <div className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider mt-0.5 whitespace-nowrap">Active Users</div>
                   </div>
                 </div>
 
@@ -1071,11 +1209,11 @@ export default function App() {
 
                 {/* Right bullet lists points */}
                 <div className="flex flex-col gap-4">
-                  <span className="text-sm font-black uppercase tracking-widest text-[#C59B4E]">About Us</span>
-                  <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight font-display uppercase leading-tight">
+                  <span className="text-sm font-black uppercase tracking-widest text-[#D6B25E]">About Us</span>
+                  <h2 className="text-3xl md:text-4xl font-black text-[var(--text-primary)] tracking-tight font-display uppercase leading-tight">
                     Transfer & Exchange Your Money Anytime Inthis World
                   </h2>
-                  <p className="text-sm text-slate-500 leading-relaxed font-normal">
+                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed font-normal">
                     The main direction of the company is the auditing of cryptocurrency coins and tokens, primarily the security and economic audits. Best strategic planning, development and promotion that help the coin compete in the market and grow.
                   </p>
 
@@ -1091,12 +1229,12 @@ export default function App() {
                       }
                     ].map((bullet, idx) => (
                       <div key={idx} className="flex gap-3 items-start">
-                        <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 text-[#C59B4E] flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[#D6B25E] flex items-center justify-center shrink-0 mt-0.5">
                           <ShieldCheck size={16} />
                         </div>
                         <div>
-                          <h4 className="font-bold text-slate-800 text-sm md:text-base font-display">{bullet.title}</h4>
-                          <p className="text-xs text-slate-400 leading-relaxed font-normal mt-0.5">{bullet.desc}</p>
+                          <h4 className="font-bold text-[var(--text-primary)] text-sm md:text-base font-display">{bullet.title}</h4>
+                          <p className="text-xs text-[var(--text-muted)] leading-relaxed font-normal mt-0.5">{bullet.desc}</p>
                         </div>
                       </div>
                     ))}
@@ -1104,7 +1242,7 @@ export default function App() {
 
                   <button 
                     onClick={() => handlePageChange('About')}
-                    className="mt-3 self-start bg-[#0B2545] hover:bg-[#07192F] active:scale-95 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg shadow-md transition-transform duration-200 cursor-pointer border border-[#0B2545]"
+                    className="mt-3 self-start bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg shadow-md transition-transform duration-200 cursor-pointer"
                   >
                     READ MORE &gt;
                   </button>
@@ -1117,16 +1255,16 @@ export default function App() {
             <PopularTools onPageChange={handlePageChange} />
 
             {/* 5. WHY CHOOSE US SECTOR */}
-            <section className="py-12 px-6 bg-[#fcfdfe] relative overflow-hidden">
+            <section className="py-12 px-6 bg-[var(--bg-secondary)] border-y border-[var(--border-subtle)] relative overflow-hidden transition-colors duration-200">
               <div className="max-w-7xl mx-auto grid grid-cols-2 gap-12 items-center">
                 
                 {/* Left Block features lists */}
                 <div className="flex flex-col gap-4">
-                  <span className="text-sm font-black uppercase tracking-widest text-[#C59B4E]">Why Choose Us</span>
-                  <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight font-display uppercase leading-tight">
+                  <span className="text-sm font-black uppercase tracking-widest text-[#D6B25E]">Why Choose Us</span>
+                  <h2 className="text-3xl md:text-4xl font-black text-[var(--text-primary)] tracking-tight font-display uppercase leading-tight">
                     We Provide Currency Exchange Services World Wide
                   </h2>
-                  <p className="text-sm text-slate-500 font-normal leading-relaxed">
+                  <p className="text-sm text-[var(--text-secondary)] font-normal leading-relaxed">
                     Worldvest Capital delivers high-performance cryptocurrency management, institutional-grade exchange liquidity, and guaranteed hourly compounding yield blueprints tailored for global investors.
                   </p>
 
@@ -1147,12 +1285,12 @@ export default function App() {
                       },
                     ].map((it, idx) => (
                       <div key={idx} className="flex gap-2.5 items-start">
-                        <div className="w-4 h-4 rounded-full bg-amber-50 text-[#C59B4E] flex items-center justify-center shrink-0 mt-0.5 border border-amber-200/60">
+                        <div className="w-4 h-4 rounded-full bg-amber-500/15 text-[#D6B25E] flex items-center justify-center shrink-0 mt-0.5 border border-amber-500/30">
                           <Check size={11} className="stroke-[3.5]" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-slate-800 text-sm md:text-base font-display">{it.title}</h4>
-                          <p className="text-xs text-slate-400 leading-relaxed font-normal mt-0.5">{it.desc}</p>
+                          <h4 className="font-bold text-[var(--text-primary)] text-sm md:text-base font-display">{it.title}</h4>
+                          <p className="text-xs text-[var(--text-muted)] leading-relaxed font-normal mt-0.5">{it.desc}</p>
                         </div>
                       </div>
                     ))}
@@ -1194,79 +1332,79 @@ export default function App() {
             {/* 7. BENEFITS LIST (YOUR BENIFITS) */}
             <BenefitsGrid />
 
-            {/* 8. OUR APP FINTECH DOWNLOAD WORK (Screenshot 1 smartphone images mockups completely styled with CSS!) */}
-            <section className="py-24 px-6 bg-slate-50 border-t border-b border-slate-100 overflow-hidden relative" id="contact-section">
+            {/* 8. OUR APP FINTECH DOWNLOAD WORK */}
+            <section className="py-24 px-6 bg-[var(--bg-secondary)] border-t border-b border-[var(--border-subtle)] overflow-hidden relative transition-colors duration-200" id="contact-section">
               <div className="max-w-7xl mx-auto grid grid-cols-12 gap-16 items-center">
                 
-                {/* Left Smart Phone visual Mockups - beautifully fully rendered in CSS instead of placeholder! */}
+                {/* Left Smart Phone visual Mockups - beautifully fully rendered in CSS */}
                 <div className="col-span-5 flex justify-center items-center gap-6 relative">
                   
                   {/* Smartphone 1 - Card Dashboard representation */}
-                  <div className="w-48 h-96 rounded-[28px] bg-slate-100 border-4 border-slate-300 shadow-2xl overflow-hidden relative shrink-0 transform -rotate-3 hover:rotate-0 transition-transform duration-500 flex flex-col">
-                    <div className="h-4 w-28 bg-slate-300 rounded-b-xl mx-auto mb-2 shrink-0 relative">
-                      <div className="w-2 h-2 rounded-full bg-slate-200 absolute right-4 top-1"></div>
+                  <div className="w-48 h-96 rounded-[28px] bg-[var(--bg-card)] border-4 border-[var(--border-subtle)] shadow-2xl overflow-hidden relative shrink-0 transform -rotate-3 hover:rotate-0 transition-transform duration-500 flex flex-col">
+                    <div className="h-4 w-28 bg-[var(--border-subtle)] rounded-b-xl mx-auto mb-2 shrink-0 relative">
+                      <div className="w-2 h-2 rounded-full bg-[var(--text-muted)] absolute right-4 top-1"></div>
                     </div>
 
-                    <div className="flex-grow p-3 flex flex-col gap-3.5 bg-indigo-50/50">
-                      <div className="text-[10px] font-bold text-slate-400 tracking-wider">My Cards</div>
+                    <div className="flex-grow p-3 flex flex-col gap-3.5 bg-[var(--bg-main)]">
+                      <div className="text-[10px] font-bold text-[var(--text-muted)] tracking-wider">My Cards</div>
                       
                       {/* Premium card */}
-                      <div className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-xl p-3 shadow-md">
+                      <div className="bg-gradient-to-br from-[#19B86B] to-[#112a47] text-white rounded-xl p-3 shadow-md">
                         <div className="text-[9px] text-white/70">Total Balance</div>
                         <div className="text-base font-black font-display mt-0.5 leading-none">$ 33,500</div>
                         <div className="text-[8px] tracking-widest font-mono mt-4 leading-none">**** 9820</div>
                       </div>
 
                       {/* Line graph outline in mock smartphone dashboard */}
-                      <div className="bg-white rounded-xl p-2 shadow-sm border border-slate-100">
-                        <div className="text-[8px] text-slate-400 font-bold mb-1">Weekly Metrics</div>
+                      <div className="bg-[var(--bg-card)] rounded-xl p-2 shadow-sm border border-[var(--border-subtle)]">
+                        <div className="text-[8px] text-[var(--text-muted)] font-bold mb-1">Weekly Metrics</div>
                         <svg viewBox="0 0 100 40" className="w-full">
-                          <path d="M 0 35 Q 25 10, 50 30 T 100 20 L 100 40 L 0 40 Z" fill="#ebf4ff" />
-                          <path d="M 0 35 Q 25 10, 50 30 T 100 20" fill="none" stroke="#6366f1" strokeWidth="2" />
+                          <path d="M 0 35 Q 25 10, 50 30 T 100 20 L 100 40 L 0 40 Z" fill="rgba(25, 184, 107, 0.15)" />
+                          <path d="M 0 35 Q 25 10, 50 30 T 100 20" fill="none" stroke="#19B86B" strokeWidth="2" />
                         </svg>
                       </div>
 
                       {/* Transaction */}
-                      <div className="bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 flex justify-between items-center text-[9px]">
+                      <div className="bg-[var(--bg-card)] rounded-xl p-2.5 shadow-sm border border-[var(--border-subtle)] flex justify-between items-center text-[9px]">
                         <div>
-                          <div className="font-bold text-slate-700 leading-none">Yield Plans</div>
-                          <div className="text-[7px] text-slate-400 mt-0.5">Instant credit</div>
+                          <div className="font-bold text-[var(--text-primary)] leading-none">Yield Plans</div>
+                          <div className="text-[7px] text-[var(--text-muted)] mt-0.5">Instant credit</div>
                         </div>
-                        <span className="font-black text-emerald-500">+$ 50.00</span>
+                        <span className="font-black text-[#19B86B]">+$ 50.00</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Smartphone 2 - Transactions list */}
-                  <div className="w-48 h-96 rounded-[28px] bg-white border-4 border-slate-300 shadow-2xl overflow-hidden relative shrink-0 transform rotate-3 hover:rotate-0 transition-transform duration-500 flex flex-col -mt-12">
-                    <div className="h-4 w-28 bg-slate-300 rounded-b-xl mx-auto mb-2 shrink-0"></div>
+                  <div className="w-48 h-96 rounded-[28px] bg-[var(--bg-card)] border-4 border-[var(--border-subtle)] shadow-2xl overflow-hidden relative shrink-0 transform rotate-3 hover:rotate-0 transition-transform duration-500 flex flex-col -mt-12">
+                    <div className="h-4 w-28 bg-[var(--border-subtle)] rounded-b-xl mx-auto mb-2 shrink-0"></div>
 
-                    <div className="flex-grow p-3 flex flex-col gap-3">
-                      <div className="text-[10px] font-bold text-slate-400">Transaction History</div>
+                    <div className="flex-grow p-3 flex flex-col gap-3 bg-[var(--bg-main)]">
+                      <div className="text-[10px] font-bold text-[var(--text-muted)]">Transaction History</div>
 
-                      <div className="grid grid-cols-2 gap-2 text-[10px] uppercase font-bold text-slate-400 tracking-wide text-center">
-                        <div className="bg-amber-50/60 rounded-lg p-2.5 text-[#C59B4E] border border-amber-200/50">
+                      <div className="grid grid-cols-2 gap-2 text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wide text-center">
+                        <div className="bg-amber-500/10 rounded-lg p-2.5 text-[#D6B25E] border border-amber-500/30">
                           <span>$ 20,000</span>
-                          <span className="text-[6px] block text-slate-400 mt-0.5">Deposits</span>
+                          <span className="text-[6px] block text-[var(--text-muted)] mt-0.5">Deposits</span>
                         </div>
-                        <div className="bg-slate-100 rounded-lg p-2.5">
+                        <div className="bg-[var(--bg-card)] rounded-lg p-2.5 border border-[var(--border-subtle)]">
                           <span>$ 5,000</span>
-                          <span className="text-[6px] block text-slate-400 mt-0.5">Withdraws</span>
+                          <span className="text-[6px] block text-[var(--text-muted)] mt-0.5">Withdraws</span>
                         </div>
                       </div>
 
                       {/* Custom payment transaction widgets */}
                       <div className="flex flex-col gap-2 mt-1">
                         {[
-                          { title: 'BTC Wallet Account', amt: '+$ 2,500.00', color: 'text-emerald-500' },
-                          { title: 'Tether TRC20 Out', amt: '-$ 120.00', color: 'text-slate-700' },
-                          { title: 'Perfect Money Out', amt: '-$ 40.00', color: 'text-slate-700' },
-                          { title: 'Yield Earned 84H', amt: '+$ 6.30', color: 'text-emerald-500' },
+                          { title: 'BTC Wallet Account', amt: '+$ 2,500.00', color: 'text-[#19B86B]' },
+                          { title: 'Tether TRC20 Out', amt: '-$ 120.00', color: 'text-[var(--text-primary)]' },
+                          { title: 'Perfect Money Out', amt: '-$ 40.00', color: 'text-[var(--text-primary)]' },
+                          { title: 'Yield Earned 84H', amt: '+$ 6.30', color: 'text-[#19B86B]' },
                         ].map((tx, idx) => (
-                          <div key={idx} className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex justify-between items-center text-[9px]">
+                          <div key={idx} className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg p-2 flex justify-between items-center text-[9px]">
                             <div>
-                              <div className="font-bold text-slate-800 leading-none">{tx.title}</div>
-                              <div className="text-[7px] text-slate-400 mt-0.5">Oct-2026</div>
+                              <div className="font-bold text-[var(--text-primary)] leading-none">{tx.title}</div>
+                              <div className="text-[7px] text-[var(--text-muted)] mt-0.5">Oct-2026</div>
                             </div>
                             <span className={`font-black font-mono ${tx.color}`}>{tx.amt}</span>
                           </div>
@@ -1276,50 +1414,50 @@ export default function App() {
                   </div>
 
                   {/* Absolute gradient orbital glow */}
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-48 h-48 bg-amber-100/30 rounded-full blur-2xl -z-10"></div>
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl -z-10"></div>
                 </div>
 
                 {/* Right Download links and Questions elements */}
                 <div className="col-span-7 flex flex-col gap-6 text-left">
-                  <span className="text-sm font-black uppercase tracking-widest text-[#C59B4E]">Our App</span>
+                  <span className="text-sm font-black uppercase tracking-widest text-[#D6B25E]">Our App</span>
                   
-                  <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight font-display uppercase leading-tight">
+                  <h2 className="text-3xl md:text-4xl font-black text-[var(--text-primary)] tracking-tight font-display uppercase leading-tight">
                     Let's Answer Some Of Your Questions Or Download Our App
                   </h2>
 
-                  <p className="text-slate-500 font-normal text-sm md:text-base leading-relaxed max-w-xl">
+                  <p className="text-[var(--text-secondary)] font-normal text-sm md:text-base leading-relaxed max-w-xl">
                     Manage your portfolio on the go with real-time asset monitoring, instant deposit settlements, and automated daily yield compounding. Access institutional-grade security protocols, track your earnings 24/7, and withdraw your capital effortlessly from anywhere in the world.
                   </p>
 
-                  <div className="text-slate-400 font-bold uppercase tracking-wider text-sm md:text-base mt-3">
-                    Over <span className="text-slate-800 font-black">70 million Downloads</span> Worldwide
+                  <div className="text-[var(--text-muted)] font-bold uppercase tracking-wider text-sm md:text-base mt-3">
+                    Over <span className="text-[var(--text-primary)] font-black">70 million Downloads</span> Worldwide
                   </div>
 
                   {/* App platform badge triggers */}
                   <div className="flex flex-wrap justify-start gap-4 mt-2">
                     <button 
                       onClick={() => alert("Redirecting payload to Google Play Store...")}
-                      className="bg-black text-white hover:bg-slate-900 px-5 py-3 rounded-xl flex items-center gap-3 shadow-premium hover:-translate-y-0.5 transition-all text-left border border-slate-800"
+                      className="bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-elevated)] px-5 py-3 rounded-xl flex items-center gap-3 shadow-premium hover:-translate-y-0.5 transition-all text-left border border-[var(--border-subtle)]"
                     >
                       <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                         <path d="M5,3H19A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3M17.5,12L12,6.5V11H9V13H12V17.5L17.5,12Z" />
                       </svg>
                       <div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Get it on</div>
-                        <div className="text-sm font-black font-display text-white">Google Play</div>
+                        <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wide">Get it on</div>
+                        <div className="text-sm font-black font-display text-[var(--text-primary)]">Google Play</div>
                       </div>
                     </button>
 
                     <button 
                       onClick={() => alert("Redirecting payload to App Store...")}
-                      className="bg-black text-white hover:bg-slate-900 px-5 py-3 rounded-xl flex items-center gap-3 shadow-premium hover:-translate-y-0.5 transition-all text-left border border-slate-800"
+                      className="bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-elevated)] px-5 py-3 rounded-xl flex items-center gap-3 shadow-premium hover:-translate-y-0.5 transition-all text-left border border-[var(--border-subtle)]"
                     >
                       <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                         <path d="M17.05,20.28C15.66,21.64 14.15,22 12.55,22C10.96,22 9.53,21.64 8.13,20.28C5.25,17.4 3.75,12.56 5.61,9.45C6.54,7.85 8.16,6.86 9.94,6.83C11.33,6.8 12.44,7.5 13.24,7.5C14,7.5 15.35,6.67 16.94,6.83C17.6,6.86 19.34,7.12 20.44,8.74C20.35,8.8 18.27,10 18.27,12.47C18.27,15.42 20.88,16.42 20.91,16.44C20.88,16.5 19.86,20.28 17.05,20.28M13.22,4.83C14.47,3.31 14.39,1.75 14.34,1C13.22,1.05 11.9,1.74 11.05,2.75C10.13,3.83 10.13,5.34 10.13,6.11C11.36,6.11 12.35,5.88 13.22,4.83Z" />
                       </svg>
                       <div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Download on the</div>
-                        <div className="text-sm font-black font-display text-white">App Store</div>
+                        <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wide">Download on the</div>
+                        <div className="text-sm font-black font-display text-[var(--text-primary)]">App Store</div>
                       </div>
                     </button>
                   </div>
@@ -1352,15 +1490,15 @@ export default function App() {
         )}
 
         {currentPage === 'News' && (
-          <div className="bg-[#fcfdfe] pb-20">
+          <div className="bg-[var(--bg-main)] pb-20 transition-colors duration-200">
             {/* Breadcrumb row */}
-            <div className="bg-[#0b1b2e] py-16 text-center text-white border-b border-[#C59B4E]/20 mb-12">
+            <div className="bg-[#0b1b2e] py-16 text-center text-white border-b border-[#D6B25E]/20 mb-12">
               <div className="max-w-7xl mx-auto px-4">
                 <h1 className="text-3xl md:text-5xl font-black font-display tracking-tight text-white mb-2">News & Blog</h1>
                 <div className="text-slate-400 text-xs md:text-sm font-semibold tracking-wider">
                   <span className="hover:text-white cursor-pointer" onClick={() => handlePageChange('Home')}>Home</span>
-                  <span className="mx-2 text-[#C59B4E]">•</span>
-                  <span className="text-[#C59B4E]">News & Blog</span>
+                  <span className="mx-2 text-[#D6B25E]">•</span>
+                  <span className="text-[#D6B25E]">News & Blog</span>
                 </div>
               </div>
             </div>
@@ -1387,15 +1525,15 @@ export default function App() {
                   desc: 'To protect customer balances, security modules have added secondary smartphone credentials verification. Authenticate your account profile today in settings.'
                 }
               ].map((news, idx) => (
-                <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:scale-[1.01] transition-transform duration-200 flex flex-col gap-3">
+                <div key={idx} className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-subtle)] shadow-sm hover:scale-[1.01] transition-all duration-200 flex flex-col gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black tracking-widest bg-amber-50 text-[#C59B4E] border border-amber-200/80 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-black tracking-widest bg-amber-500/10 text-[#D6B25E] border border-amber-500/30 px-2 py-0.5 rounded">
                       {news.tag}
                     </span>
-                    <span className="text-xs text-slate-400 font-bold">{news.date}</span>
+                    <span className="text-xs text-[var(--text-muted)] font-bold">{news.date}</span>
                   </div>
-                  <h3 className="font-bold text-slate-800 text-lg font-display">{news.title}</h3>
-                  <p className="text-xs md:text-sm text-slate-500 font-normal leading-relaxed">{news.desc}</p>
+                  <h3 className="font-bold text-[var(--text-primary)] text-lg font-display">{news.title}</h3>
+                  <p className="text-xs md:text-sm text-[var(--text-secondary)] font-normal leading-relaxed">{news.desc}</p>
                 </div>
               ))}
             </div>

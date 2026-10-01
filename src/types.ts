@@ -12,6 +12,10 @@ export interface Deposit {
   timestamp?: number;
   roi?: number;
   term?: number;
+  status?: 'Pending' | 'Approved' | 'Rejected' | 'pending' | 'approved' | 'rejected';
+  submittedAt?: number;
+  approvedAt?: number | null;
+  reviewedAt?: number | null;
 }
 
 export interface Withdrawal {

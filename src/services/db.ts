@@ -10,6 +10,7 @@ import {
   dbFetchUserWithdrawals,
   dbAddTransaction,
   dbUpdateTransactionStatus,
+  dbDeleteTransaction,
   dbFetchUserTransactions,
   dbFetchInvestmentPlans,
   dbGetSystemSettings,
@@ -338,6 +339,33 @@ export async function updateTransactionStatus(transactionId: string, status: 'Pe
           }
         } catch (e) {}
       }
+    }
+  }
+}
+
+/**
+ * Permanently deletes a transaction record from Firestore and local storage cache
+ */
+export async function deleteTransactionRecord(transactionId: string, uid?: string): Promise<void> {
+  if (isFirebaseReady) {
+    try {
+      await dbDeleteTransaction(transactionId);
+    } catch (error) {
+      console.warn("Failed deleting transaction from Firebase:", error);
+    }
+  }
+
+  // Remove from all local storage transactions stores
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('transactions_')) {
+      try {
+        const list = JSON.parse(localStorage.getItem(key) || '[]');
+        const filtered = list.filter((t: any) => t.id !== transactionId);
+        if (filtered.length !== list.length) {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        }
+      } catch (e) {}
     }
   }
 }

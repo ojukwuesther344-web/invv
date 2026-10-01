@@ -535,6 +535,7 @@ export async function dbAddDeposit(uid: string, d: Deposit): Promise<void> {
   if (!isFirebaseReady) return;
   const depositId = d.id || `dep_${Date.now()}`;
   const path = `deposits/${depositId}`;
+  const now = Date.now();
 
   try {
     await setDoc(doc(db, 'deposits', depositId), {
@@ -546,9 +547,12 @@ export async function dbAddDeposit(uid: string, d: Deposit): Promise<void> {
       processor: d.processor,
       planId: d.planId || 'p1',
       planName: d.planName || '10 DAYS 6% DAILY',
-      timestamp: d.timestamp || Date.now(),
+      timestamp: d.timestamp || now,
       roi: d.roi || 160,
-      term: d.term || 10
+      term: d.term || 10,
+      status: d.status || 'Pending',
+      submittedAt: d.submittedAt || d.timestamp || now,
+      approvedAt: d.status === 'Approved' ? (d.approvedAt || now) : null
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -579,7 +583,10 @@ export async function dbFetchUserDeposits(uid: string): Promise<Deposit[]> {
         planName: data.planName || '10 DAYS 6% DAILY',
         timestamp: data.timestamp || Date.now(),
         roi: Number(data.roi) || 160,
-        term: Number(data.term) || 10
+        term: Number(data.term) || 10,
+        status: data.status || 'Pending',
+        submittedAt: data.submittedAt || data.timestamp || 0,
+        approvedAt: data.approvedAt || null
       });
     });
     return records;
@@ -731,6 +738,20 @@ export async function dbUpdateTransactionStatus(transactionId: string, status: '
     }, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Permanently deletes a transaction record from Firestore
+ */
+export async function dbDeleteTransaction(transactionId: string): Promise<void> {
+  if (!isFirebaseReady) return;
+  const path = `transactions/${transactionId}`;
+  try {
+    const docRef = doc(db, 'transactions', transactionId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
 
@@ -2019,7 +2040,36 @@ export async function dbApproveDepositTransaction(
             tx.reviewedAt = Date.now();
             tx.reviewedBy = adminIdentifier;
             tx.approvedBy = adminIdentifier;
+
+            // Also update matching pending investment transaction
+            const matchingInv = list.find((item: any) => 
+              item.type === 'Investment' && 
+              item.status === 'Pending' && 
+              (item.referenceId === transactionId || Number(item.amount) === Number(tx.amount))
+            );
+            if (matchingInv) {
+              matchingInv.status = 'Approved';
+              matchingInv.approvedAt = tx.approvedAt;
+              matchingInv.reviewedAt = tx.reviewedAt;
+              matchingInv.reviewedBy = adminIdentifier;
+              matchingInv.approvedBy = adminIdentifier;
+            }
             localStorage.setItem(key, JSON.stringify(list));
+
+            // Also update local deposits collection
+            const depKey = `deposits_${tx.userId}`;
+            const depStr = localStorage.getItem(depKey);
+            if (depStr) {
+              try {
+                const deps = JSON.parse(depStr);
+                const dep = deps.find((d: any) => d.id === `dep_${transactionId}` || d.id === transactionId || (Number(d.amount) === Number(tx.amount) && d.status === 'Pending'));
+                if (dep) {
+                  dep.status = 'Approved';
+                  dep.approvedAt = tx.approvedAt;
+                  localStorage.setItem(depKey, JSON.stringify(deps));
+                }
+              } catch (e) {}
+            }
 
             // Credit target user profile
             const uKey = `user_profile_${tx.userId}`;

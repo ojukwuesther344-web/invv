@@ -3,6 +3,7 @@ import { Phone, Mail, MapPin, ChevronDown, User, LogOut, Menu, X, ArrowRight } f
 import { Page, UserState } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
 import CryptoTickerBar from './CryptoTickerBar';
+import ThemeToggle from './ThemeToggle';
 import { isSystemAdminIdentity } from '../services/firebaseService';
 
 interface HeaderProps {
@@ -22,7 +23,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
     { name: 'About Us', view: 'About' as Page },
     { name: 'FAQs', view: 'FAQs' as Page },
     { name: 'News', view: 'News' as Page },
-    { name: 'Contact Us', view: 'Home' as Page, elementId: 'contact-section' }, // anchor scroll to contact
+    { name: 'Contact Us', view: 'Home' as Page, elementId: 'contact-section' },
   ];
 
   const handleNavClick = (view: Page, elementId?: string) => {
@@ -47,13 +48,13 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
           <div className="flex items-center gap-4 text-gray-300">
             <a href="tel:+12125921125" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <Phone size={12} className="text-[#C59B4E]" />
-              <span>+1 (212) 592-1125</span>
+              <span className="hidden sm:inline">+1 (212) 592-1125</span>
             </a>
             <a href="mailto:support@worldvestcapital.ltd" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <Mail size={12} className="text-[#C59B4E]" />
-              <span>support@worldvestcapital.ltd</span>
+              <span className="hidden md:inline">support@worldvestcapital.ltd</span>
             </a>
-            <span className="flex items-center gap-1.5">
+            <span className="hidden lg:flex items-center gap-1.5">
               <MapPin size={12} className="text-[#C59B4E]" />
               <span>20-22 Wenlock Road, London, England, N1 7GU</span>
             </span>
@@ -108,7 +109,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
       </div>
 
       {/* Main Nav Bar */}
-      <nav id="navbar" className="bg-white border-b border-gray-100 py-4.5 px-4 md:px-6 shadow-sm sticky top-0 transition-all duration-300">
+      <nav id="navbar" className="bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] py-3 px-4 md:px-6 shadow-xs sticky top-0 transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           {/* Logo */}
           <button 
@@ -121,7 +122,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
                 src={logoheadImg || "/logohead.png"} 
                 alt="WorldVest Capital LTD" 
                 onError={() => setLogoLoadError(true)}
-                className="h-9 sm:h-11 md:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                className="h-9 sm:h-10 md:h-11 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
                 referrerPolicy="no-referrer"
               />
             ) : (
@@ -130,10 +131,10 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
                   W
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-display font-black text-slate-800 text-base md:text-lg tracking-tight leading-none">
+                  <span className="font-display font-black text-[var(--text-primary)] text-base md:text-lg tracking-tight leading-none">
                     World<span className="text-[#C59B4E]">Vest</span>
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] tracking-widest uppercase">
                     Capital LTD
                   </span>
                 </div>
@@ -142,7 +143,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
           </button>
 
           {/* Desktop Navigation Links */}
-          <div className="flex items-center gap-7">
+          <div className="hidden md:flex items-center gap-7">
             {navItems.map((item) => {
               const isActive = currentPage === item.view && !item.elementId;
               return (
@@ -150,7 +151,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
                   key={item.name}
                   onClick={() => handleNavClick(item.view, item.elementId)}
                   className={`text-sm font-semibold tracking-wide transition-colors relative py-1.5 cursor-pointer hover:text-[#C59B4E] ${
-                    isActive ? 'text-[#C59B4E]' : 'text-[#334155]'
+                    isActive ? 'text-[#C59B4E]' : 'text-[var(--text-secondary)]'
                   }`}
                 >
                   {item.name}
@@ -162,21 +163,23 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
             })}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          {/* Action Buttons & Desktop Theme Toggle */}
+          <div className="hidden sm:flex items-center gap-3">
+            {/* Quick theme toggle */}
+            <ThemeToggle variant="minimal" />
+
             {user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? (
               <div className="flex items-center gap-1.5">
-
                 <button 
                   onClick={() => onPageChange('Dashboard')}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-md hover:bg-slate-100 uppercase tracking-wider transition-all"
+                  className="flex items-center gap-2 px-3.5 py-2 bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-semibold rounded-lg hover:bg-[var(--bg-card-elevated)] uppercase tracking-wider transition-all"
                 >
                   <User size={14} className="text-[#C59B4E]" />
-                  <span>{user.username} (Dashboard)</span>
+                  <span className="truncate max-w-[120px]">{user.username} (Dashboard)</span>
                 </button>
                 <button 
                   onClick={onLogout}
-                  className="p-2 border border-slate-200 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors"
+                  className="p-2 border border-[var(--border-subtle)] rounded-lg hover:bg-red-500/10 hover:text-red-400 text-[var(--text-muted)] transition-colors"
                   title="Logout"
                 >
                   <LogOut size={14} />
@@ -185,7 +188,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
             ) : (
               <button 
                 onClick={() => onPageChange('Register')}
-                className="flex items-center gap-1.5 px-4 py-2 hover:text-[#C59B4E] text-sm font-semibold text-[#334155] transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 hover:text-[#C59B4E] text-sm font-semibold text-[var(--text-secondary)] transition-colors"
               >
                 <User size={15} className="text-[#C59B4E]" />
                 <span>Register / Login</span>
@@ -200,13 +203,96 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
                   onPageChange('Register');
                 }
               }}
-              className="flex items-center gap-1.5 bg-[#0B2545] hover:bg-[#07192F] active:scale-[0.98] text-white px-5 py-2.5 rounded-md font-black text-xs uppercase tracking-wider transition-all shadow-md border border-[#0B2545] cursor-pointer"
+              className="flex items-center gap-1.5 bg-[#19B86B] hover:bg-[#159a59] active:scale-[0.98] text-white px-4.5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
             >
               <span>{user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? 'Go to Account' : 'GET STARTED'}</span>
               <ArrowRight size={14} />
             </button>
           </div>
+
+          {/* Mobile hamburger button */}
+          <div className="flex sm:hidden items-center gap-2">
+            <ThemeToggle variant="minimal" />
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-elevated)] transition-colors"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Slideout Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-3 pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-3 animate-in fade-in duration-200">
+            <div className="flex flex-col gap-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => handleNavClick(item.view, item.elementId)}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:text-[#C59B4E] hover:bg-[var(--bg-card)] rounded-lg transition-colors"
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-col gap-2">
+              {user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      onPageChange('Dashboard');
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-semibold rounded-lg"
+                  >
+                    <User size={14} className="text-[#C59B4E]" />
+                    <span>{user.username} (Dashboard)</span>
+                  </button>
+                  <button 
+                    onClick={onLogout}
+                    className="p-2 border border-[var(--border-subtle)] rounded-lg text-rose-500 hover:bg-rose-500/10"
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => {
+                    onPageChange('Register');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-bold rounded-lg uppercase"
+                >
+                  <User size={14} className="text-[#C59B4E]" />
+                  <span>Register / Login</span>
+                </button>
+              )}
+
+              <button 
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email)) {
+                    onPageChange('Dashboard');
+                  } else {
+                    onPageChange('Register');
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-1.5 bg-[#19B86B] text-white py-2.5 rounded-lg font-black text-xs uppercase tracking-wider"
+              >
+                <span>{user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? 'Go to Account' : 'GET STARTED'}</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {/* Mobile Appearance Theme Toggle */}
+            <div className="pt-2 border-t border-[var(--border-subtle)]">
+              <ThemeToggle variant="sidebar" />
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Steady Moving Crypto & Market Ticker Bar with Dark Blue Background */}
@@ -214,3 +300,4 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
     </header>
   );
 }
+

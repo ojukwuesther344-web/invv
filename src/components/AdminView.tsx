@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ThemeToggle from './ThemeToggle';
 import { 
   ShieldAlert, 
   Users, 
@@ -1546,27 +1547,28 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   const pendingWithdrawalsTotal = users.reduce((sum, u) => sum + u.pendingWithdrawal, 0);
 
   return (
-    <div className="min-h-screen w-full bg-[#07111e] font-sans text-slate-100 flex flex-col md:flex-row relative">
+    <div className="min-h-screen w-full bg-[var(--bg-main)] font-sans text-[var(--text-primary)] flex flex-col md:flex-row relative transition-colors duration-200">
       
       {/* Mobile Sticky Navigation Banner */}
-      <div className="md:hidden sticky top-0 left-0 right-0 bg-[#091526] border-b border-[#152e4f] p-4 flex items-center justify-between z-40 shadow-md">
+      <div className="md:hidden sticky top-0 left-0 right-0 bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] p-4 flex items-center justify-between z-40 shadow-md">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#9333ea] to-[#041a31] flex items-center justify-center text-[10px] font-black">
             A
           </div>
-          <span className="text-sm font-black text-white tracking-wider font-display uppercase">
+          <span className="text-sm font-black text-[var(--text-primary)] tracking-wider font-display uppercase">
             Admin <span className="text-[#C59B4E]">Panel</span>
           </span>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-[#0b1b30] border border-[#183556] px-2.5 py-1 rounded-full text-[9px] font-bold text-[#C59B4E] uppercase tracking-wider">
+        <div className="flex items-center gap-2.5">
+          <ThemeToggle variant="minimal" />
+          <div className="flex items-center gap-1.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] px-2.5 py-1 rounded-full text-[9px] font-bold text-[#C59B4E] uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-[#C59B4E] animate-pulse"></span>
             LIVE
           </div>
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-slate-300 hover:text-white p-1.5 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#C59B4E] transition-all bg-slate-900/40 border border-[#163050]"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1.5 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#C59B4E] transition-all bg-[var(--bg-card)] border border-[var(--border-subtle)]"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -1578,45 +1580,45 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       {mobileMenuOpen && (
         <div 
           onClick={() => setMobileMenuOpen(false)} 
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-40 md:hidden transition-all duration-300"
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 md:hidden transition-all duration-300"
         />
       )}
 
       {/* Admin Sidebar (Desktop & Mobile Slideout Drawer) */}
       <aside 
-        className={`fixed inset-y-0 left-0 bg-[#091526] border-r border-[#152e4f] p-6 flex flex-col gap-6 shrink-0 z-50 w-64 md:w-[255px] transform transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 md:flex ${
+        className={`fixed inset-y-0 left-0 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] p-6 flex flex-col gap-6 shrink-0 z-50 w-64 md:w-[255px] transform transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 md:flex ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex justify-between items-center md:block">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#9333ea] to-[#041a31] flex items-center justify-center text-xs font-black">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#19B86B] to-[#041a31] flex items-center justify-center text-xs font-black text-white">
                 A
               </div>
-              <span className="text-lg font-black text-white tracking-wider font-display uppercase">
-                Admin <span className="text-[#C59B4E]">Panel</span>
+              <span className="text-lg font-black text-[var(--text-primary)] tracking-wider font-display uppercase">
+                Admin <span className="text-[#D6B25E]">Panel</span>
               </span>
             </div>
-            <div className="text-[10px] text-purple-400 font-bold tracking-widest uppercase">REAL-TIME CONSOLES</div>
+            <div className="text-[10px] text-[#19B86B] font-bold tracking-widest uppercase">REAL-TIME CONSOLES</div>
           </div>
           
           <button 
             onClick={() => setMobileMenuOpen(false)}
-            className="p-1.5 text-slate-400 hover:text-white md:hidden hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] md:hidden hover:bg-[var(--bg-card)] rounded-lg transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Current User Status info */}
-        <div className="p-3.5 bg-slate-900/40 rounded-xl border border-[#173357] flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400 font-bold text-xs uppercase">
+        <div className="p-3.5 bg-[var(--bg-card-elevated)] rounded-xl border border-[var(--border-subtle)] flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#19B86B]/15 border border-[#19B86B]/30 flex items-center justify-center text-[#19B86B] font-bold text-xs uppercase">
             AD
           </div>
           <div className="overflow-hidden">
-            <div className="text-[10px] text-slate-500 font-bold uppercase leading-none">AUTHORIZED ADMIN</div>
-            <div className="text-xs font-black text-white truncate leading-normal mt-1">{currentUser.username}</div>
+            <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase leading-none">AUTHORIZED ADMIN</div>
+            <div className="text-xs font-black text-[var(--text-primary)] truncate leading-normal mt-1">{currentUser.username}</div>
           </div>
         </div>
 
@@ -1819,8 +1821,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
           </button>
         </nav>
 
+        {/* Appearance Theme Toggle in Admin Sidebar (Requirement 16) */}
+        <div className="pt-2">
+          <ThemeToggle variant="sidebar" />
+        </div>
+
         {/* Foot exit link */}
-        <div className="pt-4 border-t border-[#152e4f] flex flex-col gap-2">
+        <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-2">
           <button 
             onClick={() => {
               onPageChange('Home');
@@ -1846,9 +1853,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       <main className="flex-1 w-full md:w-auto min-w-0 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
         
         {/* Dynamic header row with real-time status banner */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-[#142d4a] w-full">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-[var(--border-subtle)] w-full">
           <div>
-            <h1 className="text-2xl font-black font-display tracking-tight text-white uppercase">
+            <h1 className="text-2xl font-black font-display tracking-tight text-[var(--text-primary)] uppercase">
               {activeTab === 'overview' && "Dashboard Live Analytics"}
               {activeTab === 'users' && "Registered Client Accounts"}
               {activeTab === 'blacklist' && "Accounts Blacklist & Suspension"}
@@ -1864,7 +1871,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               {activeTab === 'live_support' && "Live Support Desk & Auto-Replies"}
               {activeTab === 'password_security' && "Password & Security"}
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               Active Session sync connected safely via Web SDK. Real-time updates active.
             </p>
           </div>
