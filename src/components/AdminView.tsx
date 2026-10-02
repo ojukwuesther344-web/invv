@@ -514,19 +514,19 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-[#07101c] flex flex-col items-center justify-center p-6 text-white relative overflow-hidden font-sans">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-900 relative overflow-hidden font-sans">
         {/* Sleek background flares */}
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#C59B4E]/10 rounded-full blur-[120px] pointer-events-none"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-        <div className="bg-[#0b1b30] border border-[#C59B4E]/20 p-8 md:p-10 rounded-2xl max-w-md w-full shadow-2xl relative z-10 flex flex-col gap-6">
+        <div className="bg-white border border-slate-200 p-8 md:p-10 rounded-2xl max-w-md w-full shadow-xl relative z-10 flex flex-col gap-6">
           <div className="flex flex-col items-center text-center gap-3">
             <div className="w-16 h-16 rounded-full bg-[#C59B4E]/10 border border-[#C59B4E]/20 flex items-center justify-center text-[#C59B4E]">
               <ShieldAlert size={36} className="animate-pulse" />
             </div>
             <div>
-              <h1 className="text-2xl font-black font-display tracking-wider text-white uppercase">Admin Portal</h1>
-              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              <h1 className="text-2xl font-black font-display tracking-wider text-slate-900 uppercase">Admin Portal</h1>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
                 This gateway is reserved strictly for authorized administrator credentials. Enter your account details below to gain admin privileges.
               </p>
             </div>
@@ -534,25 +534,25 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
           <form onSubmit={handleAdminSignIn} className="flex flex-col gap-4">
             {authError && (
-              <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-lg text-xs text-red-400 font-semibold text-center leading-relaxed">
+              <div className="bg-red-50 border border-red-200 p-3 rounded-lg text-xs text-red-700 font-semibold text-center leading-relaxed">
                 {authError}
               </div>
             )}
             {authSuccess && (
-              <div className="bg-[#C59B4E]/10 border border-[#C59B4E]/30 p-3 rounded-lg text-xs text-[#C59B4E] font-semibold text-center leading-relaxed">
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-800 font-semibold text-center leading-relaxed">
                 {authSuccess}
               </div>
             )}
             {resetStatus && (
-              <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-lg text-xs text-emerald-400 font-semibold text-center leading-relaxed">
+              <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg text-xs text-emerald-800 font-semibold text-center leading-relaxed">
                 {resetStatus}
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Admin Email Address</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 text-left">Admin Email Address</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
                   <Mail size={16} />
                 </span>
                 <input 
@@ -561,14 +561,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="blessingubah38@gmail.com"
                   required
-                  className="w-full bg-[#07101c] border border-slate-700/60 focus:border-[#C59B4E] rounded-lg py-3 pl-11 pr-4 text-xs font-medium text-white placeholder-slate-600 outline-none transition-colors"
+                  className="w-full bg-white border border-slate-300 focus:border-[#C59B4E] focus:ring-2 focus:ring-[#C59B4E]/15 rounded-lg py-3 pl-11 pr-4 text-xs font-medium text-slate-900 placeholder-slate-400 outline-none transition-colors"
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Administrator Password</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 text-left">Administrator Password</label>
                 <button
                   type="button"
                   onClick={handleSendPasswordReset}
@@ -579,7 +579,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 </button>
               </div>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
                   <Lock size={16} />
                 </span>
                 <input 
@@ -588,12 +588,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   onChange={(e) => setAdminPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-[#07101c] border border-slate-700/60 focus:border-[#C59B4E] rounded-lg py-3 pl-11 pr-11 text-xs font-medium text-white placeholder-slate-600 outline-none transition-colors"
+                  className="w-full bg-white border border-slate-300 focus:border-[#C59B4E] focus:ring-2 focus:ring-[#C59B4E]/15 rounded-lg py-3 pl-11 pr-11 text-xs font-medium text-slate-900 placeholder-slate-400 outline-none transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowAdminPassword(!showAdminPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                   title={showAdminPassword ? "Hide password" : "Show password"}
                 >
                   {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -604,7 +604,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             <button 
               type="submit"
               disabled={isAuthenticating}
-              className="w-full flex items-center justify-center gap-2 bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 disabled:cursor-not-allowed py-3.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer text-white shadow-lg active:scale-[0.99] mt-2 text-center"
+              className="w-full flex items-center justify-center gap-2 bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 disabled:cursor-not-allowed py-3.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer text-white shadow-md active:scale-[0.99] mt-2 text-center"
             >
               {isAuthenticating ? (
                 <>
@@ -620,12 +620,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             </button>
           </form>
 
-          <div className="h-px bg-slate-800/60"></div>
+          <div className="h-px bg-slate-200"></div>
 
           <button 
             type="button"
             onClick={() => onPageChange('Dashboard')}
-            className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer text-center"
+            className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer text-center"
           >
             <ArrowLeft size={14} />
             <span>Return to Wallet Account</span>
@@ -1549,24 +1549,24 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     <div className="min-h-screen w-full bg-[var(--bg-main)] font-sans text-[var(--text-primary)] flex flex-col md:flex-row relative transition-colors duration-200">
       
       {/* Mobile Sticky Navigation Banner */}
-      <div className="md:hidden sticky top-0 left-0 right-0 bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] p-4 flex items-center justify-between z-40 shadow-md">
+      <div className="md:hidden sticky top-0 left-0 right-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between z-40 shadow-xs">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#9333ea] to-[#041a31] flex items-center justify-center text-[10px] font-black">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#19B86B] to-[#0B2545] flex items-center justify-center text-[10px] font-black text-white">
             A
           </div>
-          <span className="text-sm font-black text-[var(--text-primary)] tracking-wider font-display uppercase">
+          <span className="text-sm font-black text-slate-900 tracking-wider font-display uppercase">
             Admin <span className="text-[#C59B4E]">Panel</span>
           </span>
         </div>
         
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] px-2.5 py-1 rounded-full text-[9px] font-bold text-[#C59B4E] uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full text-[9px] font-bold text-[#B3873B] uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-[#C59B4E] animate-pulse"></span>
             LIVE
           </div>
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1.5 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#C59B4E] transition-all bg-[var(--bg-card)] border border-[var(--border-subtle)]"
+            className="text-slate-600 hover:text-slate-900 p-1.5 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#C59B4E] transition-all bg-slate-50 border border-slate-200"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -1578,24 +1578,24 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       {mobileMenuOpen && (
         <div 
           onClick={() => setMobileMenuOpen(false)} 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 md:hidden transition-all duration-300"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 md:hidden transition-all duration-300"
         />
       )}
 
       {/* Admin Sidebar (Desktop & Mobile Slideout Drawer) */}
       <aside 
-        className={`fixed inset-y-0 left-0 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] p-6 flex flex-col gap-6 shrink-0 z-50 w-64 md:w-[255px] transform transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 md:flex ${
+        className={`fixed inset-y-0 left-0 bg-white border-r border-slate-200 p-6 flex flex-col gap-6 shrink-0 z-50 w-64 md:w-[255px] transform transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 md:flex ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex justify-between items-center md:block">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#19B86B] to-[#041a31] flex items-center justify-center text-xs font-black text-white">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#19B86B] to-[#0B2545] flex items-center justify-center text-xs font-black text-white">
                 A
               </div>
-              <span className="text-lg font-black text-[var(--text-primary)] tracking-wider font-display uppercase">
-                Admin <span className="text-[#D6B25E]">Panel</span>
+              <span className="text-lg font-black text-slate-900 tracking-wider font-display uppercase">
+                Admin <span className="text-[#C59B4E]">Panel</span>
               </span>
             </div>
             <div className="text-[10px] text-[#19B86B] font-bold tracking-widest uppercase">REAL-TIME CONSOLES</div>
@@ -1603,35 +1603,35 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
           
           <button 
             onClick={() => setMobileMenuOpen(false)}
-            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] md:hidden hover:bg-[var(--bg-card)] rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-700 md:hidden hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Current User Status info */}
-        <div className="p-3.5 bg-[var(--bg-card-elevated)] rounded-xl border border-[var(--border-subtle)] flex items-center gap-3">
+        <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-[#19B86B]/15 border border-[#19B86B]/30 flex items-center justify-center text-[#19B86B] font-bold text-xs uppercase">
             AD
           </div>
           <div className="overflow-hidden">
-            <div className="text-[10px] text-[var(--text-muted)] font-bold uppercase leading-none">AUTHORIZED ADMIN</div>
-            <div className="text-xs font-black text-[var(--text-primary)] truncate leading-normal mt-1">{currentUser.username}</div>
+            <div className="text-[10px] text-slate-500 font-bold uppercase leading-none">AUTHORIZED ADMIN</div>
+            <div className="text-xs font-black text-slate-900 truncate leading-normal mt-1">{currentUser.username}</div>
           </div>
         </div>
 
         {/* Navigation Categories */}
-        <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-210px)] pr-1 select-none scrollbar-thin scrollbar-thumb-purple-900 scrollbar-track-transparent">
+        <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-210px)] pr-1 select-none scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
           <button 
             onClick={() => {
               setActiveTab('overview');
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'overview' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'overview' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Activity size={14} className="text-[#C59B4E]" />
+            <Activity size={14} className={activeTab === 'overview' ? 'text-[#C59B4E]' : 'text-slate-500'} />
             <span>Dashboard Stats</span>
           </button>
 
@@ -1641,10 +1641,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'users' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'users' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Users size={14} className="text-[#C59B4E]" />
+            <Users size={14} className={activeTab === 'users' ? 'text-[#C59B4E]' : 'text-slate-500'} />
             <span>Registered Clients</span>
           </button>
           
@@ -1654,10 +1654,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'blacklist' ? 'bg-red-600/25 text-red-200 border border-red-500/20 shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'blacklist' ? 'bg-red-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-red-700 hover:bg-red-50 font-medium'
             }`}
           >
-            <ShieldAlert size={14} className="text-red-400" />
+            <ShieldAlert size={14} className={activeTab === 'blacklist' ? 'text-white' : 'text-red-500'} />
             <span>Accounts Blacklist</span>
           </button>
 
@@ -1667,10 +1667,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'referrals' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'referrals' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Gift size={14} className="text-purple-400" />
+            <Gift size={14} className={activeTab === 'referrals' ? 'text-[#C59B4E]' : 'text-purple-600'} />
             <span>Referrals & Bonus</span>
           </button>
 
@@ -1680,10 +1680,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'withdrawals_pending' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'withdrawals_pending' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Coins size={14} className="text-amber-500" />
+            <Coins size={14} className={activeTab === 'withdrawals_pending' ? 'text-[#C59B4E]' : 'text-amber-600'} />
             <span>Pending Withdrawals</span>
           </button>
 
@@ -1693,15 +1693,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-2 cursor-pointer ${
-              activeTab === 'deposits_pending' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'deposits_pending' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <TrendingUp size={14} className="text-green-400" />
+              <TrendingUp size={14} className={activeTab === 'deposits_pending' ? 'text-[#C59B4E]' : 'text-emerald-600'} />
               <span>Deposit Management</span>
             </div>
             {transactions.filter(t => t.type === 'Deposit' && (t.status || '').toLowerCase() === 'pending').length > 0 && (
-              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold">
+              <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold">
                 {transactions.filter(t => t.type === 'Deposit' && (t.status || '').toLowerCase() === 'pending').length}
               </span>
             )}
@@ -1713,10 +1713,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'deduct_balance' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'deduct_balance' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Coins size={14} className="text-red-400" />
+            <Coins size={14} className={activeTab === 'deduct_balance' ? 'text-white' : 'text-rose-600'} />
             <span>Deduct User Money</span>
           </button>
 
@@ -1726,10 +1726,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'payment_gateways' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'payment_gateways' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Wallet size={14} className="text-[#C59B4E]" />
+            <Wallet size={14} className={activeTab === 'payment_gateways' ? 'text-[#C59B4E]' : 'text-[#B3873B]'} />
             <span>Payment Gateways</span>
           </button>
 
@@ -1739,10 +1739,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'ip_check' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'ip_check' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Globe size={14} className="text-indigo-400" />
+            <Globe size={14} className={activeTab === 'ip_check' ? 'text-[#C59B4E]' : 'text-blue-600'} />
             <span>IP Check Logs</span>
           </button>
 
@@ -1752,10 +1752,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'newsletter' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'newsletter' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Mail size={14} className="text-[#C59B4E]" />
+            <Mail size={14} className={activeTab === 'newsletter' ? 'text-[#C59B4E]' : 'text-amber-600'} />
             <span>Send Newsletter</span>
           </button>
 
@@ -1765,10 +1765,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'plans' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'plans' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Percent size={14} className="text-pink-400" />
+            <Percent size={14} className={activeTab === 'plans' ? 'text-[#C59B4E]' : 'text-pink-600'} />
             <span>Investment Plans</span>
           </button>
 
@@ -1778,10 +1778,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'settings' ? 'bg-[#9333ea] text-white shadow-md font-extrabold' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'settings' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <Settings size={14} className="text-slate-400" />
+            <Settings size={14} className={activeTab === 'settings' ? 'text-white' : 'text-slate-500'} />
             <span>System Settings</span>
           </button>
 
@@ -1791,11 +1791,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer ${
-              activeTab === 'live_support' ? 'bg-[#9333ea] text-white shadow-md font-extrabold ring-1 ring-[#C59B4E]/60' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'live_support' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold ring-1 ring-[#C59B4E]/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Headphones size={14} className="text-[#C59B4E]" />
+              <Headphones size={14} className={activeTab === 'live_support' ? 'text-[#C59B4E]' : 'text-amber-600'} />
               <span>Live Support Desk</span>
             </div>
             {unreadSupportCount > 0 && (
@@ -1811,22 +1811,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'password_security' ? 'bg-[#9333ea] text-white shadow-md font-extrabold ring-1 ring-[#C59B4E]/60' : 'text-slate-400 hover:text-white hover:bg-slate-900/30 font-medium'
+              activeTab === 'password_security' ? 'bg-[#0B2545] text-white shadow-sm font-extrabold ring-1 ring-[#C59B4E]/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
             }`}
           >
-            <ShieldCheck size={14} className="text-[#C59B4E]" />
+            <ShieldCheck size={14} className={activeTab === 'password_security' ? 'text-[#C59B4E]' : 'text-emerald-600'} />
             <span>Password & Security</span>
           </button>
         </nav>
 
         {/* Foot exit link */}
-        <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-2">
+        <div className="pt-3 border-t border-slate-200 flex flex-col gap-2">
           <button 
             onClick={() => {
               onPageChange('Home');
               setMobileMenuOpen(false);
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-[#C59B4E] hover:text-white hover:bg-[#C59B4E]/10 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-[#C59B4E] hover:text-[#B3873B] hover:bg-amber-50/80 transition-colors cursor-pointer"
           >
             <ArrowLeft size={15} />
             <span>Website Home</span>
@@ -1834,7 +1834,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
           <button 
             onClick={handleAdminSignOut}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
           >
             <LogOut size={15} />
             <span>Lock / Sign Out Admin</span>
@@ -1846,9 +1846,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       <main className="flex-1 w-full md:w-auto min-w-0 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
         
         {/* Dynamic header row with real-time status banner */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-[var(--border-subtle)] w-full">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-200 w-full">
           <div>
-            <h1 className="text-2xl font-black font-display tracking-tight text-[var(--text-primary)] uppercase">
+            <h1 className="text-2xl font-black font-display tracking-tight text-slate-900 uppercase">
               {activeTab === 'overview' && "Dashboard Live Analytics"}
               {activeTab === 'users' && "Registered Client Accounts"}
               {activeTab === 'blacklist' && "Accounts Blacklist & Suspension"}
@@ -1864,7 +1864,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               {activeTab === 'live_support' && "Live Support Desk & Auto-Replies"}
               {activeTab === 'password_security' && "Password & Security"}
             </h1>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Active Session sync connected safely via Web SDK. Real-time updates active.
             </p>
           </div>
@@ -1878,7 +1878,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     setAddMoneyAmount('');
                     setAddMoneyModalOpen(true);
                   }}
-                  className="bg-[#C59B4E] hover:bg-[#A98035] text-slate-100 font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg cursor-pointer"
+                  className="bg-[#C59B4E] hover:bg-[#B3873B] text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   <Coins size={14} />
                   <span>Add Money</span>
@@ -1889,7 +1889,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     setBonusAmount('');
                     setBonusModalOpen(true);
                   }}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg cursor-pointer"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   <Gift size={14} />
                   <span>Award Bonus</span>
@@ -1909,15 +1909,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   setPlanRateText('');
                   setPlanFormOpen(true);
                 }}
-                className="bg-[#C59B4E] hover:bg-[#C59B4E] text-slate-900 font-black py-2.5 px-4 rounded-lg text-xs uppercase tracking-wide flex items-center gap-1.5 shadow-lg cursor-pointer"
+                className="bg-[#C59B4E] hover:bg-[#B3873B] text-white font-black py-2.5 px-4 rounded-lg text-xs uppercase tracking-wide flex items-center gap-1.5 shadow-sm cursor-pointer"
               >
                 <Plus size={15} />
                 <span>Add Package</span>
               </button>
             )}
             
-            <div className="flex items-center gap-1.5 bg-[#0b1b30] border border-[#183556] px-3 py-1.5 rounded-full text-[10px] font-bold text-[#C59B4E] uppercase tracking-widest animate-pulse leading-none">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C59B4E]"></span>
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full text-[10px] font-bold text-amber-800 uppercase tracking-widest leading-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C59B4E] animate-pulse"></span>
               LIVE RECORD ACTIVE
             </div>
           </div>
@@ -1925,8 +1925,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
         {/* Global connection error warning, if any */}
         {errorMessage && (
-          <div className="p-4 bg-red-950/40 border border-red-500/30 text-red-300 rounded-xl text-xs flex gap-2.5 items-center">
-            <ShieldAlert size={16} className="shrink-0 text-red-400" />
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex gap-2.5 items-center">
+            <ShieldAlert size={16} className="shrink-0 text-red-600" />
             <p className="font-semibold">{errorMessage}</p>
           </div>
         )}
@@ -1935,33 +1935,33 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
         {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'withdrawals_pending' || activeTab === 'deposits_pending' || activeTab === 'referrals' || activeTab === 'deduct_balance') && (
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full">
             
-            <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
-              <div className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Total User Balances</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(totalBalances)}</div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="text-[10px] text-purple-700 font-bold uppercase tracking-wider">Total User Balances</div>
+              <div className="text-lg font-black text-slate-900 mt-1.5 font-mono">{formatCurrency(totalBalances)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Aggregate liability holding</div>
             </div>
 
-            <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
-              <div className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Total Deposited</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(totalDeposited)}</div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">Total Deposited</div>
+              <div className="text-lg font-black text-slate-900 mt-1.5 font-mono">{formatCurrency(totalDeposited)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Accumulated cash volume</div>
             </div>
 
-            <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
-              <div className="text-[10px] text-[#C59B4E] font-bold uppercase tracking-wider">Active Deposits</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(activeDepositsTotal)}</div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="text-[10px] text-[#B3873B] font-bold uppercase tracking-wider">Active Deposits</div>
+              <div className="text-lg font-black text-slate-900 mt-1.5 font-mono">{formatCurrency(activeDepositsTotal)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Sum active packages yielding</div>
             </div>
 
-            <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl">
-              <div className="text-[10px] text-orange-400 font-bold uppercase tracking-wider">Pending Withdrawals</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(pendingWithdrawalsTotal)}</div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="text-[10px] text-amber-700 font-bold uppercase tracking-wider">Pending Withdrawals</div>
+              <div className="text-lg font-black text-slate-900 mt-1.5 font-mono">{formatCurrency(pendingWithdrawalsTotal)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Pending approval processing</div>
             </div>
 
-            <div className="bg-[#091527] border border-[#132c4b] p-4 rounded-xl sm:col-span-2 lg:col-span-1">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Withdrawn</div>
-              <div className="text-lg font-black text-white mt-1.5 font-mono">{formatCurrency(totalWithdrawn)}</div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl sm:col-span-2 lg:col-span-1 shadow-xs">
+              <div className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Total Withdrawn</div>
+              <div className="text-lg font-black text-slate-900 mt-1.5 font-mono">{formatCurrency(totalWithdrawn)}</div>
               <div className="text-[9px] text-slate-500 font-semibold mt-1">Total completed payouts</div>
             </div>
 
@@ -1981,13 +1981,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             {activeTab === 'overview' && (
               <div className="space-y-6 w-full">
                 {/* Visual Section Tabs */}
-                <div className="flex flex-wrap gap-2 border-b border-[#142d4a] pb-4 w-full">
+                <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4 w-full">
                   <button 
                     onClick={() => setOverviewSubTab('registered_users')}
                     className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                       overviewSubTab === 'registered_users' 
-                        ? 'bg-purple-600 text-white shadow-md' 
-                        : 'bg-slate-900/30 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-[#0B2545] text-white shadow-xs font-extrabold' 
+                        : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
                     }`}
                   >
                     All Registered ({users.length})
@@ -1996,8 +1996,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     onClick={() => setOverviewSubTab('live_deposits')}
                     className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                       overviewSubTab === 'live_deposits' 
-                        ? 'bg-[#C59B4E] text-slate-950 font-black shadow-md' 
-                        : 'bg-slate-900/30 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-emerald-600 text-white font-extrabold shadow-xs' 
+                        : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
                     }`}
                   >
                     Dynamic Live Deposits ({transactions.filter(t => t.type === 'Deposit' && t.status === 'Approved').length})
@@ -2006,8 +2006,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     onClick={() => setOverviewSubTab('live_withdrawals')}
                     className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                       overviewSubTab === 'live_withdrawals' 
-                        ? 'bg-[#C59B4E] text-white shadow-md' 
-                        : 'bg-slate-900/30 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-[#C59B4E] text-white font-extrabold shadow-xs' 
+                        : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
                     }`}
                   >
                     Dynamic Live Withdrawals ({transactions.filter(t => t.type === 'Withdrawal' && t.status === 'Approved').length})
@@ -2016,8 +2016,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     onClick={() => setOverviewSubTab('referrals')}
                     className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                       overviewSubTab === 'referrals' 
-                        ? 'bg-indigo-600 text-white shadow-md' 
-                        : 'bg-slate-900/30 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-purple-600 text-white font-extrabold shadow-xs' 
+                        : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
                     }`}
                   >
                     Referrals Directory
@@ -2026,15 +2026,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                 {/* Sub Tab: Registered Users List */}
                 {overviewSubTab === 'registered_users' && (
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 w-full">
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 w-full shadow-xs">
                     <div className="flex justify-between items-center mb-4">
-                      <div className="text-sm font-black text-white uppercase tracking-wider">Total Registered Accounts</div>
-                      <div className="text-xs text-purple-400 font-mono font-bold">Total: {users.length} Clients</div>
+                      <div className="text-sm font-black text-slate-900 uppercase tracking-wider">Total Registered Accounts</div>
+                      <div className="text-xs text-purple-700 font-mono font-bold">Total: {users.length} Clients</div>
                     </div>
                     <div className="w-full overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/40">
+                          <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-widest bg-slate-50">
                             <th className="p-3">Username / Identity</th>
                             <th className="p-3">Full Name</th>
                             <th className="p-3">Email Address</th>
@@ -2042,18 +2042,18 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <th className="p-3">Suspended State</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#10243d]">
+                        <tbody className="divide-y divide-slate-100">
                           {users.map((u) => (
-                            <tr key={u.uid} className="hover:bg-slate-900/20 transition-all font-mono">
+                            <tr key={u.uid} className="hover:bg-slate-50/80 transition-all font-mono">
                               <td className="p-3 font-bold text-[#C59B4E]">{u.username || "Guest"}</td>
-                              <td className="p-3 text-white font-sans font-semibold">{u.fullName || "Unspecified"}</td>
-                              <td className="p-3 text-slate-400">{u.email}</td>
-                              <td className="p-3 text-green-400 font-black">{formatCurrency(u.accountBalance)}</td>
+                              <td className="p-3 text-slate-900 font-sans font-semibold">{u.fullName || "Unspecified"}</td>
+                              <td className="p-3 text-slate-500">{u.email}</td>
+                              <td className="p-3 text-emerald-600 font-black">{formatCurrency(u.accountBalance)}</td>
                               <td className="p-3">
                                 {u.suspended ? (
-                                  <span className="bg-red-950/40 border border-red-500/30 text-red-400 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold uppercase">Blocked</span>
+                                  <span className="bg-rose-50 border border-rose-200 text-rose-700 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold uppercase">Blocked</span>
                                 ) : (
-                                  <span className="bg-green-950/40 border border-green-500/30 text-green-400 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold uppercase">Active</span>
+                                  <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold uppercase">Active</span>
                                 )}
                               </td>
                             </tr>
@@ -2066,12 +2066,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                 {/* Sub Tab: Live Deposits List */}
                 {overviewSubTab === 'live_deposits' && (
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 w-full">
-                    <div className="text-sm font-black text-white uppercase tracking-wider mb-4">Live Approved Deposits Records</div>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 w-full shadow-xs">
+                    <div className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Live Approved Deposits Records</div>
                     <div className="w-full overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/40">
+                          <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-widest bg-slate-50">
                             <th className="p-3">Tx Reference ID</th>
                             <th className="p-3">Investor Profile</th>
                             <th className="p-3">Completed Amount</th>
@@ -2079,13 +2079,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <th className="p-3">Registration Date</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#10243d]">
+                        <tbody className="divide-y divide-slate-100">
                           {transactions.filter(t => t.type === 'Deposit' && t.status === 'Approved').map((tx) => (
-                            <tr key={tx.id} className="hover:bg-slate-900/20 transition-all font-mono">
-                              <td className="p-3 text-slate-400 font-bold">{tx.id}</td>
-                              <td className="p-3 text-[#D4A856] font-sans font-semibold">{tx.username}</td>
-                              <td className="p-3 text-green-400 font-black">{formatCurrency(tx.amount)}</td>
-                              <td className="p-3 text-slate-300">{tx.processor || "Unknown Token"}</td>
+                            <tr key={tx.id} className="hover:bg-slate-50/80 transition-all font-mono">
+                              <td className="p-3 text-slate-500 font-bold">{tx.id}</td>
+                              <td className="p-3 text-[#B3873B] font-sans font-semibold">{tx.username}</td>
+                              <td className="p-3 text-emerald-600 font-black">{formatCurrency(tx.amount)}</td>
+                              <td className="p-3 text-slate-700">{tx.processor || "Unknown Token"}</td>
                               <td className="p-3 text-slate-500">{tx.date}</td>
                             </tr>
                           ))}
@@ -2102,12 +2102,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                 {/* Sub Tab: Live Withdrawals list */}
                 {overviewSubTab === 'live_withdrawals' && (
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 w-full">
-                    <div className="text-sm font-black text-white uppercase tracking-wider mb-4">Live Approved Payouts Directory</div>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 w-full shadow-xs">
+                    <div className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Live Approved Payouts Directory</div>
                     <div className="w-full overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/40">
+                          <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-widest bg-slate-50">
                             <th className="p-3">Tx Reference ID</th>
                             <th className="p-3">Client Profile</th>
                             <th className="p-3">Requested Amount</th>
@@ -2115,13 +2115,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <th className="p-3">Payout Date</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#10243d]">
+                        <tbody className="divide-y divide-slate-100">
                           {transactions.filter(t => t.type === 'Withdrawal' && t.status === 'Approved').map((tx) => (
-                            <tr key={tx.id} className="hover:bg-slate-900/20 transition-all font-mono">
-                              <td className="p-3 text-slate-400 font-bold">{tx.id}</td>
-                              <td className="p-3 text-[#D4A856] font-sans font-semibold">{tx.username}</td>
-                              <td className="p-3 text-amber-500 font-black">{formatCurrency(tx.amount)}</td>
-                              <td className="p-3 text-slate-300">{tx.processor || "Unknown Network"}</td>
+                            <tr key={tx.id} className="hover:bg-slate-50/80 transition-all font-mono">
+                              <td className="p-3 text-slate-500 font-bold">{tx.id}</td>
+                              <td className="p-3 text-[#B3873B] font-sans font-semibold">{tx.username}</td>
+                              <td className="p-3 text-amber-600 font-black">{formatCurrency(tx.amount)}</td>
+                              <td className="p-3 text-slate-700">{tx.processor || "Unknown Network"}</td>
                               <td className="p-3 text-slate-500">{tx.date}</td>
                             </tr>
                           ))}
@@ -2138,25 +2138,25 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                 {/* Sub Tab: Referrals Hub */}
                 {overviewSubTab === 'referrals' && (
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 rounded-b-xl w-full">
-                    <div className="text-sm font-black text-white uppercase tracking-wider mb-4">Platform Referrals network status</div>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 rounded-b-xl w-full shadow-xs">
+                    <div className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Platform Referrals network status</div>
                     <div className="w-full overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/40">
+                          <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-widest bg-slate-50">
                             <th className="p-3">Client Username</th>
                             <th className="p-3">Direct Upline (Referred By)</th>
-                            <th className="p-3 text-indigo-400">Total Referred Count</th>
-                            <th className="p-3 text-purple-400">Accrued Referral Earnings</th>
+                            <th className="p-3 text-indigo-700">Total Referred Count</th>
+                            <th className="p-3 text-purple-700">Accrued Referral Earnings</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#10243d]">
+                        <tbody className="divide-y divide-slate-100">
                           {users.map((u) => (
-                            <tr key={u.uid} className="hover:bg-slate-900/20 transition-all font-mono">
-                              <td className="p-3 font-bold text-slate-250">{u.username}</td>
-                              <td className="p-3 font-semibold text-slate-400">{u.referredBy || "None (Organic Signup)"}</td>
-                              <td className="p-3 font-indigo-400 text-slate-300 text-left font-bold">{u.referralsCount || 0} users</td>
-                              <td className="p-3 text-purple-400 font-black">{formatCurrency(u.referralEarnings || 0)}</td>
+                            <tr key={u.uid} className="hover:bg-slate-50/80 transition-all font-mono">
+                              <td className="p-3 font-bold text-slate-900">{u.username}</td>
+                              <td className="p-3 font-semibold text-slate-500">{u.referredBy || "None (Organic Signup)"}</td>
+                              <td className="p-3 text-indigo-700 font-bold">{u.referralsCount || 0} users</td>
+                              <td className="p-3 text-purple-700 font-black">{formatCurrency(u.referralEarnings || 0)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2172,22 +2172,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left block: Suspend user lookup action */}
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 flex flex-col gap-4">
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-4 shadow-xs">
                     <div className="flex items-center gap-2">
                       <ShieldAlert size={16} className="text-red-500" />
-                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-100">Block or Suspend Client</h3>
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Block or Suspend Client</h3>
                     </div>
-                    <p className="text-[11px] text-slate-400 font-sans">
+                    <p className="text-[11px] text-slate-600 font-sans">
                       Suspended clients are locked out instantly. Permanent removal deletes the backend database document.
                     </p>
 
                     <div className="space-y-3.5 mt-2">
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400">Select Client Account</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-700">Select Client Account</label>
                         <select 
                           value={blacklistUserQuery}
                           onChange={(e) => setBlacklistUserQuery(e.target.value)}
-                          className="w-full mt-1.5 bg-[#06101c] text-xs py-2.5 px-3 rounded-lg text-slate-200 border border-[#163356] focus:border-red-500 focus:outline-hidden font-mono font-bold"
+                          className="w-full mt-1.5 bg-white text-xs py-2.5 px-3 rounded-lg text-slate-900 border border-slate-300 focus:border-red-500 focus:outline-hidden font-mono font-medium shadow-xs"
                         >
                           <option value="">-- Choose registered account --</option>
                           {users.map(u => (
@@ -2217,7 +2217,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               }
                             }
                           }}
-                          className={`flex-1 text-white font-bold py-2.5 px-3 rounded-lg text-[10px] uppercase tracking-wider cursor-pointer transition-all shadow-md text-center ${
+                          className={`flex-1 text-white font-bold py-2.5 px-3 rounded-lg text-[10px] uppercase tracking-wider cursor-pointer transition-all shadow-sm text-center ${
                             users.find(u => u.uid === blacklistUserQuery)?.suspended 
                               ? 'bg-emerald-600 hover:bg-emerald-700' 
                               : 'bg-red-600 hover:bg-red-700'
@@ -2244,7 +2244,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               }
                             }
                           }}
-                          className="bg-slate-800 hover:bg-red-900 border border-slate-700 text-slate-100 font-bold py-2.5 px-3 rounded-lg text-[10px] uppercase tracking-wider cursor-pointer transition-all"
+                          className="bg-slate-100 hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-rose-700 font-bold py-2.5 px-3 rounded-lg text-[10px] uppercase tracking-wider cursor-pointer transition-all"
                         >
                           Delete Permanent
                         </button>
@@ -2253,12 +2253,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   </div>
 
                   {/* Right block: List of banned accounts */}
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 lg:col-span-2">
-                    <div className="text-xs font-black uppercase text-red-500 tracking-wider mb-3.5">Blacklisted Accounts Registered</div>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 lg:col-span-2 shadow-xs">
+                    <div className="text-xs font-black uppercase text-red-600 tracking-wider mb-3.5">Blacklisted Accounts Registered</div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-[#152e4b] text-[10px] text-slate-400 uppercase bg-slate-900/50">
+                          <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase bg-slate-50">
                             <th className="p-3">Client Username</th>
                             <th className="p-3">Full Name</th>
                             <th className="p-3">Email Address</th>
@@ -2266,13 +2266,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <th className="p-3">Action</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#10243d]">
+                        <tbody className="divide-y divide-slate-100">
                           {users.filter(u => u.suspended).map(u => (
-                            <tr key={u.uid} className="hover:bg-slate-900/10 transition-all font-mono">
-                              <td className="p-2.5 text-red-400 font-bold">{u.username}</td>
-                              <td className="p-2.5 text-slate-300 font-sans">{u.fullName}</td>
-                              <td className="p-2.5 text-slate-450">{u.email}</td>
-                              <td className="p-2.5 text-slate-350">{formatCurrency(u.accountBalance)}</td>
+                            <tr key={u.uid} className="hover:bg-slate-50/80 transition-all font-mono">
+                              <td className="p-2.5 text-red-600 font-bold">{u.username}</td>
+                              <td className="p-2.5 text-slate-800 font-sans">{u.fullName}</td>
+                              <td className="p-2.5 text-slate-500">{u.email}</td>
+                              <td className="p-2.5 text-slate-700">{formatCurrency(u.accountBalance)}</td>
                               <td className="p-2.5">
                                 <button 
                                   onClick={async () => {
@@ -2281,7 +2281,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                       alert(`${u.username} unblocked successfully.`);
                                     }
                                   }}
-                                  className="bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600 hover:text-white transition-all text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer"
+                                  className="bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-600 hover:text-white transition-all text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer"
                                 >
                                   Unblock Account
                                 </button>
@@ -2306,23 +2306,23 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Form: Award Referral Bonus */}
-                  <form onSubmit={handleAwardReferralBonus} className="bg-[#091527] border border-[#112a47] rounded-xl p-5 flex flex-col gap-4">
+                  <form onSubmit={handleAwardReferralBonus} className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-4 shadow-xs">
                     <div className="flex items-center gap-2">
-                      <Gift size={16} className="text-purple-400" />
-                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-100 font-display">Award Referral Commission</h3>
+                      <Gift size={16} className="text-purple-600" />
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 font-display">Award Referral Commission</h3>
                     </div>
-                    <p className="text-[11px] text-slate-400 font-sans">
+                    <p className="text-[11px] text-slate-600 font-sans">
                       Deducting or awarding referral bonuses manually registers a certified entry ledger log in client balances.
                     </p>
 
                     <div className="space-y-3.5 mt-2">
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400">Target Client Account</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-700">Target Client Account</label>
                         <select 
                           required
                           value={refBonusUser}
                           onChange={(e) => setRefBonusUser(e.target.value)}
-                          className="w-full mt-1.5 bg-[#06101c] text-xs py-2.5 px-3 rounded-lg text-slate-200 border border-[#163356] focus:border-[#9333ea] focus:outline-hidden font-mono font-bold"
+                          className="w-full mt-1.5 bg-white text-xs py-2.5 px-3 rounded-lg text-slate-900 border border-slate-300 focus:border-purple-600 focus:outline-hidden font-mono font-medium shadow-xs"
                         >
                           <option value="">-- Select client --</option>
                           {users.map(u => (
@@ -2332,23 +2332,23 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       </div>
 
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400">Bonus Commission ($ / USD)</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-700">Bonus Commission ($ / USD)</label>
                         <input 
                           type="number" 
                           required
                           placeholder="e.g. 150"
                           value={refBonusAmount}
                           onChange={(e) => setRefBonusAmount(e.target.value)}
-                          className="w-full mt-1.5 bg-[#06101c] text-xs py-2.5 px-3 rounded-lg text-slate-200 border border-[#163356] focus:border-[#9333ea] focus:outline-hidden font-mono font-bold"
+                          className="w-full mt-1.5 bg-white text-xs py-2.5 px-3 rounded-lg text-slate-900 border border-slate-300 focus:border-purple-600 focus:outline-hidden font-mono font-medium shadow-xs"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400">Bonus Coin Gateway</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-700">Bonus Coin Gateway</label>
                         <select 
                           value={refBonusProcessor}
                           onChange={(e: any) => setRefBonusProcessor(e.target.value)}
-                          className="w-full mt-1.5 bg-[#06101c] text-xs py-2.5 px-3 rounded-lg text-slate-200 border border-[#163356] focus:border-[#9333ea] focus:outline-hidden font-mono font-bold"
+                          className="w-full mt-1.5 bg-white text-xs py-2.5 px-3 rounded-lg text-slate-900 border border-slate-300 focus:border-purple-600 focus:outline-hidden font-mono font-medium shadow-xs"
                         >
                           <option value="USDT TRC20">USDT (TRC20)</option>
                           <option value="USDT ERC20">USDT (ERC20)</option>
@@ -2359,7 +2359,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                       <button 
                         type="submit"
-                        className="w-full bg-[#9333ea] hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-[10px] uppercase tracking-wider cursor-pointer"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-[10px] uppercase tracking-wider cursor-pointer shadow-sm"
                       >
                         Dispense Referral Commission
                       </button>
@@ -2367,25 +2367,25 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   </form>
 
                   {/* Right: Comprehensive list */}
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 lg:col-span-2">
-                    <div className="text-xs font-black uppercase text-purple-400 tracking-wider mb-4">Affiliate & Referrals Summary</div>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 lg:col-span-2 shadow-xs">
+                    <div className="text-xs font-black uppercase text-purple-700 tracking-wider mb-4">Affiliate & Referrals Summary</div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-[#152e4b] text-[10px] text-slate-400 uppercase bg-slate-900/50">
+                          <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase bg-slate-50">
                             <th className="p-3">Client Username</th>
                             <th className="p-3">Upline Referrer Name</th>
                             <th className="p-3 text-center">Referrals Quantity</th>
                             <th className="p-3 text-right">Manually Added Earnings</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#10243d]">
+                        <tbody className="divide-y divide-slate-100">
                           {users.map(u => (
-                            <tr key={u.uid} className="hover:bg-slate-900/10 transition-all font-mono">
+                            <tr key={u.uid} className="hover:bg-slate-50/80 transition-all font-mono">
                               <td className="p-2.5 font-bold text-[#C59B4E]">{u.username}</td>
-                              <td className="p-2.5 text-slate-400 font-sans font-semibold">{u.referredBy || "Unsponsored"}</td>
-                              <td className="p-2.5 text-center text-slate-200 font-bold">{u.referralsCount || 0} clicks</td>
-                              <td className="p-2.5 text-right text-purple-400 font-black">{formatCurrency(u.referralEarnings || 0)}</td>
+                              <td className="p-2.5 text-slate-500 font-sans font-semibold">{u.referredBy || "Unsponsored"}</td>
+                              <td className="p-2.5 text-center text-slate-800 font-bold">{u.referralsCount || 0} clicks</td>
+                              <td className="p-2.5 text-right text-purple-700 font-black">{formatCurrency(u.referralEarnings || 0)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2398,12 +2398,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* C. PENDING WITHDRAWALS DECK */}
             {activeTab === 'withdrawals_pending' && (
-              <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 w-full">
-                <div className="text-xs font-black uppercase tracking-wider text-amber-500 mb-4">Pending Debit Payout Requests</div>
+              <div className="bg-white border border-slate-200 rounded-xl p-5 w-full shadow-xs">
+                <div className="text-xs font-black uppercase tracking-wider text-amber-700 mb-4">Pending Debit Payout Requests</div>
                 <div className="w-full overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-wider bg-slate-900/40">
+                      <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider bg-slate-50">
                         <th className="p-3">Transaction ID</th>
                         <th className="p-3">Client Username</th>
                         <th className="p-3">Amount Required</th>
@@ -2412,29 +2412,29 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         <th className="p-3 text-right">Direct Operations</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#10243d]">
+                    <tbody className="divide-y divide-slate-100">
                       {transactions.filter(t => t.type === 'Withdrawal' && t.status === 'Pending').map((tx) => (
-                        <tr key={tx.id} className="hover:bg-slate-900/20 transition-all font-mono">
-                          <td className="p-3 font-bold text-slate-400">{tx.id}</td>
-                          <td className="p-3 text-[#D4A856] font-sans font-semibold">{tx.username}</td>
-                          <td className="p-3 text-orange-400 font-black">{formatCurrency(tx.amount)}</td>
-                          <td className="p-3 text-slate-300">
-                            {tx.processor}
+                        <tr key={tx.id} className="hover:bg-slate-50/80 transition-all font-mono">
+                          <td className="p-3 font-bold text-slate-500">{tx.id}</td>
+                          <td className="p-3 text-[#B3873B] font-sans font-semibold">{tx.username}</td>
+                          <td className="p-3 text-amber-600 font-black">{formatCurrency(tx.amount)}</td>
+                          <td className="p-3 text-slate-700">
+                            <span className="font-bold">{tx.processor}</span>
                             {/* Display potential receiving keys */}
                             <div className="text-[10px] text-slate-500 max-w-xs truncate mt-0.5">{tx.walletAddress || "No receiving wallet address"}</div>
                           </td>
-                          <td className="p-3 text-slate-400">{tx.date}</td>
+                          <td className="p-3 text-slate-500">{tx.date}</td>
                           <td className="p-3 text-right">
                             <div className="flex justify-end gap-2">
                               <button 
                                 onClick={() => handleApproveWithdrawal(tx)}
-                                className="bg-green-600 hover:bg-green-700 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-sm transition-colors cursor-pointer"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-sm transition-colors cursor-pointer shadow-xs"
                               >
                                 Approve
                               </button>
                               <button 
                                 onClick={() => handleRejectWithdrawal(tx)}
-                                className="bg-red-600 hover:bg-red-700 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-sm transition-colors cursor-pointer"
+                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-sm transition-colors cursor-pointer shadow-xs"
                               >
                                 Decline
                               </button>
@@ -2477,27 +2477,27 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               }
 
               return (
-                <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 w-full space-y-5">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#142d4a] pb-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-5 w-full space-y-5 shadow-xs">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-200 pb-4">
                     <div>
-                      <div className="text-xs font-black uppercase tracking-wider text-green-400 flex items-center gap-2">
+                      <div className="text-xs font-black uppercase tracking-wider text-emerald-700 flex items-center gap-2">
                         <TrendingUp size={16} />
                         Deposit Management & Blockchain Proof Review
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5 font-sans">
+                      <p className="text-[11px] text-slate-600 mt-0.5 font-sans">
                         Verify cryptocurrency transaction hashes and receipts. Balances update ONLY when approved. Idempotency prevents double crediting.
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <div className="relative flex-1 sm:w-60">
-                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                           type="text"
                           value={depositSearchQuery}
                           onChange={(e) => setDepositSearchQuery(e.target.value)}
                           placeholder="Search user, ID, or txHash..."
-                          className="w-full bg-[#06101c] text-xs py-2 pl-8 pr-3 rounded-lg text-slate-200 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-mono"
+                          className="w-full bg-white text-xs py-2 pl-8 pr-3 rounded-lg text-slate-900 border border-slate-300 focus:border-[#C59B4E] focus:outline-hidden font-mono shadow-xs"
                         />
                       </div>
                     </div>
@@ -2510,8 +2510,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       onClick={() => setDepositStatusFilter('PENDING')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
                         depositStatusFilter === 'PENDING'
-                          ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                          : 'bg-[#0e2138] text-amber-300 hover:bg-[#152e4d]'
+                          ? 'bg-amber-500 text-white font-black shadow-xs'
+                          : 'bg-slate-100 text-amber-800 border border-slate-200 hover:bg-slate-200/70'
                       }`}
                     >
                       <span>⏳ PENDING ({pendingDeposits.length})</span>
@@ -2521,8 +2521,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       onClick={() => setDepositStatusFilter('ALL')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
                         depositStatusFilter === 'ALL'
-                          ? 'bg-[#C59B4E] text-slate-950 font-black shadow-md'
-                          : 'bg-[#0e2138] text-slate-300 hover:bg-[#152e4d]'
+                          ? 'bg-[#C59B4E] text-white font-black shadow-xs'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200/70'
                       }`}
                     >
                       <span>ALL DEPOSITS ({depositList.length})</span>
@@ -2532,8 +2532,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       onClick={() => setDepositStatusFilter('APPROVED')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
                         depositStatusFilter === 'APPROVED'
-                          ? 'bg-emerald-600 text-white font-black shadow-md'
-                          : 'bg-[#0e2138] text-emerald-400 hover:bg-[#152e4d]'
+                          ? 'bg-emerald-600 text-white font-black shadow-xs'
+                          : 'bg-slate-100 text-emerald-800 border border-slate-200 hover:bg-slate-200/70'
                       }`}
                     >
                       <span>✓ APPROVED ({approvedDeposits.length})</span>
@@ -2543,8 +2543,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       onClick={() => setDepositStatusFilter('REJECTED')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
                         depositStatusFilter === 'REJECTED'
-                          ? 'bg-rose-600 text-white font-black shadow-md'
-                          : 'bg-[#0e2138] text-rose-400 hover:bg-[#152e4d]'
+                          ? 'bg-rose-600 text-white font-black shadow-xs'
+                          : 'bg-slate-100 text-rose-800 border border-slate-200 hover:bg-slate-200/70'
                       }`}
                     >
                       <span>✕ REJECTED ({rejectedDeposits.length})</span>
@@ -2555,7 +2555,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <div className="w-full overflow-x-auto font-sans">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="border-b border-[#152f4c] text-[10px] text-slate-400 uppercase tracking-wider bg-slate-900/50">
+                        <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider bg-slate-50">
                           <th className="p-3">User & UID</th>
                           <th className="p-3">Deposit Amount</th>
                           <th className="p-3">Method & Network</th>
@@ -2566,7 +2566,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           <th className="p-3 text-right">Admin Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#10243d] font-mono">
+                      <tbody className="divide-y divide-slate-100 font-mono">
                         {displayedDeposits.map((tx) => {
                           const statusLower = (tx.status || '').toLowerCase();
                           const isPending = statusLower === 'pending';
@@ -2576,13 +2576,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           const hash = tx.txHash || tx.transactionHash;
 
                           return (
-                            <tr key={tx.id} className="hover:bg-slate-900/30 transition-colors">
+                            <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
                               {/* User Info */}
                               <td className="p-3 font-sans">
-                                <div className="font-bold text-[#D4A856] text-xs leading-tight">
+                                <div className="font-bold text-[#B3873B] text-xs leading-tight">
                                   {tx.username || 'Anonymous'}
                                 </div>
-                                <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1">
+                                <div className="text-[10px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
                                   <span className="truncate max-w-[100px]" title={tx.userId}>{tx.userId || tx.id}</span>
                                   {tx.userId && (
                                     <button
@@ -2592,10 +2592,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                         setCopiedTxHash(`uid_${tx.id}`);
                                         setTimeout(() => setCopiedTxHash(null), 2000);
                                       }}
-                                      className="text-slate-500 hover:text-slate-200 transition-colors cursor-pointer"
+                                      className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                                       title="Copy UID"
                                     >
-                                      {copiedTxHash === `uid_${tx.id}` ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                                      {copiedTxHash === `uid_${tx.id}` ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
                                     </button>
                                   )}
                                 </div>
@@ -2603,7 +2603,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                               {/* Amount & Currency */}
                               <td className="p-3">
-                                <span className={`font-black text-sm block ${isApproved ? 'text-emerald-400' : isPending ? 'text-amber-400' : 'text-slate-400'}`}>
+                                <span className={`font-black text-sm block ${isApproved ? 'text-emerald-600' : isPending ? 'text-amber-600' : 'text-slate-600'}`}>
                                   {formatCurrency(tx.amount)}
                                 </span>
                                 <span className="text-[9px] text-slate-500 uppercase font-sans font-bold">{tx.currency || 'USD'}</span>
@@ -2611,8 +2611,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                               {/* Method & Network */}
                               <td className="p-3 font-sans">
-                                <span className="text-slate-200 font-bold block text-xs">{tx.paymentMethod || tx.processor || 'USDT'}</span>
-                                <span className="text-[10px] text-[#C59B4E] font-mono block">
+                                <span className="text-slate-800 font-bold block text-xs">{tx.paymentMethod || tx.processor || 'USDT'}</span>
+                                <span className="text-[10px] text-[#B3873B] font-mono block">
                                   {tx.network || 'TRON (TRC20)'}
                                 </span>
                               </td>
@@ -2620,8 +2620,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               {/* Blockchain Hash */}
                               <td className="p-3 text-[10px]">
                                 {hash ? (
-                                  <div className="flex items-center gap-1.5 bg-[#06101c] px-2 py-1 rounded border border-[#163356] max-w-[190px]">
-                                    <span className="truncate font-mono text-slate-300 font-medium" title={hash}>
+                                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-200 max-w-[190px]">
+                                    <span className="truncate font-mono text-slate-700 font-medium" title={hash}>
                                       {hash}
                                     </span>
                                     <button
@@ -2631,14 +2631,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                         setCopiedTxHash(`hash_${tx.id}`);
                                         setTimeout(() => setCopiedTxHash(null), 2000);
                                       }}
-                                      className="text-slate-400 hover:text-white transition-colors shrink-0 cursor-pointer"
+                                      className="text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
                                       title="Copy Hash"
                                     >
-                                      {copiedTxHash === `hash_${tx.id}` ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                                      {copiedTxHash === `hash_${tx.id}` ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-slate-500 italic text-[10px] font-sans">None (Receipt Only)</span>
+                                  <span className="text-slate-400 italic text-[10px] font-sans">None (Receipt Only)</span>
                                 )}
                               </td>
 
@@ -2650,7 +2650,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                       src={receiptImg}
                                       alt="Receipt proof"
                                       onClick={() => setPreviewReceiptModal({ url: receiptImg, title: `Receipt Proof - ${tx.username} ($${tx.amount})` })}
-                                      className="w-10 h-10 object-cover rounded-md border border-[#1a385e] hover:border-[#C59B4E] cursor-pointer transition-all shadow-sm shrink-0"
+                                      className="w-10 h-10 object-cover rounded-md border border-slate-200 hover:border-[#C59B4E] cursor-pointer transition-all shadow-xs shrink-0"
                                       title="Click to zoom receipt"
                                     />
                                     <button
@@ -2662,14 +2662,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-slate-500 text-[10px] font-sans">No Receipt</span>
+                                  <span className="text-slate-400 text-[10px] font-sans">No Receipt</span>
                                 )}
                               </td>
 
                               {/* Submission Date / Time */}
-                              <td className="p-3 text-[10px] text-slate-400 font-sans">
-                                <div className="font-semibold text-slate-300">{tx.date || new Date(tx.timestamp || tx.submittedAt || Date.now()).toLocaleDateString()}</div>
-                                <div className="text-slate-500 text-[9px] font-mono">
+                              <td className="p-3 text-[10px] text-slate-500 font-sans">
+                                <div className="font-semibold text-slate-700">{tx.date || new Date(tx.timestamp || tx.submittedAt || Date.now()).toLocaleDateString()}</div>
+                                <div className="text-slate-400 text-[9px] font-mono">
                                   {new Date(tx.timestamp || tx.submittedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                                 {tx.reviewedBy && (
@@ -2682,14 +2682,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               {/* Current Status */}
                               <td className="p-3 font-sans">
                                 {isPending && (
-                                  <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
-                                    <Clock size={11} className="animate-spin text-amber-400" />
+                                  <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
+                                    <Clock size={11} className="animate-spin text-amber-600" />
                                     PENDING
                                   </span>
                                 )}
                                 {isApproved && (
                                   <div>
-                                    <span className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
+                                    <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
                                       <Check size={11} className="stroke-[3]" />
                                       APPROVED
                                     </span>
@@ -2697,12 +2697,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 )}
                                 {isRejected && (
                                   <div>
-                                    <span className="inline-flex items-center gap-1 bg-rose-500/15 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
+                                    <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-800 border border-rose-300 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider font-mono">
                                       <X size={11} className="stroke-[3]" />
                                       REJECTED
                                     </span>
                                     {tx.rejectionReason && (
-                                      <p className="text-[9px] text-rose-400/80 mt-1 max-w-[150px] truncate" title={tx.rejectionReason}>
+                                      <p className="text-[9px] text-rose-600 mt-1 max-w-[150px] truncate" title={tx.rejectionReason}>
                                         {tx.rejectionReason}
                                       </p>
                                     )}
@@ -2717,7 +2717,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     <button 
                                       type="button"
                                       onClick={() => handleApproveDeposit(tx)}
-                                      className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all shadow cursor-pointer flex items-center gap-1"
+                                      className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all shadow-xs cursor-pointer flex items-center gap-1"
                                       title="Approve deposit and credit balance"
                                     >
                                       <CheckCircle size={12} />
@@ -2726,7 +2726,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     <button 
                                       type="button"
                                       onClick={() => handleRejectDeposit(tx)}
-                                      className="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all shadow cursor-pointer flex items-center gap-1"
+                                      className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all shadow-xs cursor-pointer flex items-center gap-1"
                                       title="Reject deposit (balance unchanged)"
                                     >
                                       <XCircle size={12} />
@@ -2734,7 +2734,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     </button>
                                   </div>
                                 ) : isApproved ? (
-                                  <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider inline-flex items-center gap-1">
+                                  <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider inline-flex items-center gap-1">
                                     <Check size={12} /> Credited
                                   </span>
                                 ) : (
@@ -2763,24 +2763,24 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* E. DEDUCT USER ACTIVE MONEY BALANCE (Item 5) */}
             {activeTab === 'deduct_balance' && (
-              <div className="w-full max-w-4xl bg-[#091527] border border-[#112a47] rounded-xl p-6">
+              <div className="w-full max-w-4xl bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
                 <div className="flex items-center gap-2 mb-4">
                   <Coins size={18} className="text-red-500" />
-                  <h3 className="text-sm font-black uppercase text-white tracking-widest font-display">Deduct Client Money Ledgers</h3>
+                  <h3 className="text-sm font-black uppercase text-slate-900 tracking-widest font-display">Deduct Client Money Ledgers</h3>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed mb-6 font-sans">
+                <p className="text-xs text-slate-600 leading-relaxed mb-6 font-sans">
                   Immediately reduce a client's available wallet balance. This operation is processed securely in Firestore, registers a completed withdrawal transaction row for clear logs, and ensures real-time updates.
                 </p>
 
                 <form onSubmit={handleDeductBalanceSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Select Target Account</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">Select Target Account</label>
                       <select 
                         required
                         value={deductUser}
                         onChange={(e) => setDeductUser(e.target.value)}
-                        className="w-full bg-[#06101c] text-xs py-3 px-4 rounded-lg text-slate-300 border border-[#163356] focus:border-red-500 focus:outline-hidden font-mono font-bold"
+                        className="w-full bg-slate-50 text-xs py-3 px-4 rounded-lg text-slate-800 border border-slate-300 focus:border-red-500 focus:bg-white focus:outline-hidden font-mono font-bold"
                       >
                         <option value="">-- Choose Account --</option>
                         {users.map(u => (
@@ -2790,24 +2790,24 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     </div>
 
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Debit Deduction Value ($ / USD)</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">Debit Deduction Value ($ / USD)</label>
                       <input 
                         type="number" 
                         required
                         placeholder="e.g. 500"
                         value={deductAmount}
                         onChange={(e) => setDeductAmount(e.target.value)}
-                        className="w-full bg-[#06101c] text-xs py-3 px-4 rounded-lg text-slate-300 border border-[#163356] focus:border-red-500 focus:outline-hidden font-mono font-bold"
+                        className="w-full bg-slate-50 text-xs py-3 px-4 rounded-lg text-slate-800 border border-slate-300 focus:border-red-500 focus:bg-white focus:outline-hidden font-mono font-bold"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Ledger Transaction Channel</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">Ledger Transaction Channel</label>
                     <select 
                       value={deductProcessor}
                       onChange={(e: any) => setDeductProcessor(e.target.value)}
-                      className="w-full bg-[#06101c] text-xs py-3 px-4 rounded-lg text-slate-300 border border-[#163356] focus:border-red-500 focus:outline-hidden font-mono font-bold"
+                      className="w-full bg-slate-50 text-xs py-3 px-4 rounded-lg text-slate-800 border border-slate-300 focus:border-red-500 focus:bg-white focus:outline-hidden font-mono font-bold"
                     >
                       <option value="Account Balance">Account Balance (Direct Debit)</option>
                       <option value="USDT TRC20">USDT TRC20</option>
@@ -2820,7 +2820,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <div className="pt-3 flex justify-end">
                     <button 
                       type="submit"
-                      className="bg-red-600 hover:bg-red-700 text-white text-xs uppercase font-extrabold tracking-widest px-6 py-3 rounded-lg shadow-lg cursor-pointer transition-all"
+                      className="bg-red-600 hover:bg-red-700 text-white text-xs uppercase font-extrabold tracking-widest px-6 py-3 rounded-lg shadow-sm cursor-pointer transition-all"
                     >
                       Execute Security Deduction
                     </button>
@@ -2831,12 +2831,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* F. PAYMENT GATEWAY SETTINGS (Item 7) */}
             {activeTab === 'payment_gateways' && (
-              <div className="w-full max-w-4xl bg-[#091527] border border-[#112a47] rounded-xl p-6">
+              <div className="w-full max-w-4xl bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
                 <div className="flex items-center gap-2 mb-4">
-                  <Wallet size={18} className="text-[#C59B4E]" />
-                  <h3 className="text-sm font-black uppercase text-white tracking-widest font-display">Selected Payment Gateways Config</h3>
+                  <Wallet size={18} className="text-[#B3873B]" />
+                  <h3 className="text-sm font-black uppercase text-slate-900 tracking-widest font-display">Selected Payment Gateways Config</h3>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed mb-6 font-sans">
+                <p className="text-xs text-slate-600 leading-relaxed mb-6 font-sans">
                   Configure cryptocurrency receiving addresses displayed to clients on the primary deposit page. Saving changes updates standard settings in real-time.
                 </p>
 
@@ -2854,48 +2854,48 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">USDT Receiving Address (TRC20)</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">USDT Receiving Address (TRC20)</label>
                       <input 
                         type="text"
                         placeholder="Input TRC20 token address..."
                         value={settings.usdt_trc20_address || ''}
                         onChange={(e) => setSettings({ ...settings, usdt_trc20_address: e.target.value })}
-                        className="w-full bg-[#06101c] text-xs py-3 px-4 rounded-lg text-slate-300 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-mono font-bold"
+                        className="w-full bg-slate-50 text-xs py-3 px-4 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-mono font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Bitcoin Receiving Address (BTC Network)</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">Bitcoin Receiving Address (BTC Network)</label>
                       <input 
                         type="text"
                         placeholder="Input standard BTC address..."
                         value={settings.btc_address || ''}
                         onChange={(e) => setSettings({ ...settings, btc_address: e.target.value })}
-                        className="w-full bg-[#06101c] text-xs py-3 px-4 rounded-lg text-slate-300 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-mono font-bold"
+                        className="w-full bg-slate-50 text-xs py-3 px-4 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-mono font-bold"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Ethereum Receiving Address (ERC20 Web3)</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">Ethereum Receiving Address (ERC20 Web3)</label>
                       <input 
                         type="text"
                         placeholder="Input standard ETH address..."
                         value={settings.eth_address || ''}
                         onChange={(e) => setSettings({ ...settings, eth_address: e.target.value })}
-                        className="w-full bg-[#06101c] text-xs py-3 px-4 rounded-lg text-slate-300 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-mono font-bold"
+                        className="w-full bg-slate-50 text-xs py-3 px-4 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-mono font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">USDT Receiving Address (ERC20 Network)</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">USDT Receiving Address (ERC20 Network)</label>
                       <input 
                         type="text"
                         placeholder="Input standard ERC20 USDT address..."
                         value={settings.usdt_erc20_address || ''}
                         onChange={(e) => setSettings({ ...settings, usdt_erc20_address: e.target.value })}
-                        className="w-full bg-[#06101c] text-xs py-3 px-4 rounded-lg text-slate-300 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-mono font-bold"
+                        className="w-full bg-slate-50 text-xs py-3 px-4 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-mono font-bold"
                       />
                     </div>
                   </div>
@@ -2903,7 +2903,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <div className="pt-3 flex justify-end">
                     <button 
                       type="submit"
-                      className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg shadow-lg cursor-pointer max-h-11 transition-all"
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg shadow-sm cursor-pointer max-h-11 transition-all"
                     >
                       Save Gateways Config
                     </button>
@@ -2914,12 +2914,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* G. IP CHECK DETECTION AUDITING JOURNAL */}
             {activeTab === 'ip_check' && (
-              <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5">
-                <div className="text-xs font-black uppercase text-indigo-400 tracking-wider mb-4">Device Audits & Client session IP logs</div>
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+                <div className="text-xs font-black uppercase text-indigo-700 tracking-wider mb-4">Device Audits & Client session IP logs</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-sans">
                     <thead>
-                      <tr className="border-b border-[#152e4b] text-[10px] text-slate-400 uppercase tracking-wider bg-slate-900/50">
+                      <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider bg-slate-50">
                         <th className="p-3">Client Identity</th>
                         <th className="p-3">Email Details</th>
                         <th className="p-3">Audit IP Address</th>
@@ -2928,15 +2928,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         <th className="p-3">Hardware OS / Version</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#10243d] font-mono text-[11px]">
+                    <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
                       {users.map(u => (
-                        <tr key={u.uid} className="hover:bg-slate-900/15 transition-all">
-                          <td className="p-3 text-slate-100 font-bold font-sans">{u.username}</td>
-                          <td className="p-3 text-slate-400">{u.email}</td>
-                          <td className="p-3 text-[#C59B4E] font-bold">{u.ipAddress || "174.12.180.12"}</td>
-                          <td className="p-3 text-indigo-300 font-sans font-semibold">{u.country || "United States (detected)"}</td>
-                          <td className="p-3 text-slate-350">{u.browser || "Chrome / Safari engine"}</td>
-                          <td className="p-3 text-purple-400 font-bold font-sans">{u.device || "Apple iPhone (iOS 17)"}</td>
+                        <tr key={u.uid} className="hover:bg-slate-50/80 transition-all">
+                          <td className="p-3 text-slate-900 font-bold font-sans">{u.username}</td>
+                          <td className="p-3 text-slate-600">{u.email}</td>
+                          <td className="p-3 text-[#B3873B] font-bold">{u.ipAddress || "174.12.180.12"}</td>
+                          <td className="p-3 text-indigo-700 font-sans font-semibold">{u.country || "United States (detected)"}</td>
+                          <td className="p-3 text-slate-500">{u.browser || "Chrome / Safari engine"}</td>
+                          <td className="p-3 text-purple-700 font-bold font-sans">{u.device || "Apple iPhone (iOS 17)"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -2950,12 +2950,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               <div className="space-y-6">
                 
                 {/* Description helper box */}
-                <div className="bg-[#091527] border-l-4 border-[#C59B4E] bg-gradient-to-r from-[#091527] to-[#0d223c] p-4.5 rounded-r-xl border-y border-r border-[#152e4d]">
+                <div className="bg-amber-50/70 border-l-4 border-[#B3873B] p-4.5 rounded-r-xl border-y border-r border-amber-200/80">
                   <div className="flex gap-3">
-                    <Mail size={18} className="text-[#C59B4E] shrink-0 mt-0.5" />
+                    <Mail size={18} className="text-[#B3873B] shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-xs font-black uppercase text-white tracking-wider mb-1">Send a newsletter to users</h4>
-                      <p className="text-[11px] text-slate-300 leading-relaxed font-sans mt-1">
+                      <h4 className="text-xs font-black uppercase text-amber-950 tracking-wider mb-1">Send a newsletter to users</h4>
+                      <p className="text-[11px] text-slate-700 leading-relaxed font-sans mt-1">
                         This form helps you to send a newsletter to one or several users. Select a user or a user group, type a subject and a message text. Click on the 'send newsletter' button once! It then sends immediately to the selected email.
                       </p>
                     </div>
@@ -2965,20 +2965,20 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   
                   {/* LEFT COLUMN: FORM PANEL */}
-                  <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5 lg:col-span-6 space-y-5">
-                    <div className="border-b border-[#142d4a] pb-3 flex items-center justify-between">
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-100 font-display flex items-center gap-2">
-                        <Mail size={14} className="text-purple-400" />
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 lg:col-span-6 space-y-5 shadow-xs">
+                    <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-900 font-display flex items-center gap-2">
+                        <Mail size={14} className="text-purple-600" />
                         Newsletter Composer Form
                       </span>
-                      <span className="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono font-bold">SMTP READY</span>
+                      <span className="text-[10px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-mono font-bold">SMTP READY</span>
                     </div>
 
                     <form onSubmit={handleSendNewsletter} className="space-y-4">
                       
                       {/* From Prefix Identity */}
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
+                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">
                           From: (Company Name)
                         </label>
                         <input 
@@ -2987,20 +2987,20 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           value={newsletterFrom}
                           onChange={(e) => setNewsletterFrom(e.target.value)}
                           placeholder="e.g. Apex Premium Yields"
-                          className="w-full bg-[#06101c] text-xs py-3 px-3.5 rounded-lg text-slate-200 border border-[#163356] focus:border-[#9333ea] focus:outline-hidden font-sans font-semibold"
+                          className="w-full bg-slate-50 text-xs py-3 px-3.5 rounded-lg text-slate-800 border border-slate-300 focus:border-purple-600 focus:bg-white focus:outline-hidden font-sans font-semibold"
                         />
                       </div>
 
                       {/* Recipient Audience Choice */}
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400 block mb-2">
+                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-2">
                           Being sent to:
                         </label>
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <label className={`border rounded-lg p-3 flex items-center gap-2.5 cursor-pointer transition-all ${
                             newsletterTargetType === 'one' 
-                              ? 'bg-purple-950/20 border-purple-500 text-purple-300 font-extrabold' 
-                              : 'bg-slate-900/30 border-[#163356] text-slate-400 hover:text-white'
+                              ? 'bg-purple-50 border-purple-300 text-purple-700 font-extrabold' 
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
                           }`}>
                             <input 
                               type="radio"
@@ -3012,22 +3012,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   setNewsletterTargetUser(users[0].uid);
                                 }
                               }}
-                              className="accent-purple-500"
+                              className="accent-purple-600"
                             />
                             <span className="text-xs font-sans">One User</span>
                           </label>
 
                           <label className={`border rounded-lg p-3 flex items-center gap-2.5 cursor-pointer transition-all ${
                             newsletterTargetType === 'all' 
-                              ? 'bg-purple-950/20 border-purple-500 text-purple-300 font-extrabold' 
-                              : 'bg-slate-900/30 border-[#163356] text-slate-400 hover:text-white'
+                              ? 'bg-purple-50 border-purple-300 text-purple-700 font-extrabold' 
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
                           }`}>
                             <input 
                               type="radio"
                               name="audience"
                               checked={newsletterTargetType === 'all'}
                               onChange={() => setNewsletterTargetType('all')}
-                              className="accent-purple-500"
+                              className="accent-purple-600"
                             />
                             <span className="text-xs font-sans">Several Users ({users.length})</span>
                           </label>
@@ -3041,7 +3041,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               value={newsletterTargetUser}
                               onChange={(e) => setNewsletterTargetUser(e.target.value)}
                               required={newsletterTargetType === 'one'}
-                              className="w-full bg-[#06101c] text-xs py-2.5 px-3 rounded-lg text-slate-200 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-mono font-bold"
+                              className="w-full bg-slate-50 text-xs py-2.5 px-3 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-mono font-bold"
                             >
                               <option value="">-- Type or Select Client Profile --</option>
                               {users.map(u => (
@@ -3054,7 +3054,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                       {/* Subject Line */}
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
+                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">
                           Subject:
                         </label>
                         <input 
@@ -3063,13 +3063,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           value={newsletterSubject}
                           onChange={(e) => setNewsletterSubject(e.target.value)}
                           placeholder="e.g. exclusive yield news"
-                          className="w-full bg-[#06101c] text-xs py-3 px-3.5 rounded-lg text-slate-200 border border-[#163356] focus:border-[#9333ea] focus:outline-hidden font-sans font-semibold"
+                          className="w-full bg-slate-50 text-xs py-3 px-3.5 rounded-lg text-slate-800 border border-slate-300 focus:border-purple-600 focus:bg-white focus:outline-hidden font-sans font-semibold"
                         />
                       </div>
 
                       {/* Text Message Content */}
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
+                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">
                           Text Message:
                         </label>
                         <textarea
@@ -3078,20 +3078,20 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           rows={6}
                           value={newsletterTextMessage}
                           onChange={(e) => setNewsletterTextMessage(e.target.value)}
-                          className="w-full bg-[#06101c] text-xs py-3 px-3.5 rounded-lg text-slate-200 border border-[#163356] focus:border-[#9333ea] focus:outline-hidden font-sans leading-relaxed resize-none"
+                          className="w-full bg-slate-50 text-xs py-3 px-3.5 rounded-lg text-slate-800 border border-slate-300 focus:border-purple-600 focus:bg-white focus:outline-hidden font-sans leading-relaxed resize-none"
                         />
                       </div>
 
                       {/* HTML Message use toggle */}
-                      <div className="p-3 bg-slate-900/30 rounded-lg border border-[#152e4b] space-y-3">
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase font-extrabold text-[#C59B4E] tracking-wider">HTML Message:</span>
-                          <label className="flex items-center gap-2 cursor-pointer font-sans text-xs text-slate-300 font-bold select-none hover:text-white">
+                          <span className="text-[10px] uppercase font-extrabold text-[#B3873B] tracking-wider">HTML Message:</span>
+                          <label className="flex items-center gap-2 cursor-pointer font-sans text-xs text-slate-700 font-bold select-none hover:text-slate-900">
                             <input 
                               type="checkbox"
                               checked={newsletterUseHtml}
                               onChange={(e) => setNewsletterUseHtml(e.target.checked)}
-                              className="accent-[#C59B4E] w-4 h-4 rounded-sm"
+                              className="accent-amber-600 w-4 h-4 rounded-sm"
                             />
                             <span>Use it?</span>
                           </label>
@@ -3099,7 +3099,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         
                         {newsletterUseHtml && (
                           <div className="space-y-1.5 mt-2">
-                            <div className="text-[9px] text-slate-400 leading-normal mb-1.5 font-sans">
+                            <div className="text-[9px] text-slate-500 leading-normal mb-1.5 font-sans">
                               Provide custom HTML markup (e.g. strong, a links, styled text). It will render inside our professional corporate wrapper.
                             </div>
                             <textarea
@@ -3107,7 +3107,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               rows={5}
                               value={newsletterHtmlMessage}
                               onChange={(e) => setNewsletterHtmlMessage(e.target.value)}
-                              className="w-full bg-[#06101c] text-[11px] font-mono py-2.5 px-3 rounded-lg text-amber-500 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden leading-relaxed resize-y"
+                              className="w-full bg-white text-[11px] font-mono py-2.5 px-3 rounded-lg text-amber-700 border border-slate-300 focus:border-[#B3873B] focus:outline-hidden leading-relaxed resize-y"
                             />
                           </div>
                         )}
@@ -3120,8 +3120,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           disabled={newsletterSending}
                           className={`w-full py-3 px-5 rounded-lg border text-xs font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 ${
                             newsletterSending 
-                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed' 
-                              : 'bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-500 text-white hover:opacity-90 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-purple-950/40'
+                              ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed' 
+                              : 'bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-600 text-white hover:opacity-90 shadow-sm'
                           }`}
                         >
                           <Mail size={14} className={newsletterSending ? 'animate-bounce' : ''} />
@@ -3134,21 +3134,21 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                   {/* RIGHT COLUMN: REAL-TIME TEMPLATE PREVIEW */}
                   <div className="lg:col-span-6 space-y-4">
-                    <div className="bg-[#091527] border border-[#112a47] rounded-xl p-4">
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
                       
                       {/* Header row */}
-                      <div className="flex justify-between items-center border-b border-[#142d4a] pb-3 mb-4">
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-100 font-display flex items-center gap-1.5">
-                          <Globe size={13} className="text-[#C59B4E]" />
+                      <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-4">
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-900 font-display flex items-center gap-1.5">
+                          <Globe size={13} className="text-[#B3873B]" />
                           Real-Time Corporate Preview
                         </span>
-                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                       </div>
 
                       {/* Actual Mock Email Shell Box */}
-                      <div className="rounded-lg overflow-hidden border border-[#163356] max-h-[580px] overflow-y-auto bg-slate-900 shadow-xl pr-px scrollbar-thin scrollbar-thumb-purple-950 scrollbar-track-transparent">
+                      <div className="rounded-lg overflow-hidden border border-slate-200 max-h-[580px] overflow-y-auto bg-slate-50 shadow-inner pr-px">
                         
-                        <div className="bg-slate-950 px-4 py-2 border-b border-slate-800 text-[10px] text-slate-400 font-mono flex gap-2">
+                        <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 text-[10px] text-slate-600 font-mono flex gap-2">
                           <span className="font-bold text-slate-500">To:</span> 
                           <span>
                             {newsletterTargetType === 'all' 
@@ -3185,7 +3185,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   newsletterTargetType === 'one' 
                                     ? (users.find(u => u.uid === newsletterTargetUser)?.fullName || users.find(u => u.uid === newsletterTargetUser)?.username || 'Valued Subscriber') 
                                     : 'Valued Subscriber'
-                                },
+                                }
                               </p>
 
                               {/* Formatted body paragraph content */}
@@ -3243,10 +3243,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 </div>
 
                 {/* NEWSLETTER TRANSMISSION HISTORICAL JOURNAL LOGS */}
-                <div className="bg-[#091527] border border-[#112a47] rounded-xl p-5">
+                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
                   <div className="flex justify-between items-center mb-4">
-                    <div className="text-xs font-black uppercase text-[#C59B4E] tracking-wider flex items-center gap-2">
-                      <Mail size={13} className="text-[#C59B4E]" />
+                    <div className="text-xs font-black uppercase text-[#B3873B] tracking-wider flex items-center gap-2">
+                      <Mail size={13} className="text-[#B3873B]" />
                       Newsletter outbox historical delivery log
                     </div>
                     <span className="text-[10px] text-slate-500 font-mono">Count: {newsletterLogs.length} briefs dispatched</span>
@@ -3255,7 +3255,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs font-sans">
                       <thead>
-                        <tr className="border-b border-[#152e4b] text-[10px] text-slate-400 uppercase tracking-wider bg-slate-900/55">
+                        <tr className="border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider bg-slate-50">
                           <th className="p-3">Reference ID</th>
                           <th className="p-3">Company Signature (From)</th>
                           <th className="p-3">Audience Target</th>
@@ -3264,30 +3264,30 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           <th className="p-3 text-right">Recipient Count</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#10243d] font-mono text-[11px]">
+                      <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
                         {newsletterLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-slate-900/15 transition-all text-slate-300">
+                          <tr key={log.id} className="hover:bg-slate-50/80 transition-all text-slate-700">
                             <td className="p-2.5 font-bold">
-                              <span className="text-[#C59B4E] text-[10px] font-sans block leading-tight">{log.id}</span>
-                              <span className="text-slate-500 text-[9px] font-normal font-sans leading-none">{log.dateTime}</span>
+                              <span className="text-[#B3873B] text-[10px] font-sans block leading-tight">{log.id}</span>
+                              <span className="text-slate-400 text-[9px] font-normal font-sans leading-none">{log.dateTime}</span>
                             </td>
-                            <td className="p-2.5 font-sans font-semibold text-slate-200">{log.from}</td>
+                            <td className="p-2.5 font-sans font-semibold text-slate-800">{log.from}</td>
                             <td className="p-2.5">
                               {log.targetType === 'all' ? (
-                                <span className="bg-purple-950/40 border border-purple-500/35 text-purple-300 px-2 py-0.5 rounded text-[9px] font-sans font-extrabold uppercase">Bulk Several</span>
+                                <span className="bg-purple-100 border border-purple-200 text-purple-700 px-2 py-0.5 rounded text-[9px] font-sans font-extrabold uppercase">Bulk Several</span>
                               ) : (
-                                <span className="text-[#C59B4E] font-semibold">One User: {log.targetUserLabel}</span>
+                                <span className="text-[#B3873B] font-semibold">One User: {log.targetUserLabel}</span>
                               )}
                             </td>
-                            <td className="p-2.5 max-w-xs truncate font-sans text-xs text-white" title={log.subject}>{log.subject}</td>
+                            <td className="p-2.5 max-w-xs truncate font-sans text-xs text-slate-900" title={log.subject}>{log.subject}</td>
                             <td className="p-2.5 text-center">
                               {log.useHtml ? (
-                                <span className="bg-amber-950/40 border border-amber-500/30 text-amber-400 px-1.5 py-0.5 rounded text-[8px] font-bold">HTML</span>
+                                <span className="bg-amber-100 border border-amber-300 text-amber-800 px-1.5 py-0.5 rounded text-[8px] font-bold">HTML</span>
                               ) : (
-                                <span className="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[8px] font-bold">TEXT</span>
+                                <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[8px] font-bold">TEXT</span>
                               )}
                             </td>
-                            <td className="p-2.5 text-right font-black text-green-400 font-sans text-xs">{log.totalSent} recipient(s)</td>
+                            <td className="p-2.5 text-right font-black text-emerald-600 font-sans text-xs">{log.totalSent} recipient(s)</td>
                           </tr>
                         ))}
                         {newsletterLogs.length === 0 && (
@@ -3305,17 +3305,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* 1. USERS LIST TAB */}
             {activeTab === 'users' && (
-              <div className="bg-[#091527] border border-[#112a47] rounded-xl flex flex-col w-full">
+              <div className="bg-white border border-slate-200 rounded-xl flex flex-col w-full shadow-xs">
                 {/* Search Bar section */}
-                <div className="p-4 border-b border-[#142f50] flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between w-full">
+                <div className="p-4 border-b border-slate-200 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between w-full">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input 
                       type="text" 
                       placeholder="Search accounts by username, email, full name, UID..." 
                       value={userQuery}
                       onChange={(e) => setUserQuery(e.target.value)}
-                      className="w-full bg-[#06101c] text-xs py-3 pl-10 pr-4 rounded-lg text-slate-100 placeholder-slate-500 border border-[#163356] focus:border-[#C59B4E] hover:border-[#1e436f] focus:outline-hidden transition-all font-semibold"
+                      className="w-full bg-slate-50 text-xs py-3 pl-10 pr-4 rounded-lg text-slate-900 placeholder-slate-400 border border-slate-300 focus:border-[#B3873B] focus:bg-white hover:border-slate-400 focus:outline-hidden transition-all font-semibold"
                     />
                   </div>
                   <div className="flex gap-2 items-center justify-between xl:justify-end flex-wrap">
@@ -3323,29 +3323,29 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       href={FIREBASE_AUTH_CONSOLE_URL}
                       target="_blank"
                       rel="noreferrer"
-                      className="bg-purple-950/70 hover:bg-purple-900 border border-purple-500/40 text-purple-200 text-[10px] font-bold uppercase tracking-wider px-3 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 whitespace-nowrap"
+                      className="bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-[10px] font-bold uppercase tracking-wider px-3 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
                       title="Open Firebase Authentication Users console directly"
                     >
-                      <ExternalLink size={13} className="text-purple-400" />
+                      <ExternalLink size={13} className="text-purple-600" />
                       <span>Firebase Auth Console</span>
                     </a>
                     <button
                       type="button"
                       onClick={() => setShowConsoleGuideModal(true)}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold uppercase tracking-wider px-3 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 whitespace-nowrap"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-[10px] font-bold uppercase tracking-wider px-3 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
                       title="Learn how user deletion works and how to sync with Firebase console"
                     >
-                      <Info size={13} className="text-[#C59B4E]" />
+                      <Info size={13} className="text-[#B3873B]" />
                       <span>Sync Guide</span>
                     </button>
                     <button
                       onClick={() => setAddUserModalOpen(true)}
-                      className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-[10px] font-black uppercase tracking-wider px-4 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 whitespace-nowrap"
+                      className="bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-wider px-4 py-3 rounded-lg inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
                     >
                       <Plus size={13} />
                       <span>Add New User</span>
                     </button>
-                    <div className="text-xs font-semibold text-slate-400 whitespace-nowrap font-mono px-1">
+                    <div className="text-xs font-semibold text-slate-500 whitespace-nowrap font-mono px-1">
                       Found {filteredUsers.length} profiles
                     </div>
                   </div>
@@ -3355,45 +3355,45 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 <div className="hidden md:block w-full overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-[#142f50] text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-900/15">
+                      <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50">
                         <th className="p-4">Username / Identity</th>
                         <th className="p-4">Balance</th>
-                        <th className="p-4 text-[#C59B4E]">Active Deposit</th>
-                        <th className="p-4 text-orange-400">Pending Withdraw</th>
-                        <th className="p-4 text-green-400 font-semibold">Earned Total</th>
-                        <th className="p-4 text-slate-400">Total Deposit</th>
+                        <th className="p-4 text-[#B3873B]">Active Deposit</th>
+                        <th className="p-4 text-orange-600">Pending Withdraw</th>
+                        <th className="p-4 text-emerald-600 font-semibold">Earned Total</th>
+                        <th className="p-4 text-slate-600">Total Deposit</th>
                         <th className="p-4 text-right">Perform Tasks</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#122b49] text-xs font-medium">
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
                       {filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-505 text-xs italic">
+                          <td colSpan={7} className="p-8 text-center text-slate-400 text-xs italic">
                             No user matches matching "{userQuery}" found.
                           </td>
                         </tr>
                       ) : (
                         filteredUsers.map((u) => (
-                          <tr key={u.uid || u.email} className="hover:bg-slate-900/10 transition-colors">
+                          <tr key={u.uid || u.email} className="hover:bg-slate-50/80 transition-colors">
                             <td className="p-4">
                               <div>
-                                <span className="font-bold text-white text-sm">{u.username}</span>
+                                <span className="font-bold text-slate-900 text-sm">{u.username}</span>
                                 {isSoleAdminUser(u) ? (
-                                  <span className="text-[10px] text-purple-300 font-extrabold ml-1.5 bg-purple-950/70 border border-purple-500/30 px-2 py-0.5 rounded inline-flex items-center gap-1">
-                                    <ShieldCheck size={10} className="text-purple-400" />
+                                  <span className="text-[10px] text-purple-700 font-extrabold ml-1.5 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded inline-flex items-center gap-1">
+                                    <ShieldCheck size={10} className="text-purple-600" />
                                     <span>Administrator</span>
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] text-[#C59B4E] font-bold ml-1.5 bg-[#C59B4E]/10 px-1.5 py-0.5 rounded">Client</span>
+                                  <span className="text-[10px] text-amber-800 font-bold ml-1.5 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">Client</span>
                                 )}
                                 {u.suspended && (
-                                  <span className="text-[10px] text-red-400 font-bold ml-1.5 bg-red-950/70 border border-red-500/20 px-1.5 py-0.5 rounded animate-pulse">SUSPENDED</span>
+                                  <span className="text-[10px] text-red-600 font-bold ml-1.5 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded animate-pulse">SUSPENDED</span>
                                 )}
                               </div>
                               <div className="text-[10px] text-slate-500 truncate max-w-xs mt-0.5 font-mono">{u.email}</div>
-                              <div className="text-[10px] text-slate-400 max-w-xs mt-0.5 capitalize">{u.fullName}</div>
+                              <div className="text-[10px] text-slate-600 max-w-xs mt-0.5 capitalize">{u.fullName}</div>
                               <div className="flex items-center gap-1.5 mt-1">
-                                <span className="text-[9px] font-mono text-slate-500 bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-800">
+                                <span className="text-[9px] font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                                   UID: {u.uid ? `${u.uid.slice(0, 10)}...` : 'N/A'}
                                 </span>
                                 {u.uid && (
@@ -3404,20 +3404,20 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                       setCopiedUid(u.uid);
                                       setTimeout(() => setCopiedUid(null), 2000);
                                     }}
-                                    className="text-[9px] text-[#C59B4E] hover:underline font-mono inline-flex items-center gap-0.5 cursor-pointer"
+                                    className="text-[9px] text-[#B3873B] hover:underline font-mono inline-flex items-center gap-0.5 cursor-pointer"
                                     title="Copy complete Firebase UID to search in console"
                                   >
-                                    {copiedUid === u.uid ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                                    {copiedUid === u.uid ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                                     <span>{copiedUid === u.uid ? 'Copied' : 'Copy UID'}</span>
                                   </button>
                                 )}
                               </div>
                             </td>
-                            <td className="p-4 font-mono font-bold text-yellow-500">{formatCurrency(u.accountBalance)}</td>
-                            <td className="p-4 font-mono text-[#C59B4E]">{formatCurrency(u.activeDeposit)}</td>
-                            <td className="p-4 font-mono text-orange-400">{formatCurrency(u.pendingWithdrawal)}</td>
-                            <td className="p-4 font-mono text-green-400 font-bold">{formatCurrency(u.earnedTotal)}</td>
-                            <td className="p-4 font-mono font-medium text-slate-400">{formatCurrency(u.totalDeposit)}</td>
+                            <td className="p-4 font-mono font-bold text-amber-700">{formatCurrency(u.accountBalance)}</td>
+                            <td className="p-4 font-mono text-[#B3873B] font-semibold">{formatCurrency(u.activeDeposit)}</td>
+                            <td className="p-4 font-mono text-orange-600 font-semibold">{formatCurrency(u.pendingWithdrawal)}</td>
+                            <td className="p-4 font-mono text-emerald-600 font-bold">{formatCurrency(u.earnedTotal)}</td>
+                            <td className="p-4 font-mono font-medium text-slate-600">{formatCurrency(u.totalDeposit)}</td>
                             <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-1.5 flex-wrap">
                                 <button 
@@ -3427,7 +3427,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     setAddMoneyType('Deposit');
                                     setAddMoneyModalOpen(true);
                                   }}
-                                  className="inline-flex items-center gap-1 bg-[#2a2210] hover:bg-[#3d3015] text-[#C59B4E] px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
                                 >
                                   <Coins size={11} />
                                   <span>Add Money</span>
@@ -3438,7 +3438,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     setBonusAmount('');
                                     setBonusModalOpen(true);
                                   }}
-                                  className="inline-flex items-center gap-1 bg-purple-950/70 hover:bg-purple-900 text-purple-300 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
                                 >
                                   <Gift size={11} />
                                   <span>Add Bonus</span>
@@ -3456,9 +3456,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     setEditUserSuspended(!!u.suspended);
                                     setManageUserModalOpen(true);
                                   }}
-                                  className={`inline-flex items-center gap-1 ${u.suspended ? 'bg-red-950/70 border-red-800/40 text-red-300' : 'bg-slate-800 border-slate-700/40 text-slate-200'} hover:opacity-90 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-all cursor-pointer border`}
+                                  className={`inline-flex items-center gap-1 ${u.suspended ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'} hover:opacity-90 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-all cursor-pointer border`}
                                 >
-                                  <Settings size={11} className={u.suspended ? "text-red-400 animate-pulse" : ""} />
+                                  <Settings size={11} className={u.suspended ? "text-red-500 animate-pulse" : ""} />
                                   <span>{u.suspended ? "Suspended (Manage)" : "Manage User"}</span>
                                 </button>
                                 <button 
@@ -3472,7 +3472,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     setEditedActiveDeposit(u.activeDeposit);
                                     setEditedTotalDeposit(u.totalDeposit);
                                   }}
-                                  className="inline-flex items-center gap-1 bg-[#10243b] hover:bg-[#15304f] text-[#C59B4E] px-2.5 py-1.5 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1.5 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
                                 >
                                   <Edit size={11} />
                                   <span>Correct Performance</span>
@@ -3481,10 +3481,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   <button 
                                     type="button"
                                     disabled
-                                    className="inline-flex items-center gap-1 bg-slate-900/60 border border-slate-700/40 text-slate-500 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] cursor-not-allowed opacity-60"
+                                    className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-400 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] cursor-not-allowed opacity-60"
                                     title="Primary Administrator Account (Protected Credentials)"
                                   >
-                                    <ShieldCheck size={11} className="text-purple-400" />
+                                    <ShieldCheck size={11} className="text-purple-600" />
                                     <span>Protected Admin</span>
                                   </button>
                                 ) : (
@@ -3492,17 +3492,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     type="button"
                                     disabled={isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid}
                                     onClick={() => handleInitiateDeleteUser(u)}
-                                    className="inline-flex items-center gap-1 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer disabled:opacity-50"
+                                    className="inline-flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 hover:text-red-900 px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer disabled:opacity-50"
                                     title={`Permanently delete ${u.username} from Firebase Authentication and database`}
                                   >
                                     {isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid ? (
                                       <>
-                                        <RefreshCw size={11} className="animate-spin text-red-400" />
+                                        <RefreshCw size={11} className="animate-spin text-red-500" />
                                         <span>Deleting User...</span>
                                       </>
                                     ) : (
                                       <>
-                                        <Trash2 size={11} className="text-red-400" />
+                                        <Trash2 size={11} className="text-red-500" />
                                         <span>Delete User</span>
                                       </>
                                     )}
@@ -3518,33 +3518,33 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 </div>
 
                 {/* Users Mobile Card-based view */}
-                <div className="block md:hidden divide-y divide-[#122b49] bg-[#091527] rounded-b-xl overflow-hidden">
+                <div className="block md:hidden divide-y divide-slate-100 bg-white rounded-b-xl overflow-hidden">
                   {filteredUsers.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 text-xs italic">
+                    <div className="p-8 text-center text-slate-400 text-xs italic">
                       No user matches matching "{userQuery}" found.
                     </div>
                   ) : (
                     filteredUsers.map((u) => (
-                      <div key={u.uid || u.email} className="p-4 hover:bg-slate-900/10 transition-colors flex flex-col gap-3.5">
+                      <div key={u.uid || u.email} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col gap-3.5">
                         <div className="flex justify-between items-start">
                           <div className="min-w-0 flex-1 pr-2">
-                            <span className="font-bold text-white text-md block truncate">{u.username}</span>
+                            <span className="font-bold text-slate-900 text-md block truncate">{u.username}</span>
                             {isSoleAdminUser(u) ? (
-                              <span className="text-[10px] text-purple-300 font-extrabold bg-purple-950/70 border border-purple-500/30 px-2 py-0.5 rounded leading-none inline-flex items-center gap-1 mt-1">
-                                <ShieldCheck size={10} className="text-purple-400" />
+                              <span className="text-[10px] text-purple-700 font-extrabold bg-purple-50 border border-purple-200 px-2 py-0.5 rounded leading-none inline-flex items-center gap-1 mt-1">
+                                <ShieldCheck size={10} className="text-purple-600" />
                                 <span>Administrator</span>
                               </span>
                             ) : (
-                              <span className="text-[10px] text-[#C59B4E] font-bold bg-[#C59B4E]/10 px-1.5 py-0.5 rounded leading-none inline-block mt-1">Client</span>
+                              <span className="text-[10px] text-amber-800 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded leading-none inline-block mt-1">Client</span>
                             )}
                             {u.suspended && (
-                              <span className="text-[9px] text-red-400 font-bold bg-red-950/70 border border-red-500/20 px-1.5 py-0.5 rounded leading-none inline-block mt-1 ml-1.5 animate-pulse uppercase">SUSPENDED</span>
+                              <span className="text-[9px] text-red-600 font-bold bg-red-50 border border-red-200 px-1.5 py-0.5 rounded leading-none inline-block mt-1 ml-1.5 animate-pulse uppercase">SUSPENDED</span>
                             )}
                             <span className="text-[10px] text-slate-500 font-mono block mt-1.5 truncate">{u.email}</span>
-                            <span className="text-[10px] text-slate-400 block capitalize mt-0.5 truncate">{u.fullName}</span>
+                            <span className="text-[10px] text-slate-600 block capitalize mt-0.5 truncate">{u.fullName}</span>
                             {u.uid && (
                               <div className="flex items-center gap-1.5 mt-1.5">
-                                <span className="text-[9px] font-mono text-slate-500 bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-800">
+                                <span className="text-[9px] font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                                   UID: {u.uid.slice(0, 10)}...
                                 </span>
                                 <button
@@ -3554,9 +3554,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                     setCopiedUid(u.uid);
                                     setTimeout(() => setCopiedUid(null), 2000);
                                   }}
-                                  className="text-[9px] text-[#C59B4E] hover:underline font-mono inline-flex items-center gap-0.5 cursor-pointer"
+                                  className="text-[9px] text-[#B3873B] hover:underline font-mono inline-flex items-center gap-0.5 cursor-pointer"
                                 >
-                                  {copiedUid === u.uid ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                                  {copiedUid === u.uid ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                                   <span>{copiedUid === u.uid ? 'Copied' : 'Copy'}</span>
                                 </button>
                               </div>
@@ -3565,27 +3565,27 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           {/* Main Balance Highlight */}
                           <div className="text-right shrink-0">
                             <span className="text-[9px] text-slate-500 uppercase font-black block tracking-wider">Balance</span>
-                            <span className="text-sm font-mono font-black text-yellow-500">{formatCurrency(u.accountBalance)}</span>
+                            <span className="text-sm font-mono font-black text-amber-700">{formatCurrency(u.accountBalance)}</span>
                           </div>
                         </div>
 
                         {/* Stats Dashboard for each user card */}
-                        <div className="grid grid-cols-2 gap-2 bg-[#06101c]/55 p-3 rounded-lg border border-[#112a4a] text-[11px] font-semibold text-slate-300">
+                        <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] font-semibold text-slate-700">
                           <div>
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Active Deposit</span>
-                            <span className="text-[#C59B4E] font-mono font-bold">{formatCurrency(u.activeDeposit)}</span>
+                            <span className="text-[#B3873B] font-mono font-bold">{formatCurrency(u.activeDeposit)}</span>
                           </div>
                           <div>
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Pending Withdraw</span>
-                            <span className="text-orange-400 font-mono font-bold">{formatCurrency(u.pendingWithdrawal)}</span>
+                            <span className="text-orange-600 font-mono font-bold">{formatCurrency(u.pendingWithdrawal)}</span>
                           </div>
                           <div className="mt-1">
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Earned Total</span>
-                            <span className="text-green-400 font-mono font-bold">{formatCurrency(u.earnedTotal)}</span>
+                            <span className="text-emerald-600 font-mono font-bold">{formatCurrency(u.earnedTotal)}</span>
                           </div>
                           <div className="mt-1">
                             <span className="text-slate-500 text-[9px] uppercase font-bold block tracking-wide">Total Deposit</span>
-                            <span className="text-slate-400 font-mono font-bold">{formatCurrency(u.totalDeposit)}</span>
+                            <span className="text-slate-600 font-mono font-bold">{formatCurrency(u.totalDeposit)}</span>
                           </div>
                         </div>
 
@@ -3599,7 +3599,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 setAddMoneyType('Deposit');
                                 setAddMoneyModalOpen(true);
                               }}
-                              className="min-h-[44px] inline-flex items-center justify-center gap-1 bg-[#2a2210] hover:bg-[#3d3015] text-[#C59B4E] px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                              className="min-h-[44px] inline-flex items-center justify-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
                             >
                               <Coins size={12} />
                               <span>Add Money</span>
@@ -3610,7 +3610,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 setBonusAmount('');
                                 setBonusModalOpen(true);
                               }}
-                              className="min-h-[44px] inline-flex items-center justify-center gap-1 bg-purple-950/70 hover:bg-purple-900 text-purple-300 px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                              className="min-h-[44px] inline-flex items-center justify-center gap-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
                             >
                               <Gift size={12} />
                               <span>Add Bonus</span>
@@ -3631,9 +3631,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 setEditUserSuspended(!!u.suspended);
                                 setManageUserModalOpen(true);
                               }}
-                              className={`min-h-[44px] inline-flex items-center justify-center gap-1 ${u.suspended ? 'bg-red-950/70 border-red-800/40 text-red-300' : 'bg-slate-800 border-slate-700/40 text-slate-200'} hover:opacity-90 px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-all cursor-pointer border`}
+                              className={`min-h-[44px] inline-flex items-center justify-center gap-1 ${u.suspended ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'} hover:opacity-90 px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-all cursor-pointer border`}
                             >
-                              <Settings size={12} className={u.suspended ? "text-red-400 animate-pulse" : ""} />
+                              <Settings size={12} className={u.suspended ? "text-red-500 animate-pulse" : ""} />
                               <span>{u.suspended ? "Suspended (Manage)" : "Manage User"}</span>
                             </button>
                             <button 
@@ -3647,7 +3647,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 setEditedActiveDeposit(u.activeDeposit);
                                 setEditedTotalDeposit(u.totalDeposit);
                               }}
-                              className="min-h-[44px] inline-flex items-center justify-center gap-1.5 bg-[#10243b] hover:bg-[#15304f] text-[#C59B4E] px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                              className="min-h-[44px] inline-flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
                             >
                               <Edit size={12} />
                               <span>Correct Perf</span>
@@ -3658,10 +3658,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <button 
                               type="button"
                               disabled
-                              className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-slate-900/60 border border-slate-700/40 text-slate-500 px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] cursor-not-allowed opacity-60"
+                              className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-slate-100 border border-slate-200 text-slate-400 px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] cursor-not-allowed opacity-60"
                               title="Primary Administrator Account (Protected Credentials)"
                             >
-                              <ShieldCheck size={12} className="text-purple-400" />
+                              <ShieldCheck size={12} className="text-purple-600" />
                               <span>Protected Administrator</span>
                             </button>
                           ) : (
@@ -3669,16 +3669,16 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               type="button"
                               disabled={isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid}
                               onClick={() => handleInitiateDeleteUser(u)}
-                              className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-red-950/60 hover:bg-red-900 border border-red-800/40 text-red-300 hover:text-white px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer disabled:opacity-50"
+                              className="min-h-[40px] inline-flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 hover:text-red-900 px-3 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer disabled:opacity-50"
                             >
                               {isPermanentlyDeleting && deleteConfirmUser?.uid === u.uid ? (
                                 <>
-                                  <RefreshCw size={12} className="animate-spin text-red-400" />
+                                  <RefreshCw size={12} className="animate-spin text-red-500" />
                                   <span>Deleting User Permanently...</span>
                                 </>
                               ) : (
                                 <>
-                                  <Trash2 size={12} className="text-red-400" />
+                                  <Trash2 size={12} className="text-red-500" />
                                   <span>Delete User Permanently</span>
                                 </>
                               )}
@@ -3694,16 +3694,16 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* 2. TRANSACTION LOG TAB */}
             {activeTab === 'transactions' && (
-              <div className="bg-[#091527] border border-[#112a47] rounded-xl flex flex-col">
-                <div className="p-4 border-b border-[#142f50] flex flex-col md:flex-row gap-3">
+              <div className="bg-white border border-slate-200 rounded-xl flex flex-col shadow-xs">
+                <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row gap-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input 
                       type="text" 
                       placeholder="Filter transactions by user or ID details..." 
                       value={txQuery}
                       onChange={(e) => setTxQuery(e.target.value)}
-                      className="w-full bg-[#06101c] text-xs py-2.5 pl-9 pr-4 rounded-lg text-slate-100 placeholder-slate-500 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden transition-all"
+                      className="w-full bg-slate-50 text-xs py-2.5 pl-9 pr-4 rounded-lg text-slate-800 placeholder-slate-400 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden transition-all"
                     />
                   </div>
                   
@@ -3711,10 +3711,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <select 
                     value={txTypeFilter}
                     onChange={(e) => setTxTypeFilter(e.target.value)}
-                    className="bg-[#06101c] text-xs px-3 py-2.5 rounded-lg border border-[#163356] text-slate-300 focus:outline-hidden"
+                    className="bg-slate-50 text-xs px-3 py-2.5 rounded-lg border border-slate-300 text-slate-700 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-medium"
                   >
                     <option value="All">All Types</option>
                     <option value="Deposit">Deposits Only</option>
+                    <option value="Re-Investment">Re-Investments</option>
                     <option value="Withdrawal">Withdrawals Only</option>
                     <option value="Investment">Investments</option>
                     <option value="Profit">Profits</option>
@@ -3725,18 +3726,20 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <select 
                     value={txStatusFilter}
                     onChange={(e) => setTxStatusFilter(e.target.value)}
-                    className="bg-[#06101c] text-xs px-3 py-2.5 rounded-lg border border-[#163356] text-slate-300 focus:outline-hidden"
+                    className="bg-slate-50 text-xs px-3 py-2.5 rounded-lg border border-slate-300 text-slate-700 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-medium"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Pending">Pending</option>
                     <option value="Approved">Approved</option>
                     <option value="Rejected">Rejected</option>
                   </select>
-                        {/* Transactions Desktop Table */}
+                </div>
+
+                {/* Transactions Desktop Table */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-[#142f50] text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-900/15">
+                      <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50">
                         <th className="p-4">Date & Stamp</th>
                         <th className="p-4">Log Details</th>
                         <th className="p-4">Type</th>
@@ -3746,10 +3749,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         <th className="p-4 text-right">Approval Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#122b49] text-xs font-semibold">
+                    <tbody className="divide-y divide-slate-100 text-xs font-semibold">
                       {filteredTransactions.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-505 text-xs italic">
+                          <td colSpan={7} className="p-8 text-center text-slate-400 text-xs italic">
                             No ledger documents matched current search configurations.
                           </td>
                         </tr>
@@ -3760,21 +3763,21 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           const isPending = tx.status === 'Pending';
                           
                           return (
-                            <tr key={tx.id} className="hover:bg-slate-900/10 transition-colors">
-                              <td className="p-4 text-slate-400 font-mono text-[10px]">
+                            <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="p-4 text-slate-600 font-mono text-[10px]">
                                 <div>{tx.date}</div>
-                                <div className="text-[10px] text-slate-600 mt-0.5">{new Date(tx.timestamp).toLocaleTimeString()}</div>
+                                <div className="text-[10px] text-slate-400 mt-0.5">{new Date(tx.timestamp).toLocaleTimeString()}</div>
                               </td>
                               <td className="p-4">
-                                <div className="font-bold text-white text-xs">{tx.username}</div>
-                                <div className="text-[9px] text-slate-500 font-mono mt-0.5 selection:bg-purple-900/50">ID: {tx.id}</div>
+                                <div className="font-bold text-slate-900 text-xs">{tx.username}</div>
+                                <div className="text-[9px] text-slate-500 font-mono mt-0.5">ID: {tx.id}</div>
                                 {tx.paymentProof && (
                                   <div className="mt-1">
                                     <a 
                                       href={tx.paymentProof} 
                                       target="_blank" 
                                       referrerPolicy="no-referrer" 
-                                      className="text-[#C59B4E] hover:underline text-[10px] inline-flex items-center gap-1 font-semibold"
+                                      className="text-[#B3873B] hover:underline text-[10px] inline-flex items-center gap-1 font-semibold"
                                     >
                                       <Info size={11} />
                                       View Payment Proof Image
@@ -3784,23 +3787,24 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               </td>
                               <td className="p-4">
                                 <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${
-                                  tx.type === 'Deposit' ? 'bg-green-500/10 text-green-400' :
-                                  tx.type === 'Withdrawal' ? 'bg-orange-500/10 text-orange-400' :
-                                  tx.type === 'Investment' ? 'bg-blue-500/10 text-blue-400' :
-                                  tx.type === 'Profit' ? 'bg-[#C59B4E]/10 text-[#C59B4E]' :
-                                  'bg-purple-500/10 text-purple-400'
-                                }}`}>
+                                  tx.type === 'Deposit' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                  tx.type === 'Re-Investment' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                                  tx.type === 'Withdrawal' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                                  tx.type === 'Investment' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                  tx.type === 'Profit' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                                  'bg-purple-50 text-purple-700 border border-purple-200'
+                                }`}>
                                   {tx.type}
                                 </span>
                               </td>
-                              <td className="p-4 font-mono font-bold text-white">{formatCurrency(tx.amount)}</td>
-                              <td className="p-4 font-mono text-xs">{tx.processor}</td>
+                              <td className="p-4 font-mono font-bold text-slate-900">{formatCurrency(tx.amount)}</td>
+                              <td className="p-4 font-mono text-xs text-slate-600">{tx.processor}</td>
                               <td className="p-4">
                                 <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold ${
-                                  tx.status === 'Approved' || tx.status === 'Completed' ? 'bg-green-500/15 text-green-400' :
-                                  tx.status === 'Pending' ? 'bg-amber-500/15 text-amber-400 animate-pulse' :
-                                  'bg-red-500/15 text-red-500'
-                                }}`}>
+                                  tx.status === 'Approved' || tx.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                  tx.status === 'Pending' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
+                                  'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}>
                                   <span>{tx.status}</span>
                                 </span>
                               </td>
@@ -3809,14 +3813,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   <div className="inline-flex gap-1.5">
                                     <button 
                                       onClick={() => handleApproveWithdrawal(tx)}
-                                      className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-sm cursor-pointer"
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-sm cursor-pointer shadow-xs"
                                       title="Approve Payout"
                                     >
                                       <CheckCircle size={15} />
                                     </button>
                                     <button 
                                       onClick={() => handleRejectWithdrawal(tx)}
-                                      className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-sm cursor-pointer"
+                                      className="bg-rose-600 hover:bg-rose-700 text-white p-1 rounded-sm cursor-pointer shadow-xs"
                                       title="Reject/Refund Request"
                                     >
                                       <XCircle size={15} />
@@ -3827,14 +3831,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   <div className="flex gap-1.5 justify-end">
                                     <button 
                                       onClick={() => handleApproveDeposit(tx)}
-                                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2.5 py-1 rounded font-black uppercase tracking-wider cursor-pointer transition-colors shadow"
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2.5 py-1 rounded font-black uppercase tracking-wider cursor-pointer transition-colors shadow-xs"
                                       title="Approve Deposit and Credit Balance"
                                     >
                                       Approve
                                     </button>
                                     <button 
                                       onClick={() => handleRejectDeposit(tx)}
-                                      className="bg-rose-600 hover:bg-rose-500 text-white text-[10px] px-2.5 py-1 rounded font-black uppercase tracking-wider cursor-pointer transition-colors shadow"
+                                      className="bg-rose-600 hover:bg-rose-700 text-white text-[10px] px-2.5 py-1 rounded font-black uppercase tracking-wider cursor-pointer transition-colors shadow-xs"
                                       title="Reject Deposit"
                                     >
                                       Reject
@@ -3854,9 +3858,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 </div>
 
                 {/* Transactions Mobile Card-based view */}
-                <div className="block md:hidden divide-y divide-[#122b49] bg-[#091527] rounded-b-xl overflow-hidden">
+                <div className="block md:hidden divide-y divide-slate-100 bg-white rounded-b-xl overflow-hidden">
                   {filteredTransactions.length === 0 ? (
-                    <div className="p-8 text-center text-slate-505 text-xs italic">
+                    <div className="p-8 text-center text-slate-400 text-xs italic">
                       No ledger documents matched current search configurations.
                     </div>
                   ) : (
@@ -3866,34 +3870,35 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       const isPending = tx.status === 'Pending';
                       
                       return (
-                        <div key={tx.id} className="p-4 hover:bg-slate-900/10 transition-colors flex flex-col gap-3">
+                        <div key={tx.id} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col gap-3">
                           <div className="flex justify-between items-start">
                             <div>
-                              <span className="font-bold text-white text-xs block">{tx.username}</span>
+                              <span className="font-bold text-slate-900 text-xs block">{tx.username}</span>
                               <span className="text-[9px] text-slate-500 font-mono block mt-0.5 truncate max-w-[150px]">ID: {tx.id}</span>
                             </div>
                             <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider block ${
-                              tx.type === 'Deposit' ? 'bg-green-500/10 text-green-400' :
-                              tx.type === 'Withdrawal' ? 'bg-orange-500/10 text-orange-400' :
-                              tx.type === 'Investment' ? 'bg-blue-500/10 text-blue-400' :
-                              tx.type === 'Profit' ? 'bg-[#C59B4E]/10 text-[#C59B4E]' :
-                              'bg-purple-500/10 text-purple-400'
+                              tx.type === 'Deposit' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                              tx.type === 'Re-Investment' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                              tx.type === 'Withdrawal' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                              tx.type === 'Investment' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                              tx.type === 'Profit' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                              'bg-purple-50 text-purple-700 border border-purple-200'
                             }`}>
                               {tx.type}
                             </span>
                           </div>
 
-                          <div className="flex justify-between items-center text-xs bg-[#06101c]/55 p-2.5 rounded-lg border border-[#112a4a]">
+                          <div className="flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-200">
                             <div>
                               <span className="text-slate-500 text-[9px] uppercase font-bold block">Asset Amount</span>
-                              <span className="font-mono font-black text-white text-sm">{formatCurrency(tx.amount)} <span className="text-[10px] text-slate-500 font-normal">via {tx.processor}</span></span>
+                              <span className="font-mono font-black text-slate-900 text-sm">{formatCurrency(tx.amount)} <span className="text-[10px] text-slate-500 font-normal">via {tx.processor}</span></span>
                             </div>
                             <div className="text-right">
                               <span className="text-slate-500 text-[9px] uppercase font-bold block">Log Status</span>
                               <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded font-black tracking-wide ${
-                                tx.status === 'Approved' || tx.status === 'Completed' ? 'bg-green-500/15 text-green-400' :
-                                tx.status === 'Pending' ? 'bg-amber-500/15 text-amber-400 animate-pulse' :
-                                'bg-red-500/15 text-red-500'
+                                tx.status === 'Approved' || tx.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                tx.status === 'Pending' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
+                                'bg-rose-50 text-rose-700 border border-rose-200'
                               }`}>
                                 {tx.status}
                               </span>
@@ -3901,10 +3906,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           </div>
 
                           {/* Timestamp & Payment Proof */}
-                          <div className="flex justify-between items-center text-[10px] text-slate-400">
+                          <div className="flex justify-between items-center text-[10px] text-slate-600">
                             <div>
                               <span className="font-mono block font-semibold">{tx.date}</span>
-                              <span className="text-slate-600 block mt-0.5 font-semibold">{new Date(tx.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                              <span className="text-slate-400 block mt-0.5 font-semibold">{new Date(tx.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                             </div>
                             
                             {tx.paymentProof && (
@@ -3913,7 +3918,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   href={tx.paymentProof} 
                                   target="_blank" 
                                   referrerPolicy="no-referrer" 
-                                  className="text-[#C59B4E] hover:underline min-h-[32px] inline-flex items-center gap-1 font-bold bg-[#C59B4E]/10 border border-[#C59B4E]/20 px-2 py-1 rounded-md transition-colors hover:bg-[#D4A856]/20"
+                                  className="text-[#B3873B] hover:underline min-h-[32px] inline-flex items-center gap-1 font-bold bg-amber-50 border border-amber-200 px-2 py-1 rounded-md transition-colors hover:bg-amber-100"
                                 >
                                   <Info size={11} />
                                   <span>View Proof</span>
@@ -3929,14 +3934,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 <>
                                   <button 
                                     onClick={() => handleApproveWithdrawal(tx)}
-                                    className="flex-grow bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer min-h-[38px]"
+                                    className="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer min-h-[38px] shadow-xs"
                                   >
                                     <CheckCircle size={13} />
                                     <span>Approve</span>
                                   </button>
                                   <button 
                                     onClick={() => handleRejectWithdrawal(tx)}
-                                    className="flex-grow bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer min-h-[38px]"
+                                    className="flex-grow bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer min-h-[38px] shadow-xs"
                                   >
                                     <XCircle size={13} />
                                     <span>Reject</span>
@@ -3947,14 +3952,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 <div className="flex gap-2 w-full">
                                   <button 
                                     onClick={() => handleApproveDeposit(tx)}
-                                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] shadow"
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] shadow-xs"
                                   >
                                     <CheckCircle size={13} />
                                     <span>Approve</span>
                                   </button>
                                   <button 
                                     onClick={() => handleRejectDeposit(tx)}
-                                    className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] shadow"
+                                    className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] shadow-xs"
                                   >
                                     <XCircle size={13} />
                                     <span>Reject</span>
@@ -3972,7 +3977,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       );
                     })
                   )}
-                </div>          </div>
+                </div>
               </div>
             )}
 
@@ -3980,10 +3985,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             {activeTab === 'plans' && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {plans.map((p) => (
-                  <div key={p.id} className="bg-[#091527] border border-[#132d4b] p-5 rounded-xl flex flex-col justify-between">
+                  <div key={p.id} className="bg-white border border-slate-200 p-5 rounded-xl flex flex-col justify-between shadow-xs">
                     <div>
                       <div className="flex justify-between items-start">
-                        <span className="text-xs font-black text-[#C59B4E] tracking-wider uppercase font-mono">{p.dailyRateText}</span>
+                        <span className="text-xs font-black text-[#B3873B] tracking-wider uppercase font-mono">{p.dailyRateText}</span>
                         <div className="flex items-center gap-1.5">
                           <button 
                             onClick={() => {
@@ -3996,37 +4001,37 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               setPlanRateText(p.dailyRateText);
                               setPlanFormOpen(true);
                             }}
-                            className="p-1.5 hover:bg-slate-800 text-blue-400 rounded-sm cursor-pointer"
+                            className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-sm cursor-pointer"
                           >
                             <Edit size={13} />
                           </button>
                           <button 
                             onClick={() => handleDeletePlan(p.id)}
-                            className="p-1.5 hover:bg-slate-800 text-red-500 rounded-sm cursor-pointer"
+                            className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-sm cursor-pointer"
                           >
                             <Trash2 size={13} />
                           </button>
                         </div>
                       </div>
-                      <h3 className="text-md font-black text-white uppercase tracking-tight mt-2 font-display">{p.name}</h3>
-                      <div className="text-[10px] text-slate-500 mt-1 font-semibold selection:bg-purple-900/50">Plan ID: {p.id}</div>
+                      <h3 className="text-md font-black text-slate-900 uppercase tracking-tight mt-2 font-display">{p.name}</h3>
+                      <div className="text-[10px] text-slate-400 mt-1 font-semibold">Plan ID: {p.id}</div>
                       
-                      <div className="grid grid-cols-2 gap-4 mt-4 py-3 border-y border-[#122842] text-xs font-semibold">
+                      <div className="grid grid-cols-2 gap-4 mt-4 py-3 border-y border-slate-100 text-xs font-semibold">
                         <div>
                           <div className="text-[10px] text-slate-500 uppercase">Min Principal</div>
-                          <div className="text-white font-bold font-mono mt-0.5">{formatCurrency(p.min)}</div>
+                          <div className="text-slate-900 font-bold font-mono mt-0.5">{formatCurrency(p.min)}</div>
                         </div>
                         <div>
                           <div className="text-[10px] text-slate-500 uppercase">Max Principal</div>
-                          <div className="text-white font-bold font-mono mt-0.5">{p.max >= 1000000 ? 'Unlimited' : formatCurrency(p.max)}</div>
+                          <div className="text-slate-900 font-bold font-mono mt-0.5">{p.max >= 1000000 ? 'Unlimited' : formatCurrency(p.max)}</div>
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-5 pt-1.5">
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-400 font-semibold font-mono">Term: <strong className="text-white font-bold">{p.term} Days</strong></span>
-                        <span className="text-purple-400 font-black text-sm">{p.roi}% ROI</span>
+                        <span className="text-slate-500 font-semibold font-mono">Term: <strong className="text-slate-900 font-bold">{p.term} Days</strong></span>
+                        <span className="text-purple-700 font-black text-sm">{p.roi}% ROI</span>
                       </div>
                     </div>
                   </div>
@@ -4036,26 +4041,26 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* 4. PLATFORM SETTINGS TAB */}
             {activeTab === 'settings' && (
-              <div className="bg-[#091527] border border-[#112a47] rounded-xl p-6 md:p-8 w-full max-w-4xl">
+              <div className="bg-white border border-slate-200 rounded-xl p-6 md:p-8 w-full max-w-4xl shadow-xs">
                 <form onSubmit={handleSaveGlobalSettings} className="space-y-6">
                   
                   {/* Announcement Banner */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                      <BellRing size={14} className="text-purple-400" />
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <BellRing size={14} className="text-purple-600" />
                       <span>Welcome Banner & News Announcement</span>
                     </label>
                     <textarea 
                       rows={3}
                       value={settings.announcement}
                       onChange={(e) => setSettings({ ...settings, announcement: e.target.value })}
-                      className="bg-[#06101c] text-xs p-3.5 rounded-lg text-slate-100 placeholder-slate-500 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden font-medium"
+                      className="bg-slate-50 text-xs p-3.5 rounded-lg text-slate-800 placeholder-slate-400 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-medium"
                       placeholder="Enter the announcement string displayed on accounts page..."
                     />
                   </div>
 
-                  <div className="border-t border-[#142d4a] pt-4">
-                    <h3 className="text-xs font-black uppercase tracking-wider text-[#C59B4E] mb-4 flex items-center gap-1.5">
+                  <div className="border-t border-slate-200 pt-4">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[#B3873B] mb-4 flex items-center gap-1.5">
                       <Globe size={14} />
                       <span>Cryptocurrency Administrative Receiving Wallets</span>
                     </h3>
@@ -4063,45 +4068,45 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     <div className="space-y-4">
                       {/* USDT TRC20 Wallet */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">USDT TRC20 Wallet Address</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">USDT TRC20 Wallet Address</label>
                         <input 
                           type="text" 
                           value={settings.usdt_trc20_address || ''}
                           onChange={(e) => setSettings({ ...settings, usdt_trc20_address: e.target.value })}
-                          className="bg-[#06101c] font-mono text-xs p-3 rounded-lg text-slate-100 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden"
+                          className="bg-slate-50 font-mono text-xs p-3 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-bold"
                         />
                       </div>
 
                       {/* Bitcoin Wallet */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bitcoin Address</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Bitcoin Address</label>
                         <input 
                           type="text" 
                           value={settings.btc_address || ''}
                           onChange={(e) => setSettings({ ...settings, btc_address: e.target.value })}
-                          className="bg-[#06101c] font-mono text-xs p-3 rounded-lg text-slate-100 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden"
+                          className="bg-slate-50 font-mono text-xs p-3 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-bold"
                         />
                       </div>
 
                       {/* Ethereum Wallet */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Ethereum / ERC-20 Address</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ethereum / ERC-20 Address</label>
                         <input 
                           type="text" 
                           value={settings.eth_address || ''}
                           onChange={(e) => setSettings({ ...settings, eth_address: e.target.value })}
-                          className="bg-[#06101c] font-mono text-xs p-3 rounded-lg text-slate-100 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden"
+                          className="bg-slate-50 font-mono text-xs p-3 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-bold"
                         />
                       </div>
 
                       {/* USDT ERC20 Wallet */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">USDT ERC20 Wallet Address</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">USDT ERC20 Wallet Address</label>
                         <input 
                           type="text" 
                           value={settings.usdt_erc20_address || ''}
                           onChange={(e) => setSettings({ ...settings, usdt_erc20_address: e.target.value })}
-                          className="bg-[#06101c] font-mono text-xs p-3 rounded-lg text-slate-100 border border-[#163356] focus:border-[#C59B4E] focus:outline-hidden"
+                          className="bg-slate-50 font-mono text-xs p-3 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:bg-white focus:outline-hidden font-bold"
                         />
                       </div>
                     </div>
@@ -4111,7 +4116,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <div className="pt-4 flex justify-end">
                     <button 
                       type="submit"
-                      className="bg-[#C59B4E] hover:bg-[#A98035] text-white font-bold py-3 px-6 rounded-lg text-xs uppercase tracking-wider shadow-lg transition-transform cursor-pointer"
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded-lg text-xs uppercase tracking-wider shadow-sm transition-transform cursor-pointer"
                     >
                       Synchronize Settings
                     </button>
@@ -4123,13 +4128,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             {/* 5. PASSWORD & SECURITY SUBMENU */}
             {activeTab === 'password_security' && (
               <div className="flex flex-col gap-6 w-full max-w-2xl animate-in fade-in duration-300">
-                <div className="bg-[#091527] border border-[#1a385e] rounded-2xl p-6 sm:p-8 shadow-xl">
-                  <div className="pb-4 border-b border-[#142d4a] mb-6">
-                    <h2 className="text-base font-black text-white uppercase font-display tracking-wider flex items-center gap-2">
-                      <ShieldCheck size={18} className="text-[#C59B4E]" />
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs">
+                  <div className="pb-4 border-b border-slate-200 mb-6">
+                    <h2 className="text-base font-black text-slate-900 uppercase font-display tracking-wider flex items-center gap-2">
+                      <ShieldCheck size={18} className="text-[#B3873B]" />
                       <span>Change Password</span>
                     </h2>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-600 mt-1">
                       Verify your current password to update your administrator credentials. The updated password will become the only valid password.
                     </p>
                   </div>
@@ -4137,13 +4142,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   {passwordUpdateStatus && (
                     <div className={`p-4 rounded-xl text-xs font-medium mb-6 flex items-start gap-2.5 ${
                       passwordUpdateStatus.type === 'success' 
-                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' 
-                        : 'bg-red-500/10 border border-red-500/30 text-red-300'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' 
+                        : 'bg-rose-50 border border-rose-200 text-rose-800'
                     }`}>
                       {passwordUpdateStatus.type === 'success' ? (
-                        <CheckCircle size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                        <CheckCircle size={16} className="text-emerald-600 shrink-0 mt-0.5" />
                       ) : (
-                        <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                        <XCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
                       )}
                       <span>{passwordUpdateStatus.message}</span>
                     </div>
@@ -4152,11 +4157,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <form onSubmit={handleChangeAdminPassword} className="space-y-5">
                     {/* CURRENT PASSWORD */}
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                        CURRENT PASSWORD <span className="text-red-400">*</span>
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        CURRENT PASSWORD <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
                           <Lock size={15} />
                         </span>
                         <input 
@@ -4165,18 +4170,18 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           onChange={(e) => setCurrentPasswordInput(e.target.value)}
                           placeholder="Enter current administrator password"
                           required
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-3 pl-11 pr-4 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl py-3 pl-11 pr-4 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                       </div>
                     </div>
 
                     {/* NEW PASSWORD */}
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                        NEW PASSWORD <span className="text-red-400">*</span>
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        NEW PASSWORD <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
                           <Key size={15} />
                         </span>
                         <input 
@@ -4186,18 +4191,18 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           placeholder="Enter new administrator password"
                           required
                           minLength={6}
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-3 pl-11 pr-4 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl py-3 pl-11 pr-4 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                       </div>
                     </div>
 
                     {/* CONFIRM NEW PASSWORD */}
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                        CONFIRM NEW PASSWORD <span className="text-red-400">*</span>
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        CONFIRM NEW PASSWORD <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
                           <CheckCircle size={15} />
                         </span>
                         <input 
@@ -4207,21 +4212,21 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           placeholder="Confirm new administrator password"
                           required
                           minLength={6}
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-3 pl-11 pr-4 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl py-3 pl-11 pr-4 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                       </div>
                     </div>
 
                     <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                        <Info size={13} className="text-[#C59B4E] shrink-0" />
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                        <Info size={13} className="text-[#B3873B] shrink-0" />
                         <span>The old password immediately stops working once updated.</span>
                       </div>
 
                       <button
                         type="submit"
                         disabled={isUpdatingPassword}
-                        className="w-full sm:w-auto bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 text-white font-bold py-3 px-7 rounded-xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3 px-7 rounded-xl text-xs uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
                       >
                         {isUpdatingPassword ? (
                           <>
@@ -4242,36 +4247,36 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             {activeTab === 'live_support' && (
               <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300">
                 {/* Top Metrics & Subtab Navigation */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#091527] border border-[#1a385e] rounded-2xl p-4 sm:p-5 shadow-xl">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#C59B4E]/10 border border-[#C59B4E]/30 flex items-center justify-center text-[#C59B4E]">
+                    <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#B3873B]">
                       <Headphones size={24} />
                     </div>
                     <div>
-                      <h2 className="text-base font-black text-white uppercase font-display tracking-wider flex items-center gap-2">
+                      <h2 className="text-base font-black text-slate-900 uppercase font-display tracking-wider flex items-center gap-2">
                         <span>24/7 Live Support Command Center</span>
                       </h2>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         Manage incoming visitor questions in real-time and customize automated bot responses.
                       </p>
                     </div>
                   </div>
 
                   {/* Sub-tabs pills */}
-                  <div className="flex items-center gap-2 bg-[#06101c] p-1.5 rounded-xl border border-[#152e4f]">
+                  <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                     <button
                       type="button"
                       onClick={() => setSupportSubTab('chats')}
                       className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                         supportSubTab === 'chats'
-                          ? 'bg-[#C59B4E] text-[#081627] shadow-sm'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <MessageSquare size={14} />
                       <span>Live Inquiries</span>
                       {unreadSupportCount > 0 && (
-                        <span className="bg-[#f59e0b] text-[#081627] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
+                        <span className="bg-amber-400 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
                           {unreadSupportCount}
                         </span>
                       )}
@@ -4281,13 +4286,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       onClick={() => setSupportSubTab('autoreply')}
                       className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                         supportSubTab === 'autoreply'
-                          ? 'bg-[#C59B4E] text-[#081627] shadow-sm'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <Bot size={14} />
                       <span>Auto-Reply Settings</span>
-                      <span className={`w-2 h-2 rounded-full ${autoReplySettings.enabled ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                      <span className={`w-2 h-2 rounded-full ${autoReplySettings.enabled ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                     </button>
                   </div>
                 </div>
@@ -4296,16 +4301,16 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 {supportSubTab === 'chats' && (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     {/* Left: Chat Sessions List (5 cols) */}
-                    <div className="lg:col-span-4 bg-[#091527] border border-[#1a385e] rounded-2xl p-4 shadow-xl flex flex-col gap-3 min-h-[560px]">
-                      <div className="flex items-center justify-between pb-3 border-b border-[#142d4a]">
+                    <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col gap-3 min-h-[560px]">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                         <div className="flex items-center gap-2">
-                          <MessageCircle size={16} className="text-[#C59B4E]" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                          <MessageCircle size={16} className="text-[#B3873B]" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                             Client Inquiries ({supportSessions.length})
                           </h3>
                         </div>
                         {unreadSupportCount > 0 && (
-                          <span className="text-[11px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                             {unreadSupportCount} Unread
                           </span>
                         )}
@@ -4313,7 +4318,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                       {/* Search box */}
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500 pointer-events-none">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
                           <Search size={14} />
                         </span>
                         <input
@@ -4321,7 +4326,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           value={supportSearchQuery}
                           onChange={(e) => setSupportSearchQuery(e.target.value)}
                           placeholder="Search conversations..."
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                       </div>
 
@@ -4329,9 +4334,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       <div className="flex-1 overflow-y-auto space-y-2 max-h-[460px] pr-1">
                         {supportSessions.length === 0 ? (
                           <div className="text-center py-12 px-4 text-slate-500">
-                            <Headphones size={32} className="mx-auto mb-2 opacity-40 text-[#C59B4E]" />
-                            <p className="text-xs font-medium text-slate-400">No active inquiries</p>
-                            <p className="text-[11px] text-slate-600 mt-1">
+                            <Headphones size={32} className="mx-auto mb-2 opacity-40 text-[#B3873B]" />
+                            <p className="text-xs font-medium text-slate-700">No active inquiries</p>
+                            <p className="text-[11px] text-slate-500 mt-1">
                               When visitors ask questions on the live chat, their conversations appear here in real-time.
                             </p>
                           </div>
@@ -4353,25 +4358,25 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   onClick={() => setSelectedSessionId(s.id)}
                                   className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 relative ${
                                     isSelected
-                                      ? 'bg-[#12243d] border-[#C59B4E] shadow-md'
-                                      : 'bg-[#06101c]/60 border-[#152e4f] hover:bg-[#0c1c33] hover:border-[#204473]'
+                                      ? 'bg-amber-50/70 border-amber-400 shadow-xs'
+                                      : 'bg-slate-50/80 border-slate-200 hover:bg-slate-100/70 hover:border-slate-300'
                                   }`}
                                 >
                                   <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold text-white truncate max-w-[160px]">
+                                    <span className="text-xs font-bold text-slate-900 truncate max-w-[160px]">
                                       {s.userName || s.userEmail || 'Guest Visitor'}
                                     </span>
-                                    <span className="text-[10px] text-slate-400 font-mono">
+                                    <span className="text-[10px] text-slate-500 font-mono">
                                       {s.messages && s.messages.length > 0 ? s.messages[s.messages.length - 1].timestamp : ''}
                                     </span>
                                   </div>
 
                                   <div className="flex items-center justify-between">
-                                    <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                                    <p className="text-[11px] text-slate-600 truncate max-w-[200px]">
                                       {s.lastMessage || (s.messages?.[s.messages.length - 1]?.text) || 'New conversation'}
                                     </p>
                                     {s.unreadByAdmin && (
-                                      <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shadow-xs shrink-0" title="Unread message" />
+                                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs shrink-0" title="Unread message" />
                                     )}
                                   </div>
 
@@ -4386,14 +4391,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     </div>
 
                     {/* Right: Active Chat View (8 cols) */}
-                    <div className="lg:col-span-8 bg-[#091527] border border-[#1a385e] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px]">
+                    <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col h-[560px]">
                       {(() => {
                         const activeSession = supportSessions.find(s => s.id === selectedSessionId) || null;
                         if (!activeSession) {
                           return (
                             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
-                              <MessageSquare size={40} className="mb-3 text-[#C59B4E]/60 opacity-60" />
-                              <h3 className="text-sm font-bold text-slate-300">Select an Inquiry to Respond</h3>
+                              <MessageSquare size={40} className="mb-3 text-[#B3873B]/60 opacity-60" />
+                              <h3 className="text-sm font-bold text-slate-700">Select an Inquiry to Respond</h3>
                               <p className="text-xs text-slate-500 max-w-sm mt-1">
                                 Choose a conversation from the left to view user questions and send real-time answers directly to their screen.
                               </p>
@@ -4404,21 +4409,21 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                         return (
                           <div className="flex-1 flex flex-col h-full min-h-0">
                             {/* Thread Header */}
-                            <div className="flex items-center justify-between pb-3 border-b border-[#142d4a] shrink-0">
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-200 shrink-0">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-[#112136] border border-[#C59B4E]/40 flex items-center justify-center text-[#C59B4E]">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[#B3873B]">
                                   <Headphones size={18} />
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <h4 className="text-xs font-bold text-white uppercase">
+                                    <h4 className="text-xs font-bold text-slate-900 uppercase">
                                       {activeSession.userName || 'Client'}
                                     </h4>
-                                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                                       Connected
                                     </span>
                                   </div>
-                                  <p className="text-[11px] text-slate-400 font-mono">
+                                  <p className="text-[11px] text-slate-500 font-mono">
                                     {activeSession.userEmail}
                                   </p>
                                 </div>
@@ -4427,7 +4432,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSession(activeSession.id)}
-                                className="text-slate-400 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
+                                className="text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
                                 title="Delete Conversation"
                               >
                                 <Trash2 size={16} />
@@ -4435,29 +4440,29 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             </div>
 
                             {/* Chat Messages Stream */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[#06101c] rounded-xl my-3 border border-[#142d4e]">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50 rounded-xl my-3 border border-slate-200">
                               {activeSession.messages && activeSession.messages.length > 0 ? (
                                 activeSession.messages.map((m) => (
                                   <div
                                     key={m.id}
                                     className={`flex flex-col ${m.sender === 'support' ? 'items-end' : 'items-start'}`}
                                   >
-                                    <div className="text-[10px] font-bold text-slate-400 mb-1">
+                                    <div className="text-[10px] font-bold text-slate-500 mb-1">
                                       {m.sender === 'support' ? 'Support Specialist (You)' : (activeSession.userName || 'Client')}
                                     </div>
                                     {m.sender === 'support' ? (
-                                      <div className="bg-[#0e213b] text-slate-100 border border-[#1a3e6b] text-xs px-4 py-2.5 rounded-2xl rounded-tr-xs shadow-xs max-w-[80%] leading-relaxed break-words">
+                                      <div className="bg-slate-900 text-white border border-slate-800 text-xs px-4 py-2.5 rounded-2xl rounded-tr-xs shadow-xs max-w-[80%] leading-relaxed break-words">
                                         {m.text}
                                       </div>
                                     ) : (
-                                      <div className="bg-[#C59B4E] text-slate-900 font-medium text-xs px-4 py-2.5 rounded-2xl rounded-tl-xs shadow-xs max-w-[80%] leading-relaxed break-words">
+                                      <div className="bg-amber-100 text-slate-900 font-medium text-xs px-4 py-2.5 rounded-2xl rounded-tl-xs shadow-xs max-w-[80%] leading-relaxed break-words border border-amber-200">
                                         {m.text}
                                       </div>
                                     )}
                                     <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500 font-mono">
                                       <span>{m.timestamp}</span>
                                       {m.sender === 'support' && (
-                                        <CheckCheck size={13} className="text-[#C59B4E]" />
+                                        <CheckCheck size={13} className="text-emerald-500" />
                                       )}
                                     </div>
                                   </div>
@@ -4471,7 +4476,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                             {/* Quick Response Templates Bar */}
                             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 shrink-0 mb-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0">
                                 Quick Fill:
                               </span>
                               {[
@@ -4485,7 +4490,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                   key={idx}
                                   type="button"
                                   onClick={() => setAdminReplyInput(tmpl.text)}
-                                  className="text-[10px] bg-[#10243d] hover:bg-[#19375e] text-slate-300 hover:text-white px-2.5 py-1 rounded-md border border-[#1b3a62] whitespace-nowrap transition-colors cursor-pointer"
+                                  className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 px-2.5 py-1 rounded-md border border-slate-300 whitespace-nowrap transition-colors cursor-pointer"
                                 >
                                   {tmpl.label}
                                 </button>
@@ -4499,12 +4504,12 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                                 value={adminReplyInput}
                                 onChange={(e) => setAdminReplyInput(e.target.value)}
                                 placeholder={`Reply directly to ${activeSession.userName || 'client'}...`}
-                                className="flex-1 bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                                className="flex-1 bg-white border border-slate-300 focus:border-[#B3873B] rounded-xl py-2.5 px-3.5 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                               />
                               <button
                                 type="submit"
                                 disabled={!adminReplyInput.trim() || isSendingAdminReply}
-                                className="bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                                className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs"
                               >
                                 {isSendingAdminReply ? (
                                   <Activity size={14} className="animate-spin" />
@@ -4523,38 +4528,38 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                 {/* Sub-tab 2: Auto-Reply & Bot Rules Configuration */}
                 {supportSubTab === 'autoreply' && (
-                  <div className="bg-[#091527] border border-[#1a385e] rounded-2xl p-6 sm:p-8 shadow-xl max-w-4xl">
-                    <div className="pb-4 border-b border-[#142d4a] mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs max-w-4xl">
+                    <div className="pb-4 border-b border-slate-200 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
-                        <h3 className="text-base font-black text-white uppercase font-display tracking-wider flex items-center gap-2">
-                          <Bot size={18} className="text-[#C59B4E]" />
+                        <h3 className="text-base font-black text-slate-900 uppercase font-display tracking-wider flex items-center gap-2">
+                          <Bot size={18} className="text-[#B3873B]" />
                           <span>Automated Response Rules</span>
                         </h3>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-slate-600 mt-1">
                           Edit the automated replies sent to visitors when they initiate chats or click quick support topics.
                         </p>
                       </div>
 
                       {/* Master Toggle */}
-                      <label className="flex items-center gap-3 cursor-pointer bg-[#06101c] px-4 py-2.5 rounded-xl border border-[#163356]">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      <label className="flex items-center gap-3 cursor-pointer bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                           Auto-Reply Bot:
                         </span>
                         <input
                           type="checkbox"
                           checked={autoReplySettings.enabled}
                           onChange={(e) => setAutoReplySettings(prev => ({ ...prev, enabled: e.target.checked }))}
-                          className="w-4 h-4 accent-[#C59B4E] rounded cursor-pointer"
+                          className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                         />
-                        <span className={`text-xs font-bold ${autoReplySettings.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        <span className={`text-xs font-bold ${autoReplySettings.enabled ? 'text-emerald-600' : 'text-slate-400'}`}>
                           {autoReplySettings.enabled ? 'ACTIVE' : 'DISABLED'}
                         </span>
                       </label>
                     </div>
 
                     {autoReplySaveStatus && (
-                      <div className="p-4 rounded-xl text-xs font-medium mb-6 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2">
-                        <CheckCircle size={16} className="text-emerald-400 shrink-0" />
+                      <div className="p-4 rounded-xl text-xs font-medium mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2">
+                        <CheckCircle size={16} className="text-emerald-600 shrink-0" />
                         <span>{autoReplySaveStatus}</span>
                       </div>
                     )}
@@ -4562,9 +4567,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                     <form onSubmit={handleSaveAutoReplySettings} className="space-y-6">
                       {/* Default Welcome / Reviewing Auto-Reply */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between">
                           <span>1. Default Live Chat Greeting & Review Message</span>
-                          <span className="text-[10px] text-[#C59B4E] font-normal">Sent for any general user message</span>
+                          <span className="text-[10px] text-[#B3873B] font-bold">Sent for any general user message</span>
                         </label>
                         <textarea
                           rows={3}
@@ -4572,7 +4577,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           onChange={(e) => setAutoReplySettings(prev => ({ ...prev, defaultReply: e.target.value }))}
                           placeholder="Thank you for reaching out! A support specialist is reviewing your inquiry and will guide you momentarily."
                           required
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                         <span className="text-[11px] text-slate-500">
                           Matches the exact wording shown in your visitor support popup.
@@ -4581,56 +4586,56 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                       {/* Deposit Help Auto-Reply */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between">
                           <span>2. "Deposit Help" Topic Response</span>
-                          <span className="text-[10px] text-[#C59B4E] font-normal">Triggered when user clicks "Deposit Help" chip</span>
+                          <span className="text-[10px] text-[#B3873B] font-bold">Triggered when user clicks "Deposit Help" chip</span>
                         </label>
                         <textarea
                           rows={3}
                           value={autoReplySettings.depositReply}
                           onChange={(e) => setAutoReplySettings(prev => ({ ...prev, depositReply: e.target.value }))}
                           required
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                       </div>
 
                       {/* Withdrawal Info Auto-Reply */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between">
                           <span>3. "Withdrawal Info" Topic Response</span>
-                          <span className="text-[10px] text-[#C59B4E] font-normal">Triggered when user clicks "Withdrawal Info" chip</span>
+                          <span className="text-[10px] text-[#B3873B] font-bold">Triggered when user clicks "Withdrawal Info" chip</span>
                         </label>
                         <textarea
                           rows={3}
                           value={autoReplySettings.withdrawalReply}
                           onChange={(e) => setAutoReplySettings(prev => ({ ...prev, withdrawalReply: e.target.value }))}
                           required
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                       </div>
 
                       {/* Plans & Rates Auto-Reply */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between">
                           <span>4. "Plans & Rates" Topic Response</span>
-                          <span className="text-[10px] text-[#C59B4E] font-normal">Triggered when user clicks "Plans & Rates" chip</span>
+                          <span className="text-[10px] text-[#B3873B] font-bold">Triggered when user clicks "Plans & Rates" chip</span>
                         </label>
                         <textarea
                           rows={3}
                           value={autoReplySettings.plansReply}
                           onChange={(e) => setAutoReplySettings(prev => ({ ...prev, plansReply: e.target.value }))}
                           required
-                          className="w-full bg-[#06101c] border border-[#163356] focus:border-[#C59B4E] rounded-xl p-3.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
+                          className="w-full bg-slate-50 border border-slate-300 focus:border-[#B3873B] focus:bg-white rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors"
                         />
                       </div>
 
                       {/* Typing Simulation Delay */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-[#06101c] border border-[#163356]">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                             Typing Indicator Delay (Seconds)
                           </h4>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
+                          <p className="text-[11px] text-slate-500 mt-0.5">
                             Simulates authentic agent typing duration before auto-reply appears.
                           </p>
                         </div>
@@ -4641,15 +4646,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                           max="10"
                           value={autoReplySettings.typingDelaySeconds || 1.2}
                           onChange={(e) => setAutoReplySettings(prev => ({ ...prev, typingDelaySeconds: parseFloat(e.target.value) || 1.2 }))}
-                          className="w-24 bg-[#091527] border border-[#1a385e] rounded-lg py-2 px-3 text-xs text-white font-mono text-center outline-none"
+                          className="w-24 bg-white border border-slate-300 rounded-lg py-2 px-3 text-xs text-slate-900 font-mono text-center outline-none"
                         />
                       </div>
 
-                      <div className="pt-4 border-t border-[#142d4a] flex items-center justify-end">
+                      <div className="pt-4 border-t border-slate-200 flex items-center justify-end">
                         <button
                           type="submit"
                           disabled={isSavingAutoReply}
-                          className="bg-[#C59B4E] hover:bg-[#A98035] disabled:opacity-50 text-slate-900 font-bold py-3 px-8 rounded-xl text-xs uppercase tracking-wider shadow-lg flex items-center gap-2 transition-all cursor-pointer"
+                          className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3 px-8 rounded-xl text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 transition-all cursor-pointer"
                         >
                           {isSavingAutoReply ? (
                             <>
@@ -4676,17 +4681,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 1: EDIT USER BALANCE MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh]">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh]">
             
-            <div className="flex justify-between items-center pb-2.5 border-b border-[#142d4a] shrink-0">
+            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-white uppercase font-display tracking-wide">Adjust User Performance</h3>
-                <span className="text-[10px] font-bold text-slate-400 block mt-0.5 truncate max-w-[250px]">Target Profile: {editingUser.username}</span>
+                <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-wide">Adjust User Performance</h3>
+                <span className="text-[10px] font-bold text-slate-500 block mt-0.5 truncate max-w-[250px]">Target Profile: {editingUser.username}</span>
               </div>
               <button 
                 onClick={() => setEditingUser(null)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
@@ -4697,101 +4702,101 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               
               {/* Main Account Balance */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-sky-400 uppercase tracking-wide font-bold">Main Account Balance ($)</label>
+                <label className="text-[10px] text-sky-700 uppercase tracking-wide font-bold">Main Account Balance ($)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={editedMainAccountBalance}
                   onChange={(e) => setEditedMainAccountBalance(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2 rounded-lg text-slate-200 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
               {/* Account Balance */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Account Balance ($)</label>
+                <label className="text-[10px] text-slate-600 uppercase tracking-wide font-bold">Account Balance ($)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={editedBalance}
                   onChange={(e) => setEditedBalance(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2 rounded-lg text-slate-200 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
               {/* Active Deposit */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#C59B4E] uppercase tracking-wide font-bold">Active Deposit ($)</label>
+                <label className="text-[10px] text-[#B3873B] uppercase tracking-wide font-bold">Active Deposit ($)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={editedActiveDeposit}
                   onChange={(e) => setEditedActiveDeposit(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2 rounded-lg text-slate-200 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
               {/* Total Earned */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-green-400 uppercase tracking-wide font-bold">Earned Total ($)</label>
+                <label className="text-[10px] text-emerald-700 uppercase tracking-wide font-bold">Earned Total ($)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={editedEarned}
                   onChange={(e) => setEditedEarned(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2 rounded-lg text-slate-200 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
               {/* Pending Withdrawals */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-orange-400 uppercase tracking-wide font-bold">Pending Withdrawal ($)</label>
+                <label className="text-[10px] text-orange-700 uppercase tracking-wide font-bold">Pending Withdrawal ($)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={editedPendingWithdrawal}
                   onChange={(e) => setEditedPendingWithdrawal(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2 rounded-lg text-slate-200 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
               {/* Total Deposit */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Total Deposit ($)</label>
+                <label className="text-[10px] text-slate-600 uppercase tracking-wide font-bold">Total Deposit ($)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={editedTotalDeposit}
                   onChange={(e) => setEditedTotalDeposit(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2 rounded-lg text-slate-200 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
               {/* Total Withdrawn */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Total Withdrew ($)</label>
+                <label className="text-[10px] text-slate-600 uppercase tracking-wide font-bold">Total Withdrew ($)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={editedWithdrew}
                   onChange={(e) => setEditedWithdrew(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2 rounded-lg text-slate-200 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 justify-end pt-2 border-t border-[#142d4a]">
+            <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
               <button 
                 onClick={() => setEditingUser(null)}
-                className="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                className="bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleSaveUserMetrics}
-                className="bg-[#C59B4E] hover:bg-[#A98035] text-xs text-white font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-700 text-xs text-white font-bold px-4 py-2.5 rounded-lg cursor-pointer"
               >
                 Apply Adjustments
               </button>
@@ -4803,17 +4808,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 2: AWARD ADMINISTRATIVE BONUS MODAL */}
       {bonusModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
             
-            <div className="flex justify-between items-center pb-2.5 border-b border-[#142d4a] shrink-0">
+            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-white uppercase font-display tracking-widest">Award Bonus Dividend</h3>
-                <span className="text-[10px] font-semibold text-slate-400 block mt-0.5">Increments account balance & logs activity.</span>
+                <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-widest">Award Bonus Dividend</h3>
+                <span className="text-[10px] font-semibold text-slate-500 block mt-0.5">Increments account balance & logs activity.</span>
               </div>
               <button 
                 onClick={() => setBonusModalOpen(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
@@ -4823,14 +4828,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               
               {/* Select User */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Target Recipient</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Target Recipient</label>
                 {bonusUser ? (
-                  <div className="bg-[#06101c] text-xs p-2.5 rounded-lg text-sky-400 font-semibold border border-[#153457] flex justify-between items-center">
+                  <div className="bg-slate-50 text-xs p-2.5 rounded-lg text-purple-700 font-semibold border border-slate-300 flex justify-between items-center">
                     <span>{users.find(u => u.uid === bonusUser)?.username || bonusUser}</span>
                     <button 
                       type="button" 
                       onClick={() => setBonusUser('')}
-                      className="text-[10px] hover:text-red-400 underline font-bold"
+                      className="text-[10px] hover:text-red-500 underline font-bold"
                     >
                       Reset / Select Another
                     </button>
@@ -4839,7 +4844,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <select 
                     value={bonusUser}
                     onChange={(e) => setBonusUser(e.target.value)}
-                    className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457] font-semibold text-sky-400 font-semibold"
+                    className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 font-semibold"
                     required
                   >
                     <option value="">-- Choose Account --</option>
@@ -4852,25 +4857,25 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
               {/* Bonus Amount */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Dividend Sum ($)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Dividend Sum ($)</label>
                 <input 
                   type="number" 
                   placeholder="e.g. 150"
                   step="any"
                   value={bonusAmount}
                   onChange={(e) => setBonusAmount(e.target.value)}
-                  className="bg-[#06101c] text-xs font-mono p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               {/* Processor Wallet type */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Processor Ledger Key</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Processor Ledger Key</label>
                 <select 
                   value={bonusProcessor}
                   onChange={(e) => setBonusProcessor(e.target.value as any)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 >
                   <option value="USDT TRC20">USDT TRC20</option>
                   <option value="Bitcoin">Bitcoin (BTC)</option>
@@ -4879,17 +4884,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 </select>
               </div>
 
-              <div className="flex gap-2 justify-end pt-2 border-t border-[#142d4a]">
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
                 <button 
                   type="button"
                   onClick={() => setBonusModalOpen(false)}
-                  className="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                  className="bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="bg-purple-600 hover:bg-purple-700 text-xs text-white font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                  className="bg-purple-600 hover:bg-purple-700 text-xs text-white font-bold px-4 py-2.5 rounded-lg cursor-pointer shadow-xs"
                 >
                   Commit Bonus Dividend
                 </button>
@@ -4902,17 +4907,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 2.5: ADD ADMINISTRATIVE MONEY MODAL */}
       {addMoneyModalOpen && (
-        <div id="add-money-modal" className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
+        <div id="add-money-modal" className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
             
-            <div className="flex justify-between items-center pb-2.5 border-b border-[#142d4a] shrink-0">
+            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-white uppercase font-display tracking-widest">Adjust Balance Ledger</h3>
-                <span className="text-[10px] font-semibold text-slate-400 block mt-0.5">Deposit, award profit, or reduce balance directly.</span>
+                <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-widest">Adjust Balance Ledger</h3>
+                <span className="text-[10px] font-semibold text-slate-500 block mt-0.5">Deposit, award profit, or reduce balance directly.</span>
               </div>
               <button 
                 onClick={() => setAddMoneyModalOpen(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
@@ -4922,14 +4927,14 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               
               {/* Select User */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Target Recipient</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Target Recipient</label>
                 {addMoneyUser ? (
-                  <div className="bg-[#06101c] text-xs p-2.5 rounded-lg text-[#C59B4E] font-semibold border border-[#153457] flex justify-between items-center">
+                  <div className="bg-slate-50 text-xs p-2.5 rounded-lg text-[#B3873B] font-semibold border border-slate-300 flex justify-between items-center">
                     <span>{users.find(u => u.uid === addMoneyUser)?.username || addMoneyUser}</span>
                     <button 
                       type="button" 
                       onClick={() => setAddMoneyUser('')}
-                      className="text-[10px] hover:text-red-400 underline font-bold"
+                      className="text-[10px] hover:text-red-500 underline font-bold"
                     >
                       Reset / Select Another
                     </button>
@@ -4938,7 +4943,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   <select 
                     value={addMoneyUser}
                     onChange={(e) => setAddMoneyUser(e.target.value)}
-                    className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457] font-semibold"
+                    className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 font-semibold"
                     required
                   >
                     <option value="">-- Choose Account --</option>
@@ -4951,26 +4956,26 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
               {/* Operation type select toggles */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">ledger Operation Type</label>
-                <div className="grid grid-cols-3 gap-1.5 bg-[#06101c] p-1.5 rounded-lg border border-[#153457]">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">ledger Operation Type</label>
+                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1.5 rounded-lg border border-slate-200">
                   <button
                     type="button"
                     onClick={() => setAddMoneyType('Deposit')}
-                    className={`py-2 px-1 text-[9px] uppercase font-black tracking-wider rounded-md transition-all cursor-pointer ${addMoneyType === 'Deposit' ? 'bg-[#C59B4E] text-slate-950 font-bold shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    className={`py-2 px-1 text-[9px] uppercase font-black tracking-wider rounded-md transition-all cursor-pointer ${addMoneyType === 'Deposit' ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     Add Deposit
                   </button>
                   <button
                     type="button"
                     onClick={() => setAddMoneyType('Profit')}
-                    className={`py-2 px-1 text-[9px] uppercase font-black tracking-wider rounded-md transition-all cursor-pointer ${addMoneyType === 'Profit' ? 'bg-[#C59B4E] text-slate-950 font-bold shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    className={`py-2 px-1 text-[9px] uppercase font-black tracking-wider rounded-md transition-all cursor-pointer ${addMoneyType === 'Profit' ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     Add Profit
                   </button>
                   <button
                     type="button"
                     onClick={() => setAddMoneyType('Reduce')}
-                    className={`py-2 px-1 text-[9px] uppercase font-black tracking-wider rounded-md transition-all cursor-pointer ${addMoneyType === 'Reduce' ? 'bg-red-500 text-white font-bold shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    className={`py-2 px-1 text-[9px] uppercase font-black tracking-wider rounded-md transition-all cursor-pointer ${addMoneyType === 'Reduce' ? 'bg-rose-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     Reduce Bal
                   </button>
@@ -4979,7 +4984,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
               {/* Money Amount */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                   {addMoneyType === 'Reduce' ? "Amount to Deduct ($)" : "Amount to Credit ($)"}
                 </label>
                 <input 
@@ -4988,18 +4993,18 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   step="any"
                   value={addMoneyAmount}
                   onChange={(e) => setAddMoneyAmount(e.target.value)}
-                  className="bg-[#06101c] text-xs font-mono p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               {/* Processor Wallet type */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Processor Ledger Key & Network</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Processor Ledger Key & Network</label>
                 <select 
                   value={addMoneyProcessor}
                   onChange={(e) => setAddMoneyProcessor(e.target.value as any)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 >
                   <option value="USDT TRC20">USDT TRC20</option>
                   <option value="Bitcoin">Bitcoin (BTC)</option>
@@ -5008,17 +5013,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 </select>
               </div>
 
-              <div className="flex gap-2 justify-end pt-2 border-t border-[#142d4a]">
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
                 <button 
                   type="button"
                   onClick={() => setAddMoneyModalOpen(false)}
-                  className="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                  className="bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className={`text-xs text-slate-950 font-black uppercase tracking-wider px-4 py-2.5 rounded-lg cursor-pointer ${addMoneyType === 'Reduce' ? 'bg-red-400 hover:bg-red-500 text-slate-950' : 'bg-[#C59B4E] hover:bg-[#D4A856]'}`}
+                  className={`text-xs text-white font-black uppercase tracking-wider px-4 py-2.5 rounded-lg cursor-pointer shadow-xs ${addMoneyType === 'Reduce' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-600 hover:bg-amber-700'}`}
                 >
                   {addMoneyType === 'Reduce' ? "Execute Deduction" : "Confirm Ledger Credit"}
                 </button>
@@ -5031,17 +5036,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 2.6: ADD USER MODAL */}
       {addUserModalOpen && (
-        <div id="add-user-modal" className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
+        <div id="add-user-modal" className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
             
-            <div className="flex justify-between items-center pb-2.5 border-b border-[#142d4a] shrink-0">
+            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-white uppercase font-display tracking-widest">Create New User Profile</h3>
-                <span className="text-[10px] font-semibold text-slate-400 block mt-0.5">Creates a brand-new registered client directory.</span>
+                <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-widest">Create New User Profile</h3>
+                <span className="text-[10px] font-semibold text-slate-500 block mt-0.5">Creates a brand-new registered client directory.</span>
               </div>
               <button 
                 onClick={() => setAddUserModalOpen(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
@@ -5050,63 +5055,63 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             <form onSubmit={handleCreateUser} className="space-y-4 overflow-y-auto pr-1 max-h-[70vh] text-xs font-semibold">
               
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Client Username</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Client Username</label>
                 <input 
                   type="text" 
                   placeholder="e.g. janesmith"
                   value={addUserName}
                   onChange={(e) => setAddUserName(e.target.value)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Client Full Name</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Client Full Name</label>
                 <input 
                   type="text" 
                   placeholder="e.g. Jane Smith"
                   value={addUserFullName}
                   onChange={(e) => setAddUserFullName(e.target.value)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Email Address</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Email Address</label>
                 <input 
                   type="email" 
                   placeholder="e.g. jane@company.com"
                   value={addUserEmail}
                   onChange={(e) => setAddUserEmail(e.target.value)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Initial Balance Credit ($)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Initial Balance Credit ($)</label>
                 <input 
                   type="number" 
                   placeholder="e.g. 1000"
                   value={addUserInitialBalance}
                   onChange={(e) => setAddUserInitialBalance(e.target.value)}
-                  className="bg-[#06101c] text-xs font-mono p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
                 <span className="text-[9px] text-slate-500 font-normal">If above 0, an initial Deposit ledger record will be created automatically.</span>
               </div>
 
-              <div className="flex gap-2 justify-end pt-2 border-t border-[#142d4a]">
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
                 <button 
                   type="button"
                   onClick={() => setAddUserModalOpen(false)}
-                  className="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                  className="bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-lg cursor-pointer"
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-lg cursor-pointer shadow-xs"
                 >
                   Create Profile
                 </button>
@@ -5119,20 +5124,20 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 2.7: UNIFIED MANAGE USER MODAL (Edit / Suspend / Delete Info) */}
       {manageUserModalOpen && selectedManageUser && (
-        <div id="manage-user-modal" className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
+        <div id="manage-user-modal" className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh]">
             
-            <div className="flex justify-between items-center pb-2.5 border-b border-[#142d4a] shrink-0">
+            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-white uppercase font-display tracking-widest text-[#C59B4E]">Manage Client Account</h3>
-                <span className="text-[10px] font-semibold text-slate-400 block mt-0.5">Edit credentials, configure wallets, suspend or delete account.</span>
+                <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-widest text-[#B3873B]">Manage Client Account</h3>
+                <span className="text-[10px] font-semibold text-slate-500 block mt-0.5">Edit credentials, configure wallets, suspend or delete account.</span>
               </div>
               <button 
                 onClick={() => {
                   setManageUserModalOpen(false);
                   setSelectedManageUser(null);
                 }}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
@@ -5141,10 +5146,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             <form onSubmit={handleUpdateManagedProfile} className="space-y-4 overflow-y-auto pr-1 max-h-[70vh] text-xs font-semibold">
               
               {/* User UID & Firebase Console Link */}
-              <div className="bg-[#050e18] border border-[#142d4a] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="min-w-0 flex-1">
                   <span className="text-[9px] uppercase font-mono font-bold text-slate-500 block">Firebase User UID:</span>
-                  <span className="text-[11px] font-mono text-[#C59B4E] block truncate select-all">{selectedManageUser.uid}</span>
+                  <span className="text-[11px] font-mono text-[#B3873B] block truncate select-all">{selectedManageUser.uid}</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
@@ -5154,17 +5159,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       setCopiedUid(selectedManageUser.uid);
                       setTimeout(() => setCopiedUid(null), 2000);
                     }}
-                    className="p-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-[10px] font-mono cursor-pointer flex items-center gap-1"
+                    className="p-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[10px] font-mono cursor-pointer flex items-center gap-1 border border-slate-200"
                     title="Copy full UID"
                   >
-                    {copiedUid === selectedManageUser.uid ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                    {copiedUid === selectedManageUser.uid ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
                     <span>{copiedUid === selectedManageUser.uid ? 'Copied' : 'Copy UID'}</span>
                   </button>
                   <a
                     href={FIREBASE_AUTH_CONSOLE_URL}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-1.5 px-2 bg-purple-950/80 hover:bg-purple-900 border border-purple-800/40 text-purple-300 rounded-md text-[10px] cursor-pointer flex items-center gap-1"
+                    className="p-1.5 px-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-md text-[10px] cursor-pointer flex items-center gap-1"
                     title="View in Firebase Authentication Console"
                   >
                     <ExternalLink size={11} />
@@ -5175,115 +5180,115 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Username</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Username</label>
                   <input 
                     type="text" 
                     value={editUserUsername}
                     onChange={(e) => setEditUserUsername(e.target.value)}
-                    className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                    className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden font-semibold"
                     required
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Full Name</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Full Name</label>
                   <input 
                     type="text" 
                     value={editUserFullName}
                     onChange={(e) => setEditUserFullName(e.target.value)}
-                    className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                    className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden font-semibold"
                     required
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Email Address</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Email Address</label>
                 <input 
                   type="email" 
                   value={editUserEmail}
                   onChange={(e) => setEditUserEmail(e.target.value)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden font-semibold"
                   required
                 />
               </div>
 
               {/* Wallet fields configuration */}
-              <div className="p-3 bg-[#06101c]/60 rounded-xl border border-[#142d4a]/80 space-y-3.5">
-                <span className="text-[9px] uppercase font-black text-[#C59B4E] tracking-wider block border-b border-[#142d4a]/50 pb-1">Client Receiving Wallets</span>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3.5">
+                <span className="text-[9px] uppercase font-black text-[#B3873B] tracking-wider block border-b border-slate-200 pb-1">Client Receiving Wallets</span>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">USDT TRC20 Address</label>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">USDT TRC20 Address</label>
                     <input 
                       type="text" 
                       placeholder="TRC20 Wallet"
                       value={editUserUSDT}
                       onChange={(e) => setEditUserUSDT(e.target.value)}
-                      className="bg-[#040c16] text-[11px] font-mono p-2 rounded-lg text-slate-200 border border-[#11263f]"
+                      className="bg-white text-[11px] font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:outline-hidden"
                     />
                   </div>
                   
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Bitcoin Address</label>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Bitcoin Address</label>
                     <input 
                       type="text" 
                       placeholder="Bitcoin Address"
                       value={editUserBTC}
                       onChange={(e) => setEditUserBTC(e.target.value)}
-                      className="bg-[#040c16] text-[11px] font-mono p-2 rounded-lg text-slate-200 border border-[#11263f]"
+                      className="bg-white text-[11px] font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:outline-hidden"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Ethereum Address</label>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Ethereum Address</label>
                     <input 
                       type="text" 
                       placeholder="Ethereum Address"
                       value={editUserETH}
                       onChange={(e) => setEditUserETH(e.target.value)}
-                      className="bg-[#040c16] text-[11px] font-mono p-2 rounded-lg text-slate-200 border border-[#11263f]"
+                      className="bg-white text-[11px] font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:outline-hidden"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">USDT ERC20 Address</label>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">USDT ERC20 Address</label>
                     <input 
                       type="text" 
                       placeholder="ERC20 Wallet"
                       value={editUserUSDT_ERC20}
                       onChange={(e) => setEditUserUSDT_ERC20(e.target.value)}
-                      className="bg-[#040c16] text-[11px] font-mono p-2 rounded-lg text-slate-200 border border-[#11263f]"
+                      className="bg-white text-[11px] font-mono p-2 rounded-lg text-slate-800 border border-slate-300 focus:border-[#B3873B] focus:outline-hidden"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Suspension Toggle */}
-              <div className="p-3 rounded-xl border border-red-500/10 bg-red-950/15 flex items-center justify-between gap-3 animate-pulse">
+              <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <span className="text-[10px] font-black uppercase text-red-400 block tracking-wider">Administrative Session Lock</span>
-                  <span className="text-[9px] text-slate-400 font-semibold block leading-tight">If active, this account is restricted from accessing backoffice widgets immediately.</span>
+                  <span className="text-[10px] font-black uppercase text-rose-700 block tracking-wider">Administrative Session Lock</span>
+                  <span className="text-[9px] text-slate-600 font-semibold block leading-tight">If active, this account is restricted from accessing backoffice widgets immediately.</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditUserSuspended(!editUserSuspended)}
-                  className={`px-3 py-2 text-[10px] uppercase font-black rounded-lg transition-all cursor-pointer border ${editUserSuspended ? 'bg-red-500 text-white border-red-400' : 'bg-transparent text-slate-400 border-slate-700 hover:text-white hover:border-slate-500'}`}
+                  className={`px-3 py-2 text-[10px] uppercase font-black rounded-lg transition-all cursor-pointer border ${editUserSuspended ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-600 border-slate-300 hover:text-slate-900 hover:border-slate-400'}`}
                 >
                   {editUserSuspended ? "SUSPENDED" : "ACTIVE"}
                 </button>
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row gap-2 justify-between pt-3 border-t border-[#142d4a]">
+              <div className="flex flex-col-reverse sm:flex-row gap-2 justify-between pt-3 border-t border-slate-200">
                 <button 
                   type="button"
                   disabled={isPermanentlyDeleting}
                   onClick={() => handleInitiateDeleteUser(selectedManageUser)}
-                  className="bg-red-950/70 text-red-400 hover:bg-red-900/60 text-xs font-bold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-red-500/20 disabled:opacity-50"
+                  className="bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-rose-200 disabled:opacity-50"
                   title="Permanently remove this user from Firebase Authentication and database"
                 >
                   {isPermanentlyDeleting ? (
                     <>
-                      <RefreshCw size={13} className="animate-spin text-red-400" />
+                      <RefreshCw size={13} className="animate-spin text-rose-600" />
                       <span>Deleting User Permanently...</span>
                     </>
                   ) : (
@@ -5301,13 +5306,13 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       setManageUserModalOpen(false);
                       setSelectedManageUser(null);
                     }}
-                    className="bg-slate-850 text-slate-300 hover:bg-slate-850 text-xs font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                    className="bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold px-4 py-2.5 rounded-lg cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
-                    className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-100 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
+                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg transition-colors cursor-pointer shadow-xs"
                   >
                     Save Changes
                   </button>
@@ -5321,22 +5326,22 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 3: ADD/EDIT INVESTMENT PLAN MODAL */}
       {planFormOpen && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh]">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh]">
             
-            <div className="flex justify-between items-center pb-2.5 border-b border-[#142d4a] shrink-0">
+            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-white uppercase font-display tracking-widest">
+                <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-widest">
                   {editingPlan ? "Amend Package Plan" : "Create New Plan"}
                 </h3>
-                <span className="text-[10px] font-semibold text-slate-400 block mt-0.5">Parameters list dynamic yielding rates.</span>
+                <span className="text-[10px] font-semibold text-slate-500 block mt-0.5">Parameters list dynamic yielding rates.</span>
               </div>
               <button 
                 onClick={() => {
                   setPlanFormOpen(false);
                   setEditingPlan(null);
                 }}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
@@ -5346,92 +5351,92 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               
               {/* Plan Title */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Plan Name / Label</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Plan Name / Label</label>
                 <input 
                   type="text" 
                   placeholder="e.g. ULTRA HOUR TO 84H"
                   value={planName}
                   onChange={(e) => setPlanName(e.target.value)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457] font-semibold"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 font-semibold focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               {/* Min Principal */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Min Principal ($)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Min Principal ($)</label>
                 <input 
                   type="number" 
                   value={planMin}
                   onChange={(e) => setPlanMin(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               {/* Max Principal */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Max Principal ($)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Max Principal ($)</label>
                 <input 
                   type="number" 
                   value={planMax}
                   onChange={(e) => setPlanMax(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               {/* ROI percentage */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Total Return (ROI %)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Total Return (ROI %)</label>
                 <input 
                   type="number" 
                   value={planRoi}
                   onChange={(e) => setPlanRoi(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2.5 rounded-lg text-slate-100 border border-[#153457] font-bold text-yellow-500"
+                  className="bg-slate-50 text-xs font-mono p-2.5 rounded-lg text-amber-700 border border-slate-300 font-bold focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               {/* Term term in days */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Maturity Term (Days)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Maturity Term (Days)</label>
                 <input 
                   type="number" 
                   step="any"
                   value={planTerm}
                   onChange={(e) => setPlanTerm(Number(e.target.value))}
-                  className="bg-[#06101c] text-xs font-mono p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs font-mono p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                   required
                 />
               </div>
 
               {/* Display text */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Rate subtitle text</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Rate subtitle text</label>
                 <input 
                   type="text" 
                   placeholder="e.g. 1.5% HOURLY (auto-computed if empty)"
                   value={planRateText}
                   onChange={(e) => setPlanRateText(e.target.value)}
-                  className="bg-[#06101c] text-xs p-2.5 rounded-lg text-slate-100 border border-[#153457]"
+                  className="bg-slate-50 text-xs p-2.5 rounded-lg text-slate-800 border border-slate-300 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
-              <div className="flex gap-2 justify-end pt-2 border-t border-[#142d4a]">
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
                 <button 
                   type="button"
                   onClick={() => {
                     setPlanFormOpen(false);
                     setEditingPlan(null);
                   }}
-                  className="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                  className="bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-bold px-4 py-2.5 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="bg-[#C59B4E] hover:bg-[#A98035] text-xs text-white font-bold px-4 py-2.5 rounded-lg cursor-pointer"
+                  className="bg-amber-600 hover:bg-amber-700 text-xs text-white font-bold px-4 py-2.5 rounded-lg cursor-pointer shadow-xs"
                 >
                   {editingPlan ? "Amend Package" : "Publish Package"}
                 </button>
@@ -5444,54 +5449,54 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MASTER MODAL: DELETE USER PERMANENTLY CONFIRMATION DIALOG */}
       {deleteConfirmUser && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-red-200 rounded-2xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4">
             
-            <div className="flex items-center gap-3 border-b border-red-500/20 pb-3">
-              <div className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                <Trash2 className="text-red-400" size={20} />
+            <div className="flex items-center gap-3 border-b border-red-100 pb-3">
+              <div className="w-10 h-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center shrink-0">
+                <Trash2 className="text-red-600" size={20} />
               </div>
               <div>
-                <h3 className="text-base font-black text-white uppercase tracking-wider">
+                <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">
                   Delete User Permanently?
                 </h3>
-                <span className="text-[11px] text-red-400 font-semibold block">
+                <span className="text-[11px] text-red-600 font-semibold block">
                   Irreversible Administrative Operation
                 </span>
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               Are you sure you want to permanently delete:
             </p>
 
-            <div className="bg-[#050e18] border border-[#142d4a] rounded-xl p-3.5 space-y-2 text-xs">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-semibold">User Name:</span>
-                <span className="text-white font-bold font-mono">@{deleteConfirmUser.username}</span>
+                <span className="text-slate-500 font-semibold">User Name:</span>
+                <span className="text-slate-900 font-bold font-mono">@{deleteConfirmUser.username}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-semibold">User Email:</span>
-                <span className="text-slate-200 font-mono">{deleteConfirmUser.email || 'N/A'}</span>
+                <span className="text-slate-500 font-semibold">User Email:</span>
+                <span className="text-slate-700 font-mono">{deleteConfirmUser.email || 'N/A'}</span>
               </div>
-              <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-800">
-                <span className="text-[10px] text-slate-400 font-mono uppercase font-bold">Firebase Auth UID:</span>
-                <span className="text-[11px] text-[#C59B4E] font-mono break-all select-all font-semibold">
+              <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-200">
+                <span className="text-[10px] text-slate-500 font-mono uppercase font-bold">Firebase Auth UID:</span>
+                <span className="text-[11px] text-amber-700 font-mono break-all select-all font-semibold">
                   {deleteConfirmUser.uid}
                 </span>
               </div>
             </div>
 
-            <div className="p-3 bg-red-950/20 rounded-xl border border-red-500/20 text-[11px] text-red-300 leading-relaxed font-sans">
+            <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-[11px] text-red-700 leading-relaxed font-sans">
               This action will permanently remove the user's account from <strong>Firebase Authentication (Identity Platform)</strong> and cannot be undone.
             </div>
 
             {deletionError && (
-              <div className="p-3.5 bg-red-950/60 rounded-xl border border-red-500/60 text-xs text-red-200 flex items-start gap-2.5">
-                <XCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+              <div className="p-3.5 bg-red-50 rounded-xl border border-red-200 text-xs text-red-700 flex items-start gap-2.5">
+                <XCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <span className="font-bold text-red-300 block">Unable to permanently delete this user.</span>
-                  <span className="text-[11px] text-red-200 block leading-tight font-sans">
+                  <span className="font-bold text-red-800 block">Unable to permanently delete this user.</span>
+                  <span className="text-[11px] text-red-600 block leading-tight font-sans">
                     {deletionError.startsWith('Unable to permanently delete this user:')
                       ? deletionError.replace('Unable to permanently delete this user:', '').trim()
                       : deletionError}
@@ -5500,7 +5505,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#142d4a]">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
               <button
                 type="button"
                 disabled={isPermanentlyDeleting}
@@ -5508,7 +5513,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   setDeleteConfirmUser(null);
                   setDeletionError(null);
                 }}
-                className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -5516,7 +5521,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 type="button"
                 disabled={isPermanentlyDeleting}
                 onClick={handleExecutePermanentDeletion}
-                className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer transition-colors shadow-lg shadow-red-950/50 flex items-center gap-1.5 disabled:opacity-50"
+                className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50"
               >
                 {isPermanentlyDeleting ? (
                   <>
@@ -5537,64 +5542,64 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 4: USER DELETED & FIREBASE AUTH CONSOLE SYNC MODAL */}
       {deletedUserModalInfo && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
             
-            <div className="flex justify-between items-start pb-3 border-b border-[#142d4a]">
+            <div className="flex justify-between items-start pb-3 border-b border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                  <CheckCircle className="text-emerald-400" size={22} />
+                <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                  <CheckCircle className="text-emerald-600" size={22} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-white uppercase font-display tracking-widest text-[#C59B4E]">
+                  <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-widest text-amber-700">
                     Client Purged & Blacklisted
                   </h3>
-                  <span className="text-[10px] font-semibold text-slate-400 block mt-0.5">
+                  <span className="text-[10px] font-semibold text-slate-500 block mt-0.5">
                     Profile and ledger records permanently erased from database.
                   </span>
                 </div>
               </div>
               <button 
                 onClick={() => setDeletedUserModalInfo(null)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
             </div>
 
             {/* Status Checklist */}
-            <div className="bg-[#050e18] border border-[#142d4a] rounded-xl p-3.5 space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold">
                 <Check size={14} className="shrink-0" />
                 <span>Firebase Authentication user account permanently deleted</span>
               </div>
-              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold">
                 <Check size={14} className="shrink-0" />
-                <span>Firestore database document (<code className="font-mono text-[11px] bg-slate-900 px-1 py-0.5 rounded">users/{deletedUserModalInfo.uid}</code>) removed</span>
+                <span>Firestore database document (<code className="font-mono text-[11px] bg-slate-200 text-slate-800 px-1 py-0.5 rounded">users/{deletedUserModalInfo.uid}</code>) removed</span>
               </div>
-              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold">
                 <Check size={14} className="shrink-0" />
                 <span>All financial ledger entries, deposits & withdrawals purged</span>
               </div>
-              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold">
                 <Check size={14} className="shrink-0" />
                 <span>Added to Platform Blacklist (cannot re-register or access)</span>
               </div>
             </div>
 
             {/* Target User Details */}
-            <div className="p-3.5 bg-slate-900/50 rounded-xl border border-slate-800 space-y-2.5">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400 font-semibold">Client Username:</span>
-                <span className="text-white font-bold font-mono">@{deletedUserModalInfo.username}</span>
+                <span className="text-slate-500 font-semibold">Client Username:</span>
+                <span className="text-slate-900 font-bold font-mono">@{deletedUserModalInfo.username}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400 font-semibold">Email Identifier:</span>
-                <span className="text-slate-200 font-mono font-bold">{deletedUserModalInfo.email}</span>
+                <span className="text-slate-500 font-semibold">Email Identifier:</span>
+                <span className="text-slate-800 font-mono font-bold">{deletedUserModalInfo.email}</span>
               </div>
-              <div className="flex flex-col gap-1 pt-1 border-t border-slate-800">
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-200">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] uppercase font-mono font-bold text-slate-400">Firebase User UID:</span>
+                  <span className="text-[10px] uppercase font-mono font-bold text-slate-500">Firebase User UID:</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -5602,38 +5607,38 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       setCopiedDeletedUid(true);
                       setTimeout(() => setCopiedDeletedUid(false), 2500);
                     }}
-                    className="text-[10px] text-[#C59B4E] hover:underline font-mono inline-flex items-center gap-1 cursor-pointer font-bold"
+                    className="text-[10px] text-amber-700 hover:underline font-mono inline-flex items-center gap-1 cursor-pointer font-bold"
                   >
-                    {copiedDeletedUid ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    {copiedDeletedUid ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
                     <span>{copiedDeletedUid ? 'UID Copied to Clipboard!' : 'Copy UID'}</span>
                   </button>
                 </div>
-                <div className="bg-[#040a12] p-2 rounded-lg border border-[#112338] font-mono text-[11px] text-[#C59B4E] select-all break-all">
+                <div className="bg-slate-100 p-2 rounded-lg border border-slate-200 font-mono text-[11px] text-amber-800 select-all break-all">
                   {deletedUserModalInfo.uid}
                 </div>
               </div>
             </div>
 
             {/* Firebase Console Action Box */}
-            <div className="p-4 bg-gradient-to-br from-purple-950/40 to-slate-900/80 rounded-xl border border-purple-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-purple-300 font-bold text-xs">
-                <ExternalLink size={15} className="text-purple-400" />
+            <div className="p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
+              <div className="flex items-center gap-2 text-purple-900 font-bold text-xs">
+                <ExternalLink size={15} className="text-purple-600" />
                 <span>Remove from Firebase Authentication Console:</span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+              <p className="text-[11px] text-slate-600 leading-relaxed font-sans">
                 Due to Firebase security rules, client web browsers cannot delete accounts from Google Identity Platform directly without server credentials. You can delete this user in 2 seconds from your Firebase console:
               </p>
-              <ol className="text-[11px] text-slate-400 space-y-1 list-decimal list-inside font-sans">
+              <ol className="text-[11px] text-slate-600 space-y-1 list-decimal list-inside font-sans">
                 <li>Click the button below to open your Firebase Auth Users console.</li>
                 <li>Paste the copied UID or email into the search bar.</li>
-                <li>Click the <strong className="text-slate-200">⋮</strong> menu on the right and click <strong className="text-red-400">Delete account</strong>.</li>
+                <li>Click the <strong className="text-slate-900">⋮</strong> menu on the right and click <strong className="text-red-600">Delete account</strong>.</li>
               </ol>
 
               <a
                 href={FIREBASE_AUTH_CONSOLE_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-purple-950/50 cursor-pointer transition-all"
+                className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
               >
                 <ExternalLink size={14} />
                 <span>Open Firebase Authentication Console</span>
@@ -5641,21 +5646,21 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             </div>
 
             {/* Cloud Function Automation Tip */}
-            <div className="p-3 bg-[#061220] rounded-xl border border-[#133054] text-[11px] text-slate-300 space-y-1.5 font-sans">
-              <div className="flex items-center gap-1.5 text-[#C59B4E] font-bold uppercase text-[10px]">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1.5 font-sans">
+              <div className="flex items-center gap-1.5 text-amber-700 font-bold uppercase text-[10px]">
                 <Activity size={12} />
                 <span>Want 100% Automatic Deletions?</span>
               </div>
-              <p className="text-slate-400 text-[10px] leading-relaxed">
-                We have provided the Cloud Function in <code className="text-slate-200 font-mono bg-slate-900 px-1 py-0.5 rounded">functions/index.js</code>. Once deployed with <code className="text-[#C59B4E] font-mono bg-slate-900 px-1 py-0.5 rounded">firebase deploy --only functions</code>, every deletion on this dashboard automatically and permanently deletes the user from the Firebase Authentication console with zero manual clicks!
+              <p className="text-slate-500 text-[10px] leading-relaxed">
+                We have provided the Cloud Function in <code className="text-slate-800 font-mono bg-slate-200 px-1 py-0.5 rounded">functions/index.js</code>. Once deployed with <code className="text-amber-800 font-mono bg-slate-200 px-1 py-0.5 rounded">firebase deploy --only functions</code>, every deletion on this dashboard automatically and permanently deletes the user from the Firebase Authentication console with zero manual clicks!
               </p>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-[#142d4a]">
+            <div className="flex justify-end pt-2 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setDeletedUserModalInfo(null)}
-                className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg cursor-pointer"
               >
                 Done
               </button>
@@ -5667,60 +5672,60 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* MODAL 5: FIREBASE CONSOLE & AUTH DELETION SYNC GUIDE */}
       {showConsoleGuideModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-[#091527] border border-[#1a385e] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
             
-            <div className="flex justify-between items-center pb-3 border-b border-[#142d4a]">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2.5">
-                <Info size={20} className="text-[#C59B4E]" />
-                <h3 className="text-sm font-black text-white uppercase font-display tracking-widest text-[#C59B4E]">
+                <Info size={20} className="text-amber-600" />
+                <h3 className="text-sm font-black text-slate-900 uppercase font-display tracking-widest text-amber-700">
                   Firebase Console & User Deletion Sync
                 </h3>
               </div>
               <button 
                 onClick={() => setShowConsoleGuideModal(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <XCircle size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs font-sans leading-relaxed text-slate-300">
+            <div className="space-y-4 text-xs font-sans leading-relaxed text-slate-600">
               
               {/* Architecture Explanation */}
-              <div className="p-3.5 bg-[#050e18] rounded-xl border border-[#142d4a] space-y-2">
-                <h4 className="font-bold text-slate-100 uppercase text-[11px] text-[#C59B4E]">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <h4 className="font-bold text-slate-900 uppercase text-[11px] text-amber-700">
                   Why are there two separate user records in Firebase?
                 </h4>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   Firebase is structured into two separate services:
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] pt-1">
-                  <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                    <span className="font-bold text-white block mb-0.5">1. Cloud Firestore (Database)</span>
-                    <span className="text-slate-400">Stores username, profile data, balances, wallets, and transaction ledgers. Automatically updated and deleted by this Admin Dashboard.</span>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-bold text-slate-900 block mb-0.5">1. Cloud Firestore (Database)</span>
+                    <span className="text-slate-500">Stores username, profile data, balances, wallets, and transaction ledgers. Automatically updated and deleted by this Admin Dashboard.</span>
                   </div>
-                  <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                    <span className="font-bold text-white block mb-0.5">2. Firebase Auth (Identity Platform)</span>
-                    <span className="text-slate-400">Stores secure login credentials (passwords, emails, tokens). Protected by Google; web browsers cannot delete other users' accounts directly.</span>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-bold text-slate-900 block mb-0.5">2. Firebase Auth (Identity Platform)</span>
+                    <span className="text-slate-500">Stores secure login credentials (passwords, emails, tokens). Protected by Google; web browsers cannot delete other users' accounts directly.</span>
                   </div>
                 </div>
               </div>
 
               {/* Method 1 */}
-              <div className="p-3.5 bg-purple-950/20 rounded-xl border border-purple-500/20 space-y-2">
-                <h4 className="font-bold text-purple-300 uppercase text-[11px] flex items-center gap-1.5">
+              <div className="p-3.5 bg-purple-50 rounded-xl border border-purple-200 space-y-2">
+                <h4 className="font-bold text-purple-900 uppercase text-[11px] flex items-center gap-1.5">
                   <ExternalLink size={13} />
                   <span>Method 1: Manual 1-Click Console Deletion</span>
                 </h4>
-                <p className="text-[11px] text-slate-400">
-                  Whenever you delete a user in this dashboard, click the <strong className="text-purple-300">Firebase Auth Console</strong> button. Find the user row, click the <strong className="text-slate-200">⋮</strong> (three dots) on the right, and select <strong className="text-red-400">Delete account</strong>.
+                <p className="text-[11px] text-slate-600">
+                  Whenever you delete a user in this dashboard, click the <strong className="text-purple-700">Firebase Auth Console</strong> button. Find the user row, click the <strong className="text-slate-800">⋮</strong> (three dots) on the right, and select <strong className="text-red-600">Delete account</strong>.
                 </p>
                 <a
                   href={FIREBASE_AUTH_CONSOLE_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-900 hover:bg-purple-800 text-purple-200 rounded-md text-[10px] font-bold uppercase cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-[10px] font-bold uppercase cursor-pointer"
                 >
                   <ExternalLink size={11} />
                   <span>Go to Firebase Auth Users Table</span>
@@ -5728,29 +5733,29 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               </div>
 
               {/* Method 2 */}
-              <div className="p-3.5 bg-emerald-950/20 rounded-xl border border-emerald-500/20 space-y-2">
-                <h4 className="font-bold text-emerald-300 uppercase text-[11px] flex items-center gap-1.5">
+              <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
+                <h4 className="font-bold text-emerald-900 uppercase text-[11px] flex items-center gap-1.5">
                   <Activity size={13} />
                   <span>Method 2: 100% Automated Real-Time Sync</span>
                 </h4>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-600">
                   To have Firebase automatically delete the user from Authentication whenever you click "Delete Client Account" here, deploy our pre-built Cloud Function trigger:
                 </p>
-                <div className="bg-[#030910] p-2.5 rounded-lg border border-[#10243b] font-mono text-[10px] text-emerald-400 select-all overflow-x-auto">
+                <div className="bg-slate-100 p-2.5 rounded-lg border border-slate-200 font-mono text-[10px] text-emerald-700 select-all overflow-x-auto">
                   firebase deploy --only functions
                 </div>
-                <p className="text-[10px] text-slate-400">
-                  Located in <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">functions/index.js</code>. It listens to <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">users/{'{userId}'}</code> deletion and calls <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">admin.auth().deleteUser(userId)</code> instantly!
+                <p className="text-[10px] text-slate-500">
+                  Located in <code className="text-slate-800 font-mono bg-slate-200 px-1 py-0.5 rounded">functions/index.js</code>. It listens to <code className="text-slate-800 font-mono bg-slate-200 px-1 py-0.5 rounded">users/{'{userId}'}</code> deletion and calls <code className="text-slate-800 font-mono bg-slate-200 px-1 py-0.5 rounded">admin.auth().deleteUser(userId)</code> instantly!
                 </p>
               </div>
 
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-[#142d4a]">
+            <div className="flex justify-end pt-2 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setShowConsoleGuideModal(false)}
-                className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-lg cursor-pointer"
               >
                 Close Guide
               </button>
@@ -5762,38 +5767,38 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
       {/* Receipt Proof Preview Lightbox Modal */}
       {previewReceiptModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#091527] border border-[#163356] rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-4 border-b border-[#142d4a] flex justify-between items-center bg-slate-900/60">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-[#C59B4E]" />
-                <h3 className="text-xs font-black uppercase text-white tracking-wider font-display">
+                <ShieldCheck size={16} className="text-amber-600" />
+                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider font-display">
                   {previewReceiptModal.title}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewReceiptModal(null)}
-                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-4 bg-[#030810] flex items-center justify-center max-h-[70vh] overflow-auto">
+            <div className="p-4 bg-slate-100 flex items-center justify-center max-h-[70vh] overflow-auto">
               <img 
                 src={previewReceiptModal.url} 
                 alt="Receipt proof full size" 
-                className="max-h-[65vh] w-auto max-w-full object-contain rounded-lg border border-[#163356] shadow-lg"
+                className="max-h-[65vh] w-auto max-w-full object-contain rounded-lg border border-slate-200 shadow-sm"
               />
             </div>
 
-            <div className="p-4 border-t border-[#142d4a] flex justify-between items-center bg-slate-900/40">
+            <div className="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50">
               <a
                 href={previewReceiptModal.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-[#C59B4E] hover:underline font-bold flex items-center gap-1.5"
+                className="text-xs text-amber-700 hover:underline font-bold flex items-center gap-1.5"
               >
                 <ExternalLink size={13} />
                 <span>Open in New Tab</span>
@@ -5802,7 +5807,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               <button
                 type="button"
                 onClick={() => setPreviewReceiptModal(null)}
-                className="bg-[#C59B4E] hover:bg-[#D4A856] text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-2 rounded-lg cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider px-5 py-2 rounded-lg cursor-pointer"
               >
                 Close Preview
               </button>

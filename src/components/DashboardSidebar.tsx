@@ -22,7 +22,8 @@ import {
   ArrowLeftRight,
   PieChart,
   ChevronDown,
-  Layers
+  Layers,
+  RefreshCw
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -66,6 +67,11 @@ export default function DashboardSidebar({
       id: 'make-deposit', 
       label: 'Invest', 
       icon: <TrendingUp size={17} /> 
+    },
+    { 
+      id: 're-invest', 
+      label: 'Re-Investment', 
+      icon: <RefreshCw size={17} /> 
     },
     { 
       id: 'our-plans', 
@@ -144,17 +150,29 @@ export default function DashboardSidebar({
             </span>
           </div>
 
-          {/* Action buttons Deposit & Withdraw */}
-          <div className="flex items-center gap-2.5 mt-3">
+          {/* Action buttons Deposit, Re-Invest & Withdraw */}
+          <div className="grid grid-cols-3 gap-1.5 mt-3">
             <button
               type="button"
               onClick={() => {
                 onSectionChange('make-deposit');
                 if (onClose) onClose();
               }}
-              className="flex-1 bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-black text-xs uppercase py-2 px-3 rounded-lg shadow-sm text-center transition-all cursor-pointer tracking-wider"
+              className="bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-black text-[11px] uppercase py-2 px-1 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider truncate"
+              title="Deposit funds"
             >
               DEPOSIT
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onSectionChange('re-invest');
+                if (onClose) onClose();
+              }}
+              className="bg-[#0B2545] hover:bg-[#07192f] active:scale-95 text-white font-black text-[11px] uppercase py-2 px-1 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider border border-[#C59B4E]/40 truncate"
+              title="Re-Invest from available balance"
+            >
+              RE-INVEST
             </button>
             <button
               type="button"
@@ -162,7 +180,8 @@ export default function DashboardSidebar({
                 onSectionChange('withdraw');
                 if (onClose) onClose();
               }}
-              className="flex-1 bg-[#D6B25E] hover:bg-[#be9c4b] active:scale-95 text-[#080B10] font-black text-xs uppercase py-2 px-3 rounded-lg shadow-sm text-center transition-all cursor-pointer tracking-wider"
+              className="flex-1 bg-[#D6B25E] hover:bg-[#be9c4b] active:scale-95 text-[#080B10] font-black text-[11px] uppercase py-2 px-1 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider truncate"
+              title="Withdraw funds"
             >
               WITHDRAW
             </button>

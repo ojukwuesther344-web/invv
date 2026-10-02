@@ -14,7 +14,8 @@ import {
   addInvestmentPlan,
   getInvestmentPlans,
   getSystemSettings,
-  checkDuplicateTxHash
+  checkDuplicateTxHash,
+  saveUserProfile
 } from '../services/db';
 import { 
   Bell, 
@@ -123,8 +124,10 @@ export default function DashboardView({
   const [cameraError, setCameraError] = useState('');
   const [dragOver, setDragOver] = useState(false);
 
-  // Payment gateway session states
-  const [paymentSession, setPaymentSession] = useState<{
+  // Payment gateway session interface & states
+  interface PaymentSessionData {
+    txId: string;
+    invoiceId: string;
     amount: number;
     planId?: string;
     planName?: string;
@@ -133,7 +136,10 @@ export default function DashboardView({
     processor: string;
     sourceId: string;
     type: 'Deposit' | 'DirectDeposit';
-  } | null>(null);
+    createdAt: number;
+  }
+
+  const [paymentSession, setPaymentSession] = useState<PaymentSessionData | null>(null);
   const [paymentTxHash, setPaymentTxHash] = useState('');
   const [paymentProofFile, setPaymentProofFile] = useState<string>('');
   const [paymentUploadDragOver, setPaymentUploadDragOver] = useState(false);
@@ -146,6 +152,34 @@ export default function DashboardView({
   const [isCopyingAddress, setIsCopyingAddress] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Dedicated Re-Investment states
+  const [reinvestPlanId, setReinvestPlanId] = useState('starter_plan');
+  const [reinvestAmount, setReinvestAmount] = useState('500.00');
+  const [isExecutingReinvest, setIsExecutingReinvest] = useState(false);
+  const [reinvestSuccessRecord, setReinvestSuccessRecord] = useState<{
+    txId: string;
+    depId: string;
+    amount: number;
+    planName: string;
+    roi: number;
+    term: number;
+    newBalance: number;
+    timestamp: number;
+  } | null>(null);
+  const [reinvestError, setReinvestError] = useState('');
+
+  // Start a fresh, clean deposit session (resets previous approved state)
+  const handleStartNewDeposit = () => {
+    setPaymentSession(null);
+    setSubmittedTxId(null);
+    sessionStorage.removeItem(`wv_last_submitted_tx_${user.uid || user.username}`);
+    setPaymentTxHash('');
+    setPaymentProofFile('');
+    setPaymentError('');
+    setPaymentSuccess(false);
+    onSectionSelect('make-deposit');
+  };
 
   const officialReferralLink = `https://www.worldvestcapital.ltd/?ref=${user.username}`;
 
@@ -209,6 +243,9 @@ export default function DashboardView({
         return `Dashboard - Welcome ${user.username}`;
       case 'make-deposit':
         return 'Make Deposit';
+      case 're-invest':
+      case 'reinvest':
+        return 'Re-Investment';
       case 'deposit-to-account':
         return 'Deposit To Account';
       case 'deposit-list':
@@ -513,11 +550,24 @@ export default function DashboardView({
 
     try {
       if (isFromBalance) {
+        // Direct internal investment from available account balance (Instant activation)
+        const reinvTxId = `tx_reinv_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+        const reinvDepId = `dep_reinv_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+        const prevBal = Number(user.accountBalance) || 0;
+        const prevMain = Number(user.mainAccountBalance !== undefined ? user.mainAccountBalance : prevBal);
+        const newBal = Math.max(0, prevBal - amountNum);
+        const newMain = Math.max(0, prevMain - amountNum);
+        const newActive = (Number(user.activeDeposit) || 0) + amountNum;
+
         // Record standard investment transaction immediately
         await addTransactionRecord(uid, {
+          id: reinvTxId,
+          userId: uid,
           username: user.username,
-          type: 'Investment',
+          type: 'Re-Investment',
           amount: amountNum,
+          currency: 'USD',
+          paymentMethod: 'Account Balance',
           date: new Date().toLocaleString(),
           timestamp: timestamp,
           status: 'Approved',
@@ -525,11 +575,19 @@ export default function DashboardView({
           planId: activePlanObj.id,
           planName: activePlanObj.name,
           term: activePlanObj.term,
-          roi: activePlanObj.roi
+          roi: activePlanObj.roi,
+          previousBalance: prevBal,
+          newBalance: newBal,
+          previousAccountBalance: prevBal,
+          newAccountBalance: newBal,
+          createdAt: timestamp,
+          approvedAt: timestamp
         });
 
         // Also record standard deposit tracking
         await addDepositRecord(uid, {
+          id: reinvDepId,
+          userId: uid,
           username: user.username,
           amount: amountNum,
           date: new Date().toLocaleDateString(),
@@ -538,17 +596,34 @@ export default function DashboardView({
           planName: activePlanObj.name,
           timestamp: timestamp,
           roi: activePlanObj.roi,
-          term: activePlanObj.term
+          term: activePlanObj.term,
+          status: 'Approved',
+          type: 'Re-Investment'
         });
+
+        // Update user balances in Firestore and local state
+        const updatedUser: UserState = {
+          ...user,
+          accountBalance: newBal,
+          mainAccountBalance: newMain,
+          activeDeposit: newActive
+        };
+        await saveUserProfile(uid, updatedUser);
+        onUpdateUser(updatedUser);
 
         await reloadDeposits(uid);
         await reloadTransactions(uid);
 
-        alert(`Successfully activated plan "${activePlanObj.name}" with ${formatCurrency(amountNum)} deposit! View metrics updated in your central dashboard.`);
+        alert(`Successfully activated plan "${activePlanObj.name}" with ${formatCurrency(amountNum)} from your available balance! View metrics updated in your central dashboard.`);
         onSectionSelect('dashboard');
       } else {
-        // Spawn cryptographic payment gateway session
+        // Spawn cryptographic payment gateway session with fresh unique IDs
+        const sessionTxId = `tx_dep_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+        const invoiceId = `INV-DEP-${timestamp.toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
         setPaymentSession({
+          txId: sessionTxId,
+          invoiceId: invoiceId,
           amount: amountNum,
           planId: activePlanObj.id,
           planName: activePlanObj.name,
@@ -556,12 +631,15 @@ export default function DashboardView({
           term: activePlanObj.term,
           processor: proc,
           sourceId: selectedSpendSource,
-          type: 'Deposit'
+          type: 'Deposit',
+          createdAt: timestamp
         });
         setPaymentTxHash('');
         setPaymentProofFile('');
         setPaymentSuccess(false);
         setPaymentError('');
+        setSubmittedTxId(null);
+        sessionStorage.removeItem(`wv_last_submitted_tx_${uid}`);
       }
     } catch (err) {
       console.error("handleProcessDeposit error:", err);
@@ -604,16 +682,25 @@ export default function DashboardView({
                  selectedFundingMethod === 'btc' ? 'Bitcoin' : 
                  selectedFundingMethod === 'eth' ? 'Ethereum' : 'USDT ERC20';
 
+    const sessionTimestamp = Date.now();
+    const sessionTxId = `tx_dep_${sessionTimestamp}_${Math.random().toString(36).substring(2, 9)}`;
+    const invoiceId = `INV-FUND-${sessionTimestamp.toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
     setPaymentSession({
+      txId: sessionTxId,
+      invoiceId: invoiceId,
       amount: amount,
       processor: proc,
       sourceId: selectedFundingMethod,
-      type: 'DirectDeposit'
+      type: 'DirectDeposit',
+      createdAt: sessionTimestamp
     });
     setPaymentTxHash('');
     setPaymentProofFile('');
     setPaymentSuccess(false);
     setPaymentError('');
+    setSubmittedTxId(null);
+    sessionStorage.removeItem(`wv_last_submitted_tx_${uid}`);
   };
 
   const handleConfirmPayment = async () => {
@@ -650,13 +737,15 @@ export default function DashboardView({
     const amountNum = paymentSession.amount;
     const proc = paymentSession.processor;
     const networkName = COMPANY_WALLET_ADDRESSES[paymentSession.sourceId]?.network || proc;
-    const depositTxId = `tx_dep_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+    const depositTxId = paymentSession.txId || `tx_dep_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+    const invoiceId = paymentSession.invoiceId || `INV-DEP-${timestamp}`;
 
     try {
       // 1. Submit Payment Proof strictly as Pending.
       // USER BALANCE MUST NOT CHANGE until explicitly approved by an Admin.
       const depositRecord: Partial<Transaction> = {
         id: depositTxId,
+        invoiceId: invoiceId,
         userId: uid,
         username: user.username,
         type: 'Deposit',
@@ -691,6 +780,8 @@ export default function DashboardView({
         const investTxId = `tx_inv_${timestamp + 20}_${Math.random().toString(36).substring(2, 9)}`;
         await addTransactionRecord(uid, {
           id: investTxId,
+          referenceId: depositTxId,
+          invoiceId: invoiceId,
           userId: uid,
           username: user.username,
           type: 'Investment',
@@ -711,7 +802,6 @@ export default function DashboardView({
           paymentProof: paymentProofFile || '',
           receiptUrl: paymentProofFile || '',
           proofImg: paymentProofFile || '',
-          referenceId: depositTxId,
           submittedAt: timestamp,
           reviewedAt: null,
           reviewedBy: null
@@ -726,6 +816,128 @@ export default function DashboardView({
       console.error("handleConfirmPayment error:", err);
       setPaymentError("An error occurred while saving transaction proof. Please try again.");
       setIsSubmittingPayment(false);
+    }
+  };
+
+  // Dedicated Re-Investment execution handler
+  const handleExecuteReinvest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReinvestError('');
+    const amountNum = parseFloat(reinvestAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setReinvestError("Please specify a valid re-investment amount.");
+      return;
+    }
+
+    const eligibleFunds = Math.max(0, Number(user.accountBalance) || 0);
+    if (amountNum > eligibleFunds) {
+      setReinvestError(`Insufficient eligible balance. You have ${formatCurrency(eligibleFunds)} available for re-investment.`);
+      return;
+    }
+
+    const planObj = depositPlans.find(p => p.id === reinvestPlanId) || depositPlans[0];
+    if (!planObj) {
+      setReinvestError("Please select a valid investment plan.");
+      return;
+    }
+
+    if (amountNum < planObj.min) {
+      setReinvestError(`For the selected "${planObj.name}", the minimum re-investment is ${formatCurrency(planObj.min)}.`);
+      return;
+    }
+
+    if (planObj.max < 10000000 && amountNum > planObj.max) {
+      setReinvestError(`For the selected "${planObj.name}", the maximum re-investment is ${formatCurrency(planObj.max)}.`);
+      return;
+    }
+
+    setIsExecutingReinvest(true);
+    const uid = user.uid || `user_${user.username}`;
+    const timestamp = Date.now();
+    const newTxId = `tx_reinv_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+    const newDepId = `dep_reinv_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+    const prevBal = Number(user.accountBalance) || 0;
+    const prevMain = Number(user.mainAccountBalance !== undefined ? user.mainAccountBalance : prevBal);
+    const newBal = Math.max(0, prevBal - amountNum);
+    const newMain = Math.max(0, prevMain - amountNum);
+    const newActive = (Number(user.activeDeposit) || 0) + amountNum;
+
+    try {
+      // 1. Record independent new transaction record (type: 'Re-Investment')
+      const newTransaction: Partial<Transaction> = {
+        id: newTxId,
+        userId: uid,
+        username: user.username,
+        type: 'Re-Investment',
+        amount: amountNum,
+        currency: 'USD',
+        paymentMethod: 'Account Balance',
+        processor: 'Account Balance',
+        date: new Date().toLocaleString(),
+        timestamp: timestamp,
+        status: 'Approved',
+        planId: planObj.id,
+        planName: planObj.name,
+        term: planObj.term || planObj.days || 7,
+        roi: planObj.roi || 114,
+        previousBalance: prevBal,
+        newBalance: newBal,
+        previousAccountBalance: prevBal,
+        newAccountBalance: newBal,
+        createdAt: timestamp,
+        approvedAt: timestamp
+      };
+
+      await addTransactionRecord(uid, newTransaction);
+
+      // 2. Record independent new deposit record
+      await addDepositRecord(uid, {
+        id: newDepId,
+        userId: uid,
+        username: user.username,
+        amount: amountNum,
+        date: new Date().toLocaleDateString(),
+        processor: 'Account Balance',
+        planId: planObj.id,
+        planName: planObj.name,
+        timestamp: timestamp,
+        roi: planObj.roi || 114,
+        term: planObj.term || planObj.days || 7,
+        status: 'Approved',
+        type: 'Re-Investment'
+      });
+
+      // 3. Atomically update user balance
+      const updatedUser: UserState = {
+        ...user,
+        accountBalance: newBal,
+        mainAccountBalance: newMain,
+        activeDeposit: newActive
+      };
+
+      await saveUserProfile(uid, updatedUser);
+      onUpdateUser(updatedUser);
+
+      // Reload
+      await reloadDeposits(uid);
+      await reloadTransactions(uid);
+
+      setReinvestSuccessRecord({
+        txId: newTxId,
+        depId: newDepId,
+        amount: amountNum,
+        planName: planObj.name,
+        roi: planObj.roi || 114,
+        term: planObj.term || planObj.days || 7,
+        newBalance: newBal,
+        timestamp: timestamp
+      });
+
+      setIsExecutingReinvest(false);
+    } catch (err) {
+      console.error("handleExecuteReinvest error:", err);
+      setReinvestError("An error occurred while creating the re-investment. Please try again.");
+      setIsExecutingReinvest(false);
     }
   };
 
@@ -802,14 +1014,51 @@ export default function DashboardView({
     }
   };
 
-  const activeSubmittedTx = transactions.find(t => 
-    (submittedTxId && t.id === submittedTxId) ||
-    (paymentSession && t.type === 'Deposit' && (t.status === 'Pending' || t.status === 'pending') && Number(t.amount) === paymentSession.amount)
-  );
+  // Real-time synchronization: clean up submittedTxId if that transaction is approved/completed
+  React.useEffect(() => {
+    if (submittedTxId && transactions.length > 0) {
+      const match = transactions.find(t => t.id === submittedTxId);
+      if (match && (match.status === 'Approved' || match.status === 'Completed' || match.status === 'approved' || match.status === 'completed')) {
+        sessionStorage.removeItem(`wv_last_submitted_tx_${user.uid || user.username}`);
+        setSubmittedTxId(null);
+      }
+    }
+  }, [submittedTxId, transactions, user.uid, user.username]);
+
+  // Clean, deterministic calculation of active submitted transaction for the current session
+  const activeSubmittedTx = React.useMemo(() => {
+    if (paymentSession?.txId) {
+      // ONLY return the transaction strictly associated with the current payment session
+      return transactions.find(t => t.id === paymentSession.txId) || null;
+    }
+    if (submittedTxId) {
+      const match = transactions.find(t => t.id === submittedTxId);
+      // ONLY treat as active if it is still pending review / unapproved!
+      if (match && (match.status === 'Pending' || match.status === 'pending')) {
+        return match;
+      }
+      return null;
+    }
+    return null;
+  }, [paymentSession, submittedTxId, transactions]);
+
   const activeTxStatus = (activeSubmittedTx?.status || '').toLowerCase();
   const isPendingApproval = activeTxStatus === 'pending';
-  const isApproved = activeTxStatus === 'approved';
+  const isApproved = activeTxStatus === 'approved' || activeTxStatus === 'completed';
   const isRejected = activeTxStatus === 'rejected';
+
+  // Automatically reset paymentSession if user navigated to any other section when it is already approved/completed
+  React.useEffect(() => {
+    if (paymentSession) {
+      const match = transactions.find(t => t.id === paymentSession.txId);
+      const isSessionApproved = match && (match.status === 'Approved' || match.status === 'Completed' || match.status === 'approved' || match.status === 'completed');
+      if (isSessionApproved && (activeSection === 'make-deposit' || activeSection === 'deposit-to-account' || activeSection === 're-invest' || activeSection === 'dashboard')) {
+        setPaymentSession(null);
+        setSubmittedTxId(null);
+        sessionStorage.removeItem(`wv_last_submitted_tx_${user.uid || user.username}`);
+      }
+    }
+  }, [activeSection, transactions, paymentSession, user.uid, user.username]);
   const pendingDepositSum = transactions
     .filter(t => t.type === 'Deposit' && (t.status === 'Pending' || t.status === 'pending'))
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
@@ -977,7 +1226,7 @@ export default function DashboardView({
                   <h2 className="text-base md:text-lg font-black font-display text-white uppercase tracking-wider flex items-center gap-2">
                     Crypto Secure Payment Gateway
                   </h2>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Invoice ID: INV_{paymentSession.type.toUpperCase()}_{Date.now().toString().substring(7)}</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">Invoice ID: {paymentSession.invoiceId}</p>
                 </div>
               </div>
               {isPendingApproval ? (
@@ -1003,7 +1252,84 @@ export default function DashboardView({
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
+            {isApproved && activeSubmittedTx ? (
+              /* CLEAN APPROVED STATE BANNER & ACTIONS (Requirements 1, 2, 3, 4, 8) */
+              <div className="py-6 px-2 sm:px-6 flex flex-col items-center text-center max-w-lg mx-auto space-y-6 relative z-10 animate-in fade-in">
+                <div className="w-20 h-20 rounded-full bg-emerald-500/15 border-2 border-emerald-500/40 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-950/50">
+                  <Check size={44} className="stroke-[3]" />
+                </div>
+
+                <div className="space-y-2">
+                  <span className="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest rounded-full font-mono">
+                    ✓ PAYMENT APPROVED & CREDITED
+                  </span>
+                  <h2 className="text-xl md:text-2xl font-black font-display text-white uppercase tracking-wider">
+                    Payment Approved
+                  </h2>
+                  <p className="text-xs text-slate-300 leading-relaxed font-sans max-w-md">
+                    Your previous payment of <strong className="text-emerald-400 font-mono text-sm">{formatCurrency(activeSubmittedTx.amount)} USD</strong> has been successfully verified and approved by our Admin team. Your balance and yielding records have been updated.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 w-full text-xs font-mono space-y-2 text-left">
+                  <div className="flex justify-between items-center text-slate-400">
+                    <span>Transaction ID:</span>
+                    <span className="text-slate-200 font-bold truncate max-w-[200px]" title={activeSubmittedTx.id}>{activeSubmittedTx.id}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-400">
+                    <span>Settled Amount:</span>
+                    <span className="text-emerald-400 font-bold">{formatCurrency(activeSubmittedTx.amount)} USD</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-400">
+                    <span>Contract Target:</span>
+                    <span className="text-purple-400 font-bold uppercase">{activeSubmittedTx.planName || 'Investment Deposit'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-400">
+                    <span>Payment Status:</span>
+                    <span className="text-emerald-400 font-bold uppercase">APPROVED / FINALIZED</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-400 pt-1 border-t border-slate-800">
+                    <span>Timestamp:</span>
+                    <span className="text-slate-300">{new Date(activeSubmittedTx.approvedAt || activeSubmittedTx.timestamp).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleStartNewDeposit}
+                    className="flex-1 py-3.5 px-6 bg-[#19B86B] hover:bg-[#159a59] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-950/50 cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    <span>MAKE NEW DEPOSIT</span>
+                    <span className="text-sm leading-none">&rarr;</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentSession(null);
+                      onSectionSelect('re-invest');
+                    }}
+                    className="flex-1 py-3.5 px-6 bg-[#C59B4E] hover:bg-[#A98035] text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-amber-950/50 cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    <RefreshCw size={13} />
+                    <span>RE-INVEST BALANCE</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentSession(null);
+                    onSectionSelect('dashboard');
+                  }}
+                  className="text-[11px] text-slate-400 hover:text-white uppercase tracking-wider font-bold hover:underline cursor-pointer pt-1"
+                >
+                  &larr; Return to Dashboard Overview
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
                 {/* Left side: Invoice Details & Wallet Address  */}
                 <div className="md:col-span-7 flex flex-col gap-6">
                   {/* Ledger summary card */}
@@ -1193,31 +1519,6 @@ export default function DashboardView({
                       </div>
                     )}
 
-                    {isApproved && activeSubmittedTx && (
-                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 space-y-2.5 animate-in fade-in">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Payment Status</span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-                            <Check size={11} className="stroke-[3] text-emerald-400" />
-                            ✓ Payment Approved
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                          Your payment has been verified and your account balance has been updated.
-                        </p>
-                        <div className="bg-slate-950/80 rounded-lg p-2.5 border border-slate-800 text-[11px] font-mono space-y-1">
-                          <div className="flex justify-between text-slate-400">
-                            <span>Amount:</span>
-                            <span className="text-emerald-400 font-bold">{formatCurrency(activeSubmittedTx.amount)} USD</span>
-                          </div>
-                          <div className="flex justify-between text-slate-400">
-                            <span>Status:</span>
-                            <span className="text-emerald-400 font-bold uppercase tracking-wider">Approved</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     {isRejected && activeSubmittedTx && (
                       <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 space-y-2.5 animate-in fade-in">
                         <div className="flex items-center justify-between">
@@ -1323,14 +1624,6 @@ export default function DashboardView({
                         >
                           <Clock size={13} className="animate-spin" /> PENDING APPROVAL
                         </button>
-                      ) : isApproved ? (
-                        <button
-                          type="button"
-                          disabled
-                          className="w-full py-3 bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl flex items-center justify-center gap-1.5 cursor-default border border-emerald-500/30 shadow-lg"
-                        >
-                          <Check size={13} className="stroke-[3]" /> ✓ PAYMENT APPROVED
-                        </button>
                       ) : isRejected ? (
                         <button
                           type="button"
@@ -1376,6 +1669,7 @@ export default function DashboardView({
                   </div>
                 </div>
               </div>
+            )}
           </div>
         )}
 
@@ -1394,19 +1688,28 @@ export default function DashboardView({
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => onSectionSelect('make-deposit')}
-                  className="bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-bold text-xs px-4.5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  onClick={handleStartNewDeposit}
+                  className="bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <span>Invest & Earn</span>
                   <span className="text-sm leading-none">&rarr;</span>
                 </button>
                 <button
                   type="button"
+                  onClick={() => onSectionSelect('re-invest')}
+                  className="bg-[#0B2545] hover:bg-[#07192f] text-white border border-[#C59B4E]/40 active:scale-95 font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  title="Re-Invest from eligible account balance"
+                >
+                  <RefreshCw size={13} className="text-[#C59B4E]" />
+                  <span>Re-Invest</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => onSectionSelect('deposit-list')}
-                  className="bg-[var(--bg-card)] hover:bg-[var(--bg-card-elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] active:scale-95 font-bold text-xs px-4.5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  className="bg-[var(--bg-card)] hover:bg-[var(--bg-card-elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] active:scale-95 font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <span>Your Deposits</span>
                   <span className="text-sm leading-none">&rarr;</span>
@@ -1732,12 +2035,21 @@ export default function DashboardView({
                 <h4 className="font-bold text-[var(--text-primary)] text-base font-display">Increase Your Wallet Power</h4>
                 <p className="text-xs text-[var(--text-muted)] font-normal">Select a plan to invest immediate funds into your balance ledger.</p>
               </div>
-              <button 
-                onClick={() => onSectionSelect('make-deposit')}
-                className="px-6 py-3 bg-[#19B86B] hover:bg-[#159a59] text-white font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform"
-              >
-                Launch Make Deposit Section &gt;
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button 
+                  onClick={handleStartNewDeposit}
+                  className="px-5 py-3 bg-[#19B86B] hover:bg-[#159a59] text-white font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform"
+                >
+                  Deposit Funds &gt;
+                </button>
+                <button 
+                  onClick={() => onSectionSelect('re-invest')}
+                  className="px-5 py-3 bg-[#0B2545] hover:bg-[#07192f] text-white border border-[#C59B4E]/40 font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform flex items-center gap-1.5"
+                >
+                  <RefreshCw size={13} className="text-[#C59B4E]" />
+                  <span>Re-Invest Balance &gt;</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1756,13 +2068,23 @@ export default function DashboardView({
                   Choose a high-performing investment tier tailored to your financial goals. Principal returned upon maturity.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => onSectionSelect('make-deposit')}
-                className="bg-[#19B86B] hover:bg-[#159a59] text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer shrink-0"
-              >
-                Deposit & Activate Plan &rarr;
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleStartNewDeposit}
+                  className="bg-[#19B86B] hover:bg-[#159a59] text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer"
+                >
+                  Deposit & Activate &rarr;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSectionSelect('re-invest')}
+                  className="bg-[#0B2545] hover:bg-[#07192f] text-white border border-[#C59B4E]/40 font-bold text-xs px-4 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <RefreshCw size={13} className="text-[#C59B4E]" />
+                  <span>Re-Invest</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1828,16 +2150,28 @@ export default function DashboardView({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActivePlanSelected(pl.id);
-                        onSectionSelect('make-deposit');
-                      }}
-                      className="mt-4 w-full py-2.5 bg-[#19B86B] hover:bg-[#159a59] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer uppercase tracking-wider shadow-sm"
-                    >
-                      Select & Invest
-                    </button>
+                    <div className="mt-4 flex gap-2 w-full">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActivePlanSelected(pl.id);
+                          handleStartNewDeposit();
+                        }}
+                        className="flex-1 py-2 bg-[#19B86B] hover:bg-[#159a59] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer uppercase tracking-wider shadow-xs"
+                      >
+                        Deposit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReinvestPlanId(pl.id);
+                          onSectionSelect('re-invest');
+                        }}
+                        className="flex-1 py-2 bg-[#0B2545] hover:bg-[#07192f] text-white border border-[#C59B4E]/40 font-bold text-xs rounded-lg transition-colors cursor-pointer uppercase tracking-wider shadow-xs"
+                      >
+                        Re-Invest
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -2031,6 +2365,395 @@ export default function DashboardView({
 
             </form>
 
+          </div>
+        )}
+
+        {/* ===== RE-INVESTMENT SECTION (PART 2 REQUIREMENT) ===== */}
+        {(activeSection === 're-invest' || activeSection === 'reinvest') && !paymentSession && (
+          <div className="max-w-4xl mx-auto w-full p-4 sm:p-6 md:p-8 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {renderBackButton('Back to Dashboard')}
+
+            {/* Header banner */}
+            <div className="bg-[var(--bg-card)] p-6 md:p-8 rounded-2xl border border-[var(--border-subtle)] shadow-xs">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#C59B4E]/10 border border-[#C59B4E]/30 rounded-full text-[#C59B4E] text-[10px] font-black uppercase tracking-widest mb-2 font-mono">
+                    <RefreshCw size={12} className="animate-spin text-[#C59B4E]" style={{ animationDuration: '6s' }} />
+                    COMPOUND YOUR YIELDS
+                  </div>
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-display text-[var(--text-primary)] uppercase tracking-wider">
+                    RE-INVESTMENT
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1 max-w-xl leading-relaxed">
+                    Use your eligible available funds to start a new investment.
+                  </p>
+                </div>
+                <div className="text-left md:text-right bg-[var(--bg-card-elevated)] p-4 rounded-xl border border-[var(--border-subtle)] min-w-[220px]">
+                  <span className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-wider block">
+                    Available for Re-Investment
+                  </span>
+                  <span className="text-2xl font-black text-[#19B86B] font-mono block mt-0.5">
+                    {formatCurrency(user.accountBalance)} <span className="text-xs text-[var(--text-muted)] font-sans">USD</span>
+                  </span>
+                  <span className="text-[9px] text-[var(--text-muted)] block mt-1 font-mono">
+                    Liquid Balance Only (Excludes Locked/Pending)
+                  </span>
+                </div>
+              </div>
+
+              {/* Financial Balance Rule Breakdown */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[var(--border-subtle)] text-xs">
+                <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--border-subtle)]">
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Liquid Account Balance</span>
+                  <span className="font-mono font-bold text-[var(--text-primary)] text-sm block mt-0.5">{formatCurrency(user.accountBalance)}</span>
+                  <span className="text-[8px] text-[#19B86B] font-semibold block mt-0.5">✓ Eligible for Re-Investment</span>
+                </div>
+                <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--border-subtle)]">
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Main Account Balance</span>
+                  <span className="font-mono font-bold text-[var(--text-primary)] text-sm block mt-0.5">{formatCurrency(user.mainAccountBalance !== undefined ? user.mainAccountBalance : user.accountBalance)}</span>
+                  <span className="text-[8px] text-[var(--text-muted)] font-semibold block mt-0.5">Overall Net Capital</span>
+                </div>
+                <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--border-subtle)]">
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Active Investments</span>
+                  <span className="font-mono font-bold text-purple-400 text-sm block mt-0.5">{formatCurrency(user.activeDeposit)}</span>
+                  <span className="text-[8px] text-[var(--text-muted)] font-semibold block mt-0.5">Yield Generating Contracts</span>
+                </div>
+                <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--border-subtle)]">
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Pending / Locked</span>
+                  <span className="font-mono font-bold text-amber-400 text-sm block mt-0.5">{formatCurrency(pendingDepositSum)}</span>
+                  <span className="text-[8px] text-[var(--text-muted)] font-semibold block mt-0.5">Awaiting Admin Verification</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Success state after confirming re-investment */}
+            {reinvestSuccessRecord ? (
+              <div className="bg-[var(--bg-card)] rounded-2xl border-2 border-[#19B86B]/40 shadow-xl p-6 sm:p-8 text-center max-w-xl mx-auto w-full animate-in zoom-in-95 duration-300 space-y-6">
+                <div className="w-20 h-20 rounded-full bg-[#19B86B]/15 border-2 border-[#19B86B] text-[#19B86B] flex items-center justify-center mx-auto shadow-lg shadow-emerald-950/20">
+                  <Check size={44} className="stroke-[3]" />
+                </div>
+
+                <div className="space-y-2">
+                  <span className="inline-block px-3 py-1 bg-[#19B86B]/15 text-[#19B86B] border border-[#19B86B]/30 text-[10px] font-black uppercase tracking-widest rounded-full font-mono">
+                    ✓ RE-INVESTMENT SUCCESSFUL
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black font-display text-[var(--text-primary)] uppercase tracking-wider">
+                    Re-Investment Confirmed
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed max-w-md mx-auto">
+                    Your re-investment of <strong className="text-[#19B86B] font-mono text-sm">{formatCurrency(reinvestSuccessRecord.amount)} USD</strong> has been debited from your eligible balance and activated as a fresh investment contract.
+                  </p>
+                </div>
+
+                <div className="bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-xl p-4 text-xs font-mono space-y-2.5 text-left">
+                  <div className="flex justify-between items-center text-[var(--text-muted)]">
+                    <span>Transaction ID:</span>
+                    <span className="text-[var(--text-primary)] font-bold truncate max-w-[200px]" title={reinvestSuccessRecord.txId}>{reinvestSuccessRecord.txId}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[var(--text-muted)]">
+                    <span>Deposit Record ID:</span>
+                    <span className="text-[var(--text-primary)] font-bold truncate max-w-[200px]" title={reinvestSuccessRecord.depId}>{reinvestSuccessRecord.depId}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[var(--text-muted)]">
+                    <span>Target Plan:</span>
+                    <span className="text-purple-400 font-bold uppercase">{reinvestSuccessRecord.planName}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[var(--text-muted)]">
+                    <span>Expected ROI:</span>
+                    <span className="text-[#D6B25E] font-bold">{reinvestSuccessRecord.roi}% over {reinvestSuccessRecord.term} Days</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[var(--text-muted)]">
+                    <span>Re-Invested Principal:</span>
+                    <span className="text-[#19B86B] font-bold">{formatCurrency(reinvestSuccessRecord.amount)} USD</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[var(--text-muted)] pt-2 border-t border-[var(--border-subtle)]">
+                    <span>Remaining Balance:</span>
+                    <span className="text-[var(--text-primary)] font-bold">{formatCurrency(reinvestSuccessRecord.newBalance)} USD</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[var(--text-muted)]">
+                    <span>Timestamp:</span>
+                    <span className="text-[var(--text-primary)]">{new Date(reinvestSuccessRecord.timestamp).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReinvestSuccessRecord(null);
+                      onSectionSelect('deposit-history');
+                    }}
+                    className="flex-1 py-3 px-4 bg-[var(--bg-card-elevated)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                  >
+                    View Deposit History
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReinvestSuccessRecord(null);
+                      setReinvestAmount('500.00');
+                    }}
+                    className="flex-1 py-3 px-4 bg-[#C59B4E] hover:bg-[#A98035] text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
+                  >
+                    Start Another Re-Investment
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleExecuteReinvest} className="space-y-6">
+                {/* Step 1: Select Plan */}
+                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-subtle)] shadow-xs space-y-4">
+                  <div className="flex justify-between items-center border-b border-[var(--border-subtle)] pb-3">
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-[#C59B4E] font-mono tracking-wider">Step 1 of 4</span>
+                      <h3 className="text-base font-black text-[var(--text-primary)] uppercase tracking-wider font-display">
+                        Select Investment Plan
+                      </h3>
+                    </div>
+                    <span className="text-xs text-[var(--text-muted)] font-semibold hidden sm:inline">Choose contract tier</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {depositPlans.map((pl) => {
+                      const isSelected = reinvestPlanId === pl.id;
+                      const dailyRoiVal = pl.dailyRoi || (pl.id === 'harvest_plan' || pl.id === 'golden_plan' ? 3 : 2);
+                      const durationDays = pl.days || pl.term || (pl.id === 'starter_plan' ? 7 : pl.id === 'golden_plan' ? 30 : 21);
+                      const totalRoiText = pl.roi ? `${pl.roi}% ROI` : (
+                        pl.id === 'starter_plan' ? '114% ROI' :
+                        pl.id === 'garden_plan' ? '142% ROI' :
+                        pl.id === 'harvest_plan' ? '163% ROI' :
+                        pl.id === 'golden_plan' ? '190% ROI' : '114% ROI'
+                      );
+
+                      return (
+                        <div
+                          key={pl.id}
+                          onClick={() => setReinvestPlanId(pl.id)}
+                          className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between gap-3 ${
+                            isSelected
+                              ? 'bg-[var(--bg-card-elevated)] border-[#C59B4E] ring-2 ring-[#C59B4E]/30 shadow-md'
+                              : 'bg-[var(--bg-main)] border-[var(--border-subtle)] hover:border-[#C59B4E]/50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-black text-xs uppercase text-[var(--text-primary)] font-display">{pl.name}</span>
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                              isSelected ? 'bg-[#C59B4E] border-[#C59B4E]' : 'border-[var(--border-subtle)]'
+                            }`}>
+                              {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950"></div>}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between text-[var(--text-muted)] text-[11px]">
+                              <span>Daily Return:</span>
+                              <span className="font-bold text-[#19B86B]">{dailyRoiVal}% / Day</span>
+                            </div>
+                            <div className="flex justify-between text-[var(--text-muted)] text-[11px]">
+                              <span>Duration:</span>
+                              <span className="font-bold text-[var(--text-primary)]">{durationDays} Days</span>
+                            </div>
+                            <div className="flex justify-between text-[var(--text-muted)] text-[11px]">
+                              <span>Total Return:</span>
+                              <span className="font-black text-[#C59B4E] font-mono">{totalRoiText}</span>
+                            </div>
+                            <div className="flex justify-between text-[var(--text-muted)] text-[10px] pt-1 border-t border-[var(--border-subtle)]">
+                              <span>Min Deposit:</span>
+                              <span className="font-bold text-[var(--text-primary)]">{formatCurrency(pl.min)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Step 2: Enter Amount */}
+                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-subtle)] shadow-xs space-y-4">
+                  <div className="flex justify-between items-center border-b border-[var(--border-subtle)] pb-3">
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-[#C59B4E] font-mono tracking-wider">Step 2 of 4</span>
+                      <h3 className="text-base font-black text-[var(--text-primary)] uppercase tracking-wider font-display">
+                        Enter Re-Investment Amount
+                      </h3>
+                    </div>
+                    <span className="text-xs text-[var(--text-muted)] font-semibold">
+                      Max Available: <strong className="text-[#19B86B] font-mono">{formatCurrency(user.accountBalance)}</strong>
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase text-[var(--text-muted)] tracking-wider mb-2">
+                      Amount to Re-Invest (USD)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] font-black font-mono text-xl">$</span>
+                      <input 
+                        type="number"
+                        step="0.01"
+                        min="1"
+                        value={reinvestAmount}
+                        onChange={(e) => setReinvestAmount(e.target.value)}
+                        className="w-full pl-8 pr-4 py-3.5 bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-xl font-mono text-xl font-bold text-[var(--text-primary)] focus:outline-none focus:border-[#C59B4E] transition-colors"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick percentage buttons */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {[
+                      { label: '25%', factor: 0.25 },
+                      { label: '50%', factor: 0.5 },
+                      { label: '75%', factor: 0.75 },
+                      { label: '100% (Max)', factor: 1.0 },
+                    ].map((btn) => (
+                      <button
+                        key={btn.label}
+                        type="button"
+                        onClick={() => {
+                          const amt = Math.max(0, (user.accountBalance || 0) * btn.factor);
+                          setReinvestAmount(amt.toFixed(2));
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg bg-[var(--bg-main)] hover:bg-[var(--border-subtle)] border border-[var(--border-subtle)] text-xs font-bold font-mono text-[var(--text-secondary)] transition-colors cursor-pointer"
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                    {(() => {
+                      const curPlan = depositPlans.find(p => p.id === reinvestPlanId) || depositPlans[0];
+                      if (curPlan && curPlan.min) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setReinvestAmount(Number(curPlan.min).toFixed(2))}
+                            className="px-3.5 py-1.5 rounded-lg bg-[#C59B4E]/10 hover:bg-[#C59B4E]/20 border border-[#C59B4E]/30 text-xs font-bold font-mono text-[#C59B4E] transition-colors cursor-pointer"
+                          >
+                            Plan Min ({formatCurrency(curPlan.min)})
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                </div>
+
+                {/* Step 3: Review Investment */}
+                {(() => {
+                  const planObj = depositPlans.find(p => p.id === reinvestPlanId) || depositPlans[0];
+                  const amountNum = parseFloat(reinvestAmount) || 0;
+                  const dailyRoiVal = planObj?.dailyRoi || (planObj?.id === 'harvest_plan' || planObj?.id === 'golden_plan' ? 3 : 2);
+                  const durationDays = planObj?.days || planObj?.term || (planObj?.id === 'starter_plan' ? 7 : 21);
+                  const totalRoiRate = planObj?.roi || 114;
+                  const totalProfitAmount = (amountNum * (totalRoiRate > 100 ? totalRoiRate - 100 : totalRoiRate)) / 100;
+                  const totalReturnAmount = amountNum * (totalRoiRate / 100);
+                  const remainingBalance = Math.max(0, (user.accountBalance || 0) - amountNum);
+                  const isInsufficient = amountNum > (user.accountBalance || 0);
+                  const isBelowMin = planObj && amountNum < planObj.min;
+                  const isAboveMax = planObj && planObj.max < 10000000 && amountNum > planObj.max;
+
+                  return (
+                    <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-subtle)] shadow-xs space-y-4">
+                      <div className="flex justify-between items-center border-b border-[var(--border-subtle)] pb-3">
+                        <div>
+                          <span className="text-[10px] font-black uppercase text-[#C59B4E] font-mono tracking-wider">Step 3 of 4</span>
+                          <h3 className="text-base font-black text-[var(--text-primary)] uppercase tracking-wider font-display">
+                            Review Re-Investment Ledger
+                          </h3>
+                        </div>
+                        <span className="text-xs text-[var(--text-muted)] font-semibold">Verify financial terms</span>
+                      </div>
+
+                      <div className="bg-[var(--bg-card-elevated)] rounded-xl border border-[var(--border-subtle)] p-4 text-xs font-mono space-y-2.5">
+                        <div className="flex justify-between text-[var(--text-muted)]">
+                          <span>Funding Source:</span>
+                          <span className="text-[#19B86B] font-bold">Eligible Account Balance ({formatCurrency(user.accountBalance)} USD)</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--text-muted)]">
+                          <span>Target Plan:</span>
+                          <span className="text-[var(--text-primary)] font-bold uppercase">{planObj?.name}</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--text-muted)]">
+                          <span>Daily Yield:</span>
+                          <span className="text-[#19B86B] font-bold">{dailyRoiVal}% Daily</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--text-muted)]">
+                          <span>Contract Term:</span>
+                          <span className="text-[var(--text-primary)] font-bold">{durationDays} Days</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--text-muted)]">
+                          <span>Re-Investment Principal:</span>
+                          <span className="text-[var(--text-primary)] font-black text-sm">{formatCurrency(amountNum)} USD</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--text-muted)]">
+                          <span>Expected Net Profit:</span>
+                          <span className="text-[#D6B25E] font-bold">{formatCurrency(totalProfitAmount)} USD</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--text-muted)]">
+                          <span>Total Return At Maturity:</span>
+                          <span className="text-[#19B86B] font-bold">{formatCurrency(totalReturnAmount)} USD ({totalRoiRate}%)</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--text-muted)] pt-2 border-t border-[var(--border-subtle)]">
+                          <span>Remaining Account Balance:</span>
+                          <span className={`font-bold ${isInsufficient ? 'text-rose-400' : 'text-[var(--text-primary)]'}`}>
+                            {formatCurrency(remainingBalance)} USD
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Warnings if validation fails */}
+                      {isInsufficient && (
+                        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-bold flex items-center gap-2">
+                          <span>⚠️ Insufficient eligible account balance. You have {formatCurrency(user.accountBalance)} available.</span>
+                        </div>
+                      )}
+                      {isBelowMin && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400 font-bold flex items-center gap-2">
+                          <span>⚠️ The minimum re-investment for {planObj?.name} is {formatCurrency(planObj?.min)}.</span>
+                        </div>
+                      )}
+                      {isAboveMax && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400 font-bold flex items-center gap-2">
+                          <span>⚠️ The maximum re-investment for {planObj?.name} is {formatCurrency(planObj?.max)}.</span>
+                        </div>
+                      )}
+
+                      {/* Step 4: Confirm */}
+                      <div className="pt-2 border-t border-[var(--border-subtle)] space-y-3">
+                        <div className="p-3.5 bg-[#C59B4E]/5 rounded-xl border border-[#C59B4E]/20 text-[11px] text-[var(--text-muted)] leading-relaxed">
+                          <strong className="text-[#C59B4E] uppercase font-bold block mb-0.5">ℹ️ Independent Transaction Record</strong>
+                          Every re-investment generates a fresh, independent investment and deposit record with its own unique ID. Your previous investments and historical records will remain permanently intact.
+                        </div>
+
+                        {reinvestError && (
+                          <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-bold">
+                            {reinvestError}
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={isExecutingReinvest || isInsufficient || isBelowMin || isAboveMax || amountNum <= 0}
+                          className="w-full py-4 bg-[#19B86B] hover:bg-[#159a59] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                        >
+                          {isExecutingReinvest ? (
+                            <>
+                              <RefreshCw size={15} className="animate-spin stroke-[2.5]" />
+                              <span>CREATING RE-INVESTMENT RECORD...</span>
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={16} />
+                              <span>CONFIRM RE-INVESTMENT & START YIELDING</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </form>
+            )}
           </div>
         )}
 
@@ -2229,19 +2952,21 @@ export default function DashboardView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border-subtle)] text-xs text-[var(--text-secondary)] font-medium font-mono">
-                    {transactions.filter(t => t.type === 'Deposit' || t.type === 'Investment').length === 0 ? (
+                    {transactions.filter(t => t.type === 'Deposit' || t.type === 'Investment' || t.type === 'Re-Investment').length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-12 px-6 text-center text-[var(--text-muted)] font-sans text-xs">
                           No deposit or investment records located yet. Initiate a transaction to begin.
                         </td>
                       </tr>
                     ) : (
-                      transactions.filter(t => t.type === 'Deposit' || t.type === 'Investment').map((t) => (
+                      transactions.filter(t => t.type === 'Deposit' || t.type === 'Investment' || t.type === 'Re-Investment').map((t) => (
                         <tr key={t.id} className="hover:bg-[var(--bg-card-elevated)] transition-colors">
                           <td className="py-4.5 px-6 font-bold text-[var(--text-primary)]">{t.id}</td>
                           <td className="py-4.5 px-3">
                             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                              t.type === 'Deposit' ? 'bg-[#19B86B]/15 text-[#19B86B]' : 'bg-indigo-500/15 text-indigo-400'
+                              t.type === 'Deposit' ? 'bg-[#19B86B]/15 text-[#19B86B]' :
+                              t.type === 'Re-Investment' ? 'bg-amber-500/15 text-[#D6B25E] border border-amber-500/30' :
+                              'bg-indigo-500/15 text-indigo-400'
                             }`}>
                               {t.type}
                             </span>

@@ -1,4 +1,4 @@
-export type Page = 'Home' | 'About' | 'FAQs' | 'Register' | 'Dashboard' | 'Deposit' | 'News' | 'Admin';
+export type Page = 'Home' | 'About' | 'FAQs' | 'Register' | 'Dashboard' | 'Deposit' | 'News' | 'Admin' | 'Reinvest';
 
 export interface Deposit {
   id?: string;
@@ -6,16 +6,17 @@ export interface Deposit {
   username: string;
   amount: number;
   date: string;
-  processor: 'USDT TRC20' | 'Bitcoin' | 'Ethereum' | 'USDT ERC20' | 'Dogecoin' | 'Perfect Money' | 'Tron' | 'XRP' | 'Account Balance';
+  processor: 'USDT TRC20' | 'Bitcoin' | 'Ethereum' | 'USDT ERC20' | 'Dogecoin' | 'Perfect Money' | 'Tron' | 'XRP' | 'Account Balance' | string;
   planId?: string;
   planName?: string;
   timestamp?: number;
   roi?: number;
   term?: number;
-  status?: 'Pending' | 'Approved' | 'Rejected' | 'pending' | 'approved' | 'rejected';
+  status?: 'Pending' | 'Approved' | 'Rejected' | 'Completed' | 'pending' | 'approved' | 'rejected' | string;
   submittedAt?: number;
   approvedAt?: number | null;
   reviewedAt?: number | null;
+  type?: 'Deposit' | 'Re-Investment' | string;
 }
 
 export interface Withdrawal {
@@ -37,7 +38,7 @@ export interface Transaction {
   id: string;
   userId: string;
   username: string;
-  type: 'Deposit' | 'Investment' | 'Profit' | 'Withdrawal' | 'Bonus' | 'DEPOSIT' | 'PROFIT' | 'BONUS' | 'BALANCE_REDUCTION' | string;
+  type: 'Deposit' | 'Investment' | 'Re-Investment' | 'Profit' | 'Withdrawal' | 'Bonus' | 'DEPOSIT' | 'PROFIT' | 'BONUS' | 'BALANCE_REDUCTION' | string;
   amount: number;
   date: string;
   timestamp: number;
@@ -48,6 +49,7 @@ export interface Transaction {
   term?: number;
   roi?: number;
   referenceId?: string;
+  invoiceId?: string;
   createdAt?: number;
   approvedAt?: number | null;
   txHash?: string;

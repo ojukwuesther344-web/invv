@@ -91,6 +91,8 @@ export default function App() {
     const search = window.location.search.toLowerCase();
     if (path.includes('/admin') || hash.includes('admin') || search.includes('admin')) {
       return 'Admin';
+    } else if (path.includes('/re-invest') || path.includes('/reinvest') || hash.includes('re-invest') || hash.includes('reinvest')) {
+      return 'Dashboard';
     } else if (path.includes('/dashboard') || hash.includes('dashboard') || search.includes('dashboard')) {
       return 'Dashboard';
     } else if (path.includes('/deposit') || hash.includes('deposit')) {
@@ -107,13 +109,29 @@ export default function App() {
     return 'Home';
   };
 
+  const resolveDashboardSection = (): string => {
+    if (typeof window === 'undefined') return 'dashboard';
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    if (path.includes('/re-invest') || path.includes('/reinvest') || hash.includes('re-invest') || hash.includes('reinvest')) {
+      return 're-invest';
+    }
+    return 'dashboard';
+  };
+
   const [currentPage, setCurrentPage] = useState<Page>(resolvePageFromLocation);
+  const [dashboardSection, setDashboardSection] = useState<string>(resolveDashboardSection);
 
   // Sync route on hash/popstate navigation changes
   useEffect(() => {
     const handleLocationChange = () => {
       const page = resolvePageFromLocation();
       setCurrentPage(page);
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.includes('/re-invest') || path.includes('/reinvest') || hash.includes('re-invest') || hash.includes('reinvest')) {
+        setDashboardSection('re-invest');
+      }
     };
     window.addEventListener('hashchange', handleLocationChange);
     window.addEventListener('popstate', handleLocationChange);
@@ -136,7 +154,6 @@ export default function App() {
       }
     } catch {}
   }, [currentPage]);
-  const [dashboardSection, setDashboardSection] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
@@ -376,7 +393,7 @@ export default function App() {
 
     // Only investments that are Approved or Completed are eligible for earnings
     const approvedInvestments = transactions.filter(t => 
-      t.type === 'Investment' && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
+      (t.type === 'Investment' || t.type === 'Re-Investment') && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
     );
 
     // 1. Data Integrity & Cleanup Check:
@@ -535,7 +552,7 @@ export default function App() {
 
     // Only approved/completed investments
     const approvedInvestments = transactions.filter(t => 
-      t.type === 'Investment' && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
+      (t.type === 'Investment' || t.type === 'Re-Investment') && (t.status === 'Approved' || t.status === 'approved' || t.status === 'Completed' || t.status === 'completed')
     );
 
     const approvedDeposits = transactions.filter(t => 
@@ -553,7 +570,7 @@ export default function App() {
       .reduce((sum, t) => sum + t.amount, 0);
 
     const activeInvestments = transactions
-      .filter(t => t.type === 'Investment' && (t.status === 'Approved' || t.status === 'approved'))
+      .filter(t => (t.type === 'Investment' || t.type === 'Re-Investment') && (t.status === 'Approved' || t.status === 'approved'))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const approvedWithdrawals = transactions
@@ -574,7 +591,7 @@ export default function App() {
     let liveEarnedTotal = 0;
 
     // Process all investments for UI tracking, but ONLY approved investments accrue profit!
-    transactions.filter(t => t.type === 'Investment').forEach((inv) => {
+    transactions.filter(t => t.type === 'Investment' || t.type === 'Re-Investment').forEach((inv) => {
       const amt = Number(inv.amount) || 0;
       const invStatus = (inv.status || '').toLowerCase();
       const isApproved = invStatus === 'approved' || invStatus === 'completed';
