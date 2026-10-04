@@ -2,7 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" id="viewport-meta" content="width=1200, initial-scale=1.0" />
+    <script>
+      (function() {
+        try {
+          var targetWidth = 1200;
+          var meta = document.getElementById('viewport-meta') || document.querySelector('meta[name="viewport"]');
+          if (meta) {
+            var screenW = window.screen && window.screen.width ? window.screen.width : window.innerWidth;
+            if (screenW && screenW < targetWidth) {
+              var initialScale = screenW / targetWidth;
+              meta.setAttribute('content', 'width=' + targetWidth + ', initial-scale=' + initialScale + ', maximum-scale=5.0, user-scalable=yes');
+            } else {
+              meta.setAttribute('content', 'width=1200, initial-scale=1.0');
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script>
       (function() {
         try {

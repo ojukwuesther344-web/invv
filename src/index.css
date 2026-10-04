@@ -172,3 +172,34 @@ h1, h2, h3, h4, h5, h6, .font-display {
   animation: ticker-slide 32s linear infinite;
 }
 
+/* Custom scrollbar for dark admin theme */
+.admin-scrollbar,
+[data-admin-view],
+[data-admin-view] * {
+  scrollbar-width: thin;
+  scrollbar-color: #173653 #06111F;
+}
+
+.admin-scrollbar::-webkit-scrollbar,
+[data-admin-view]::-webkit-scrollbar,
+[data-admin-view] *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.admin-scrollbar::-webkit-scrollbar-track,
+[data-admin-view]::-webkit-scrollbar-track,
+[data-admin-view] *::-webkit-scrollbar-track {
+  background: #06111F;
+}
+.admin-scrollbar::-webkit-scrollbar-thumb,
+[data-admin-view]::-webkit-scrollbar-thumb,
+[data-admin-view] *::-webkit-scrollbar-thumb {
+  background: #173653;
+  border-radius: 4px;
+}
+.admin-scrollbar::-webkit-scrollbar-thumb:hover,
+[data-admin-view]::-webkit-scrollbar-thumb:hover,
+[data-admin-view] *::-webkit-scrollbar-thumb:hover {
+  background: #9B22FF;
+}
+

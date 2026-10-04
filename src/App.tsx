@@ -14,6 +14,7 @@ import FAQsView from './components/FAQsView';
 import RegisterView from './components/RegisterView';
 import AdminView from './components/AdminView';
 import SupportFloatingButton from './components/SupportFloatingButton';
+import DesktopCanvasWrapper from './components/DesktopCanvasWrapper';
 import { Page, UserState, Deposit, Withdrawal, Transaction } from './types';
 import { formatCurrency } from './utils/formatters';
 import { 
@@ -991,16 +992,18 @@ export default function App() {
   // Renders Admin Panel View
   if (currentPage === 'Admin') {
     return (
-      <AdminView 
-        onPageChange={handlePageChange}
-        currentUser={liveUser}
-        onLoginSuccess={(adminUser) => {
-          setUser({
-            ...adminUser,
-            isLoggedIn: true
-          });
-        }}
-      />
+      <DesktopCanvasWrapper desktopWidth={1200}>
+        <AdminView 
+          onPageChange={handlePageChange}
+          currentUser={liveUser}
+          onLoginSuccess={(adminUser) => {
+            setUser({
+              ...adminUser,
+              isLoggedIn: true
+            });
+          }}
+        />
+      </DesktopCanvasWrapper>
     );
   }
 
@@ -1036,46 +1039,49 @@ export default function App() {
     }
 
     return (
-      <div className="flex h-screen overflow-hidden bg-[var(--bg-main)] text-[var(--text-primary)] font-sans w-full transition-colors duration-200">
-        <DashboardSidebar 
-          activeSection={dashboardSection}
-          onSectionChange={setDashboardSection}
-          onLogout={handleLogout}
-          username={user.username}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          isAdmin={false}
-          onPageChange={handlePageChange}
-          mainAccountBalance={liveUser.mainAccountBalance}
-          accountBalance={liveUser.accountBalance}
-        />
-        <DashboardView 
-          onPageChange={handlePageChange}
-          user={liveUser}
-          onUpdateUser={handleUpdateUserMetrics}
-          activeSection={dashboardSection}
-          onSectionSelect={setDashboardSection}
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          activeTracks={activeTracks}
-          transactions={transactions}
-          reloadTransactions={reloadTransactions}
-          reloadDeposits={reloadDeposits}
-        />
-        <SupportFloatingButton onPageChange={handlePageChange} currentUser={liveUser} />
-      </div>
+      <DesktopCanvasWrapper desktopWidth={1200}>
+        <div className="flex h-screen overflow-hidden bg-[var(--bg-main)] text-[var(--text-primary)] font-sans w-full transition-colors duration-200">
+          <DashboardSidebar 
+            activeSection={dashboardSection}
+            onSectionChange={setDashboardSection}
+            onLogout={handleLogout}
+            username={user.username}
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            isAdmin={false}
+            onPageChange={handlePageChange}
+            mainAccountBalance={liveUser.mainAccountBalance}
+            accountBalance={liveUser.accountBalance}
+          />
+          <DashboardView 
+            onPageChange={handlePageChange}
+            user={liveUser}
+            onUpdateUser={handleUpdateUserMetrics}
+            activeSection={dashboardSection}
+            onSectionSelect={setDashboardSection}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            activeTracks={activeTracks}
+            transactions={transactions}
+            reloadTransactions={reloadTransactions}
+            reloadDeposits={reloadDeposits}
+          />
+          <SupportFloatingButton onPageChange={handlePageChange} currentUser={liveUser} />
+        </div>
+      </DesktopCanvasWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)] relative w-full transition-colors duration-200">
-      
-      {/* Absolute top global Header */}
-      <Header 
-        currentPage={currentPage} 
-        onPageChange={handlePageChange} 
-        user={user} 
-        onLogout={handleLogout} 
-      />
+    <DesktopCanvasWrapper desktopWidth={1200}>
+      <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)] relative w-full transition-colors duration-200">
+        
+        {/* Absolute top global Header */}
+        <Header 
+          currentPage={currentPage} 
+          onPageChange={handlePageChange} 
+          user={user} 
+          onLogout={handleLogout} 
+        />
 
       {/* Primary Routing view switcher */}
       <main className="flex-1">
@@ -1566,5 +1572,6 @@ export default function App() {
       <SupportFloatingButton onPageChange={handlePageChange} currentUser={user} />
 
     </div>
-  );
+  </DesktopCanvasWrapper>
+);
 }

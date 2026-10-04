@@ -69,11 +69,6 @@ export default function DashboardSidebar({
       icon: <TrendingUp size={17} /> 
     },
     { 
-      id: 're-invest', 
-      label: 'Re-Investment', 
-      icon: <RefreshCw size={17} /> 
-    },
-    { 
       id: 'our-plans', 
       label: 'Our Plans', 
       icon: <PieChart size={17} /> 
@@ -150,15 +145,15 @@ export default function DashboardSidebar({
             </span>
           </div>
 
-          {/* Action buttons Deposit, Re-Invest & Withdraw */}
-          <div className="grid grid-cols-3 gap-1.5 mt-3">
+          {/* Action buttons Deposit & Withdraw */}
+          <div className="grid grid-cols-2 gap-2 mt-3">
             <button
               type="button"
               onClick={() => {
                 onSectionChange('make-deposit');
                 if (onClose) onClose();
               }}
-              className="bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-black text-[11px] uppercase py-2 px-1 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider truncate"
+              className="bg-[#19B86B] hover:bg-[#159a59] active:scale-95 text-white font-black text-xs uppercase py-2.5 px-2 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider"
               title="Deposit funds"
             >
               DEPOSIT
@@ -166,21 +161,10 @@ export default function DashboardSidebar({
             <button
               type="button"
               onClick={() => {
-                onSectionChange('re-invest');
-                if (onClose) onClose();
-              }}
-              className="bg-[#0B2545] hover:bg-[#07192f] active:scale-95 text-white font-black text-[11px] uppercase py-2 px-1 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider border border-[#C59B4E]/40 truncate"
-              title="Re-Invest from available balance"
-            >
-              RE-INVEST
-            </button>
-            <button
-              type="button"
-              onClick={() => {
                 onSectionChange('withdraw');
                 if (onClose) onClose();
               }}
-              className="flex-1 bg-[#D6B25E] hover:bg-[#be9c4b] active:scale-95 text-[#080B10] font-black text-[11px] uppercase py-2 px-1 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider truncate"
+              className="bg-[#D6B25E] hover:bg-[#be9c4b] active:scale-95 text-[#080B10] font-black text-xs uppercase py-2.5 px-2 rounded-lg shadow-xs text-center transition-all cursor-pointer tracking-wider"
               title="Withdraw funds"
             >
               WITHDRAW

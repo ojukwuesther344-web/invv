@@ -41,19 +41,19 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
   return (
     <header className="w-full relative z-50">
       {/* Top Bar Contacts */}
-      <div className="bg-[#071625] text-white text-[11px] md:text-xs py-2 px-4 border-b border-gray-800">
+      <div className="bg-[#071625] text-white text-xs py-2 px-4 border-b border-gray-800">
         <div className="max-w-7xl mx-auto flex flex-row justify-between items-center gap-2">
           {/* Left Contacts */}
           <div className="flex items-center gap-4 text-gray-300">
             <a href="tel:+12125921125" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <Phone size={12} className="text-[#C59B4E]" />
-              <span className="hidden sm:inline">+1 (212) 592-1125</span>
+              <span className="inline">+1 (212) 592-1125</span>
             </a>
             <a href="mailto:support@worldvestcapital.ltd" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <Mail size={12} className="text-[#C59B4E]" />
-              <span className="hidden md:inline">support@worldvestcapital.ltd</span>
+              <span className="inline">support@worldvestcapital.ltd</span>
             </a>
-            <span className="hidden lg:flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5">
               <MapPin size={12} className="text-[#C59B4E]" />
               <span>20-22 Wenlock Road, London, England, N1 7GU</span>
             </span>
@@ -142,7 +142,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
           </button>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-7">
+          <div className="flex items-center gap-7">
             {navItems.map((item) => {
               const isActive = currentPage === item.view && !item.elementId;
               return (
@@ -163,7 +163,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
           </div>
 
           {/* Action Buttons */}
-          <div className="hidden sm:flex items-center gap-3">
+          <div className="flex items-center gap-3">
             {user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? (
               <div className="flex items-center gap-1.5">
                 <button 
@@ -205,84 +205,7 @@ export default function Header({ currentPage, onPageChange, user, onLogout }: He
               <ArrowRight size={14} />
             </button>
           </div>
-
-          {/* Mobile hamburger button */}
-          <div className="flex sm:hidden items-center gap-2">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-elevated)] transition-colors"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-          </div>
         </div>
-
-        {/* Mobile Slideout Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="md:hidden mt-3 pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-3 animate-in fade-in duration-200">
-            <div className="flex flex-col gap-1">
-              {navItems.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => handleNavClick(item.view, item.elementId)}
-                  className="w-full text-left px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:text-[#C59B4E] hover:bg-[var(--bg-card)] rounded-lg transition-colors"
-                >
-                  {item.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-col gap-2">
-              {user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? (
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => {
-                      onPageChange('Dashboard');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-semibold rounded-lg"
-                  >
-                    <User size={14} className="text-[#C59B4E]" />
-                    <span>{user.username} (Dashboard)</span>
-                  </button>
-                  <button 
-                    onClick={onLogout}
-                    className="p-2 border border-[var(--border-subtle)] rounded-lg text-rose-500 hover:bg-rose-500/10"
-                  >
-                    <LogOut size={14} />
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => {
-                    onPageChange('Register');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-bold rounded-lg uppercase"
-                >
-                  <User size={14} className="text-[#C59B4E]" />
-                  <span>Register / Login</span>
-                </button>
-              )}
-
-              <button 
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  if (user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email)) {
-                    onPageChange('Dashboard');
-                  } else {
-                    onPageChange('Register');
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-1.5 bg-[#19B86B] text-white py-2.5 rounded-lg font-black text-xs uppercase tracking-wider"
-              >
-                <span>{user.isLoggedIn && !isSystemAdminIdentity(user.username) && !isSystemAdminIdentity(user.email) ? 'Go to Account' : 'GET STARTED'}</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Steady Moving Crypto & Market Ticker Bar with Dark Blue Background */}

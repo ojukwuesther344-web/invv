@@ -1699,15 +1699,6 @@ export default function DashboardView({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onSectionSelect('re-invest')}
-                  className="bg-[#0B2545] hover:bg-[#07192f] text-white border border-[#C59B4E]/40 active:scale-95 font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                  title="Re-Invest from eligible account balance"
-                >
-                  <RefreshCw size={13} className="text-[#C59B4E]" />
-                  <span>Re-Invest</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => onSectionSelect('deposit-list')}
                   className="bg-[var(--bg-card)] hover:bg-[var(--bg-card-elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] active:scale-95 font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
@@ -2042,13 +2033,6 @@ export default function DashboardView({
                 >
                   Deposit Funds &gt;
                 </button>
-                <button 
-                  onClick={() => onSectionSelect('re-invest')}
-                  className="px-5 py-3 bg-[#0B2545] hover:bg-[#07192f] text-white border border-[#C59B4E]/40 font-black text-xs uppercase tracking-widest rounded-lg shadow-md cursor-pointer transition-transform flex items-center gap-1.5"
-                >
-                  <RefreshCw size={13} className="text-[#C59B4E]" />
-                  <span>Re-Invest Balance &gt;</span>
-                </button>
               </div>
             </div>
           </div>
@@ -2075,14 +2059,6 @@ export default function DashboardView({
                   className="bg-[#19B86B] hover:bg-[#159a59] text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   Deposit & Activate &rarr;
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSectionSelect('re-invest')}
-                  className="bg-[#0B2545] hover:bg-[#07192f] text-white border border-[#C59B4E]/40 font-bold text-xs px-4 py-2.5 rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <RefreshCw size={13} className="text-[#C59B4E]" />
-                  <span>Re-Invest</span>
                 </button>
               </div>
             </div>
