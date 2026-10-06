@@ -180,3 +180,52 @@ export interface UserState {
   referralsCount?: number;
   referralEarnings?: number;
 }
+
+export type DelegatedAccessMode = 'VIEW_ACCOUNT' | 'ACT_AS_CLIENT';
+
+export interface DelegatedAdminSession {
+  sessionId: string;
+  adminUid: string;
+  adminEmail: string;
+  adminName: string;
+  targetUid: string;
+  targetUser: UserState;
+  mode: DelegatedAccessMode;
+  permissionUsed: 'VIEW_ACCOUNTS' | 'ACT_AS_CLIENT';
+  createdAt: number;
+  expiresAt: number;
+  isActive: boolean;
+  actionsPerformed?: string[];
+}
+
+export interface AdminPermissions {
+  email: string;
+  VIEW_ACCOUNTS: boolean;
+  ACT_AS_CLIENT: boolean;
+  VIEW_TRANSACTIONS?: boolean;
+  MANAGE_DEPOSITS?: boolean;
+  MANAGE_WITHDRAWALS?: boolean;
+  MANAGE_USERS?: boolean;
+  MANAGE_SUPPORT?: boolean;
+  MANAGE_INVESTMENTS?: boolean;
+  updatedAt?: number;
+  updatedBy?: string;
+}
+
+export interface AdminDelegatedAuditLog {
+  id: string;
+  sessionId: string;
+  adminEmail: string;
+  adminUid: string;
+  targetUid: string;
+  targetEmail: string;
+  targetUsername: string;
+  targetName: string;
+  mode: DelegatedAccessMode;
+  startedAt: number;
+  endedAt: number | null;
+  status: 'active' | 'terminated' | 'expired';
+  actions: string[];
+  ip: string;
+  userAgent: string;
+}

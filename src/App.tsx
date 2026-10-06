@@ -15,8 +15,15 @@ import RegisterView from './components/RegisterView';
 import AdminView from './components/AdminView';
 import SupportFloatingButton from './components/SupportFloatingButton';
 import DesktopCanvasWrapper from './components/DesktopCanvasWrapper';
-import { Page, UserState, Deposit, Withdrawal, Transaction } from './types';
-import { formatCurrency } from './utils/formatters';
+import { trackWebsiteVisitor } from './services/notificationService';
+import { 
+  getActiveDelegatedSession, 
+  clearActiveDelegatedSession, 
+  terminateDelegatedSession, 
+  recordDelegatedAction 
+} from './services/adminDelegationService';
+import { Page, UserState, Deposit, Withdrawal, Transaction, DelegatedAdminSession } from './types';
+import { formatCurrency, calculateDisplayBalance } from './utils/formatters';
 import { 
   saveUserProfile, 
   fetchUserProfile, 
@@ -155,10 +162,11 @@ export default function App() {
       }
     } catch {}
   }, [currentPage]);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
-  
+
   const emptyUserState: UserState = {
     isLoggedIn: false,
     username: '',
@@ -183,6 +191,17 @@ export default function App() {
   };
 
   const [user, setUser] = useState<UserState>(emptyUserState);
+
+  // Real-time visitor session detection & background admin push notification trigger
+  useEffect(() => {
+    if (currentPage === 'Admin') return;
+    trackWebsiteVisitor({
+      pageName: currentPage,
+      isAdmin: false,
+      userEmail: user?.isLoggedIn ? user.email : undefined,
+      userName: user?.isLoggedIn ? user.username : undefined
+    });
+  }, [currentPage, user?.isLoggedIn, user?.email, user?.username]);
 
   // Setup active tracking background ticking
   useEffect(() => {
@@ -1052,6 +1071,11 @@ export default function App() {
             onPageChange={handlePageChange}
             mainAccountBalance={liveUser.mainAccountBalance}
             accountBalance={liveUser.accountBalance}
+            earnedTotal={liveUser.earnedTotal}
+            displayBalance={calculateDisplayBalance(
+              liveUser.mainAccountBalance !== undefined ? liveUser.mainAccountBalance : liveUser.accountBalance,
+              liveUser.earnedTotal
+            )}
           />
           <DashboardView 
             onPageChange={handlePageChange}

@@ -220,6 +220,111 @@ export async function fetchAdminDevices(): Promise<AdminDevice[]> {
 }
 
 /**
+ * Notification settings interface
+ */
+export interface AdminNotificationSettings {
+  pushNotifications: boolean;
+  soundAlerts: boolean;
+  minSessionCooldownSeconds?: number;
+}
+
+/**
+ * Fetch current admin notification settings
+ */
+export async function fetchNotificationSettings(): Promise<AdminNotificationSettings> {
+  try {
+    const res = await fetch('/api/notifications/settings');
+    const data = await res.json();
+    if (data.success && data.settings) {
+      if (typeof data.settings.soundAlerts === 'boolean') {
+        setNotificationSoundEnabled(data.settings.soundAlerts);
+      }
+      return data.settings;
+    }
+  } catch (e) {
+    console.warn('fetchNotificationSettings error:', e);
+  }
+  return {
+    pushNotifications: true,
+    soundAlerts: isNotificationSoundEnabled(),
+    minSessionCooldownSeconds: 300
+  };
+}
+
+/**
+ * Update admin notification settings
+ */
+export async function updateNotificationSettings(settings: Partial<AdminNotificationSettings>): Promise<AdminNotificationSettings | null> {
+  try {
+    if (typeof settings.soundAlerts === 'boolean') {
+      setNotificationSoundEnabled(settings.soundAlerts);
+    }
+    const res = await fetch('/api/notifications/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    const data = await res.json();
+    if (data.success && data.settings) {
+      return data.settings;
+    }
+  } catch (e) {
+    console.warn('updateNotificationSettings error:', e);
+  }
+  return null;
+}
+
+/**
+ * Trigger Phone Test Notification (Formatted for Phone screens)
+ */
+export async function sendTestPhoneAlert(adminEmail?: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetch('/api/notifications/test-phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminEmail: adminEmail || localStorage.getItem('wv_admin_push_email') || ''
+      })
+    });
+    const data = await res.json();
+    return {
+      success: data.success,
+      message: data.message || (data.success ? 'Phone test alert dispatched!' : 'Failed to send phone test alert.')
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err.message || 'Network error triggering phone test alert.'
+    };
+  }
+}
+
+/**
+ * Trigger Desktop Test Notification (Formatted for Laptop / Desktop screens)
+ */
+export async function sendTestDesktopAlert(adminEmail?: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetch('/api/notifications/test-desktop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminEmail: adminEmail || localStorage.getItem('wv_admin_push_email') || ''
+      })
+    });
+    const data = await res.json();
+    return {
+      success: data.success,
+      message: data.message || (data.success ? 'Desktop test alert dispatched!' : 'Failed to send desktop test alert.')
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err.message || 'Network error triggering desktop test alert.'
+    };
+  }
+}
+
+/**
  * Trigger a test notification to verify delivery on laptop or phone
  */
 export async function sendTestAlert(adminEmail: string): Promise<{ success: boolean; message: string }> {
@@ -243,6 +348,96 @@ export async function sendTestAlert(adminEmail: string): Promise<{ success: bool
       message: err.message || 'Network error triggering test alert.'
     };
   }
+}
+
+/**
+ * Track website visitor session and ping backend push notification engine
+ */
+export async function trackWebsiteVisitor(params: {
+  pageName: string;
+  isAdmin?: boolean;
+  userEmail?: string;
+  userName?: string;
+}): Promise<void> {
+  // Never track if in Admin view or admin user
+  if (params.isAdmin) return;
+
+  try {
+    // Session debounce on client side to prevent excessive pings on rapid tab switches
+    const lastTrackTimeStr = sessionStorage.getItem('wv_last_visitor_ping_time');
+    const now = Date.now();
+    if (lastTrackTimeStr && (now - parseInt(lastTrackTimeStr, 10)) < 120000) {
+      // Checked in past 2 minutes in this tab, skip
+      return;
+    }
+    sessionStorage.setItem('wv_last_visitor_ping_time', now.toString());
+
+    // Persistent visitor ID & returning client status
+    const visitorKey = 'wv_persistent_visitor_id';
+    let visitorId = localStorage.getItem(visitorKey);
+    const seenBefore = Boolean(visitorId);
+    if (!visitorId) {
+      visitorId = `v_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem(visitorKey, visitorId);
+    }
+
+    let visitorType = seenBefore ? 'Returning Client' : 'New Visitor';
+    if (params.userName || params.userEmail) {
+      visitorType = `Returning Client (${params.userName || params.userEmail})`;
+    }
+
+    // Determine device string
+    const ua = navigator.userAgent;
+    let deviceStr = 'Desktop PC';
+    if (/Android.*Mobile/i.test(ua)) deviceStr = 'Android Phone';
+    else if (/Android/i.test(ua)) deviceStr = 'Android Tablet';
+    else if (/iPhone/i.test(ua)) deviceStr = 'iPhone';
+    else if (/iPad/i.test(ua)) deviceStr = 'iPad Tablet';
+    else if (/Windows/i.test(ua)) deviceStr = 'Windows Laptop';
+    else if (/Macintosh|Mac OS X/i.test(ua)) deviceStr = 'MacBook';
+    else if (/Linux/i.test(ua)) deviceStr = 'Linux PC';
+
+    await fetch('/api/visitors/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitorId,
+        visitorType,
+        device: deviceStr,
+        page: params.pageName || 'Homepage',
+        path: window.location.pathname || '/',
+        isAdmin: false
+      })
+    });
+  } catch (e) {
+    // Silent fail for non-intrusive tracking
+  }
+}
+
+/**
+ * Setup listener for service worker push notifications while dashboard is open in foreground
+ */
+export function setupForegroundNotificationListener(onAlert?: (payload: any) => void): () => void {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    return () => {};
+  }
+
+  const handler = (event: MessageEvent) => {
+    if (event.data?.type === 'PUSH_NOTIFICATION_RECEIVED') {
+      // Play sound chime if sound alerts are active
+      if (isNotificationSoundEnabled()) {
+        playNotificationChime();
+      }
+      if (onAlert) {
+        onAlert(event.data);
+      }
+    }
+  };
+
+  navigator.serviceWorker.addEventListener('message', handler);
+  return () => {
+    navigator.serviceWorker.removeEventListener('message', handler);
+  };
 }
 
 /**

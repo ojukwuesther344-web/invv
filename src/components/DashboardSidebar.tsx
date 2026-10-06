@@ -1,6 +1,6 @@
 import React from 'react';
 import logoheadImg from '../assets/images/logohead.png';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, calculateDisplayBalance } from '../utils/formatters';
 import { 
   LayoutDashboard, 
   Wallet, 
@@ -37,6 +37,8 @@ interface SidebarProps {
   onPageChange?: (page: any) => void;
   mainAccountBalance?: number;
   accountBalance?: number;
+  earnedTotal?: number;
+  displayBalance?: number;
 }
 
 export default function DashboardSidebar({ 
@@ -49,8 +51,14 @@ export default function DashboardSidebar({
   isAdmin = false, 
   onPageChange,
   mainAccountBalance,
-  accountBalance = 0
+  accountBalance = 0,
+  earnedTotal = 0,
+  displayBalance
 }: SidebarProps) {
+  // Dynamic Display Balance calculation: BASE/CURRENT BALANCE + EARNED TOTAL
+  const calculatedDisplayBalance = displayBalance !== undefined
+    ? displayBalance
+    : calculateDisplayBalance(mainAccountBalance !== undefined ? mainAccountBalance : accountBalance, earnedTotal);
   // Primary menu matching screenshot exactly
   const primaryMenuItems = [
     { 
@@ -138,7 +146,7 @@ export default function DashboardSidebar({
           </span>
           <div className="mt-1 flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
-              {formatCurrency(mainAccountBalance !== undefined ? mainAccountBalance : accountBalance)}
+              {formatCurrency(calculatedDisplayBalance)}
             </span>
             <span className="text-xs font-semibold text-[var(--text-muted)]">
               USD

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Page, UserState, Transaction, Withdrawal } from '../types';
+import { Page, UserState, Transaction, Withdrawal, DelegatedAdminSession } from '../types';
 import logoheadImg from '../assets/images/logohead.png';
-import { formatCurrency, formatAmount } from '../utils/formatters';
+import DelegatedAdminBanner from './DelegatedAdminBanner';
+import { formatCurrency, formatAmount, calculateDisplayBalance } from '../utils/formatters';
 import { isSystemAdminIdentity } from '../services/firebaseService';
 import { 
   addDepositRecord, 
@@ -65,6 +66,9 @@ interface DashboardViewProps {
   transactions: Transaction[];
   reloadTransactions: (uid: string) => Promise<void>;
   reloadDeposits: (uid: string) => Promise<void>;
+  delegatedSession?: DelegatedAdminSession | null;
+  onExitDelegatedSession?: () => void;
+  onRecordDelegatedAction?: (actionText: string) => void;
 }
 
 export default function DashboardView({ 
@@ -77,7 +81,10 @@ export default function DashboardView({
   activeTracks = [],
   transactions,
   reloadTransactions,
-  reloadDeposits
+  reloadDeposits,
+  delegatedSession,
+  onExitDelegatedSession,
+  onRecordDelegatedAction
 }: DashboardViewProps) {
   // Security guard: System Administrator account is only for the Admin Portal and must never be displayed in the client dashboard
   useEffect(() => {
@@ -452,6 +459,13 @@ export default function DashboardView({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (delegatedSession?.mode === 'VIEW_ACCOUNT') {
+      alert('Security Notice: Modifying client profile is restricted in Admin View Mode (Read-Only).');
+      return;
+    }
+    if (delegatedSession?.mode === 'ACT_AS_CLIENT' && onRecordDelegatedAction) {
+      onRecordDelegatedAction(`Updated client profile details for ${user.email}`);
+    }
     onUpdateUser({
       fullName: profileFullName,
       email: profileEmail,
@@ -511,6 +525,10 @@ export default function DashboardView({
 
   const handleProcessDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (delegatedSession?.mode === 'VIEW_ACCOUNT') {
+      alert('Security Notice: Creating deposits is restricted in Admin View Mode (Read-Only).');
+      return;
+    }
     const amountNum = parseFloat(depositAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
       alert("Please specify a valid deposit amount.");
@@ -649,6 +667,10 @@ export default function DashboardView({
 
   const handleFundingDeposit = async (e: React.FormEvent, isBonus = false) => {
     e.preventDefault();
+    if (delegatedSession?.mode === 'VIEW_ACCOUNT') {
+      alert('Security Notice: Funding operations are restricted in Admin View Mode (Read-Only).');
+      return;
+    }
     const amount = isBonus ? 50.00 : parseFloat(fundingAmount);
     if (isNaN(amount) || amount <= 0) {
       alert("Please enter a valid amount.");
@@ -705,6 +727,10 @@ export default function DashboardView({
 
   const handleConfirmPayment = async () => {
     if (!paymentSession) return;
+    if (delegatedSession?.mode === 'VIEW_ACCOUNT') {
+      alert('Security Notice: Submitting payments or transaction proofs is restricted in Admin View Mode (Read-Only).');
+      return;
+    }
     const cleanTxHash = (paymentTxHash || '').trim();
 
     // User can provide either: A. Transaction hash, B. Transfer receipt image, or C. Both
@@ -822,6 +848,10 @@ export default function DashboardView({
   // Dedicated Re-Investment execution handler
   const handleExecuteReinvest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (delegatedSession?.mode === 'VIEW_ACCOUNT') {
+      alert('Security Notice: Creating reinvestments is restricted in Admin View Mode (Read-Only).');
+      return;
+    }
     setReinvestError('');
     const amountNum = parseFloat(reinvestAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
@@ -960,6 +990,10 @@ export default function DashboardView({
 
   const handleWithdrawalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (delegatedSession?.mode === 'VIEW_ACCOUNT') {
+      alert('Security Notice: Requesting withdrawals is restricted in Admin View Mode (Read-Only).');
+      return;
+    }
     const amount = parseFloat(withdrawAmount);
     if (isNaN(amount) || amount <= 0) {
       alert("Please enter a valid amount.");
@@ -968,6 +1002,10 @@ export default function DashboardView({
     if (user.accountBalance < amount) {
       alert(`Insufficient account balance. Your maximum withdrawable amount is ${formatCurrency(user.accountBalance)}.`);
       return;
+    }
+
+    if (delegatedSession?.mode === 'ACT_AS_CLIENT' && onRecordDelegatedAction) {
+      onRecordDelegatedAction(`Requested withdrawal of $${amount} to ${withdrawSystem} for ${user.email}`);
     }
     const uid = user.uid || `user_${user.username}`;
     const txId = `tx_with_${Date.now()}`;
@@ -1063,8 +1101,17 @@ export default function DashboardView({
     .filter(t => t.type === 'Deposit' && (t.status === 'Pending' || t.status === 'pending'))
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+  // Dynamic Display Balance calculation: BASE/CURRENT BALANCE + EARNED TOTAL
+  const displayBalance = calculateDisplayBalance(
+    user.mainAccountBalance !== undefined ? user.mainAccountBalance : user.accountBalance,
+    user.earnedTotal
+  );
+
   return (
     <div className="flex-1 bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col overflow-y-auto overflow-x-hidden w-full relative transition-colors duration-200">
+      {delegatedSession && onExitDelegatedSession && (
+        <DelegatedAdminBanner session={delegatedSession} onExit={onExitDelegatedSession} />
+      )}
       {/* Top dashboard header matching screenshot style */}
       <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)] py-3 px-4 sm:px-6 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-xs transition-colors duration-200">
         <div className="flex items-center gap-3">
@@ -1720,7 +1767,7 @@ export default function DashboardView({
                 </div>
                 <div className="my-4">
                   <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
-                    {formatCurrency(user.accountBalance)}
+                    {formatCurrency(displayBalance)}
                   </span>
                   <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
                 </div>

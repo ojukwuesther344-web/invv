@@ -42,3 +42,20 @@ export function formatAmount(
 ): string {
   return formatCurrency(value, { showSymbol: false, decimals });
 }
+
+/**
+ * Calculates the dynamic display balance: BASE/CURRENT BALANCE + EARNED TOTAL.
+ */
+export function calculateDisplayBalance(
+  baseBalance: number | string | null | undefined,
+  earnedTotal: number | string | null | undefined
+): number {
+  const base = typeof baseBalance === 'number' 
+    ? (isNaN(baseBalance) ? 0 : baseBalance) 
+    : parseFloat(String(baseBalance || 0).replace(/[^0-9.-]+/g, '')) || 0;
+  const earned = typeof earnedTotal === 'number' 
+    ? (isNaN(earnedTotal) ? 0 : earnedTotal) 
+    : parseFloat(String(earnedTotal || 0).replace(/[^0-9.-]+/g, '')) || 0;
+  return Number((base + earned).toFixed(2));
+}
+

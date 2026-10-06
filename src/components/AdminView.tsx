@@ -38,10 +38,31 @@ import {
   Send,
   CheckCheck,
   Bot,
-  MessageCircle
+  MessageCircle,
+  Bell,
+  AlertCircle,
+  Volume2,
+  VolumeX,
+  Smartphone,
+  Monitor,
+  Radio
 } from 'lucide-react';
 import { UserState, Transaction, InvestmentPlan, Page } from '../types';
 import { formatCurrency } from '../utils/formatters';
+import {
+  AdminDevice,
+  AdminNotificationSettings,
+  fetchAdminDevices,
+  fetchNotificationSettings,
+  updateNotificationSettings,
+  registerAdminPushDevice,
+  sendTestPhoneAlert,
+  sendTestDesktopAlert,
+  playNotificationChime,
+  setNotificationSoundEnabled,
+  setupForegroundNotificationListener,
+  detectDeviceInfo
+} from '../services/notificationService';
 import { 
   SupportChatSession, 
   SupportAutoReplySettings, 
@@ -511,6 +532,136 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   }, [selectedSessionId, isAuthorized]);
 
   const unreadSupportCount = supportSessions.filter(s => s.unreadByAdmin).length;
+
+  // ==========================================
+  // BACKGROUND VISITOR PUSH NOTIFICATIONS STATE & ACTIONS
+  // ==========================================
+  const [notifSettings, setNotifSettings] = useState<AdminNotificationSettings>({
+    pushNotifications: true,
+    soundAlerts: true,
+    minSessionCooldownSeconds: 300
+  });
+  const [adminDevices, setAdminDevices] = useState<AdminDevice[]>([]);
+  const [isRegisteringDevice, setIsRegisteringDevice] = useState(false);
+  const [isTestingPhone, setIsTestingPhone] = useState(false);
+  const [isTestingDesktop, setIsTestingDesktop] = useState(false);
+  const [isTestingSound, setIsTestingSound] = useState(false);
+  const [notifFeedback, setNotifFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [browserPermission, setBrowserPermission] = useState<string>('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setBrowserPermission(Notification.permission);
+    }
+
+    fetchNotificationSettings().then(cfg => {
+      setNotifSettings(cfg);
+    });
+
+    fetchAdminDevices().then(devs => {
+      setAdminDevices(devs);
+    });
+
+    const cleanup = setupForegroundNotificationListener((msg) => {
+      setNotifFeedback({
+        type: 'info',
+        message: `Visitor Alert: ${msg.body || 'New website visitor detected.'}`
+      });
+    });
+
+    return cleanup;
+  }, []);
+
+  const handleTogglePushNotifications = async (enabled: boolean) => {
+    setNotifSettings(prev => ({ ...prev, pushNotifications: enabled }));
+    await updateNotificationSettings({ pushNotifications: enabled });
+    setNotifFeedback({
+      type: 'success',
+      message: enabled ? 'Push Notifications enabled across all devices.' : 'Push Notifications disabled.'
+    });
+  };
+
+  const handleToggleSoundAlerts = async (enabled: boolean) => {
+    setNotifSettings(prev => ({ ...prev, soundAlerts: enabled }));
+    setNotificationSoundEnabled(enabled);
+    await updateNotificationSettings({ soundAlerts: enabled });
+    setNotifFeedback({
+      type: 'success',
+      message: enabled ? 'Sound Alerts enabled for visitor activity.' : 'Sound Alerts muted.'
+    });
+  };
+
+  const handleRegisterCurrentDevice = async () => {
+    setIsRegisteringDevice(true);
+    setNotifFeedback(null);
+    try {
+      const email = currentUser?.email || adminEmail || 'blessingubah38@gmail.com';
+      const res = await registerAdminPushDevice(email, 'Administrator');
+      if (res.success) {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          setBrowserPermission(Notification.permission);
+        }
+        setNotifFeedback({ type: 'success', message: res.message });
+        const devs = await fetchAdminDevices();
+        setAdminDevices(devs);
+      } else {
+        setNotifFeedback({ type: 'error', message: res.message });
+      }
+    } catch (err: any) {
+      setNotifFeedback({ type: 'error', message: err.message || 'Error registering device.' });
+    } finally {
+      setIsRegisteringDevice(false);
+    }
+  };
+
+  const handleTestPhone = async () => {
+    setIsTestingPhone(true);
+    setNotifFeedback(null);
+    try {
+      const email = currentUser?.email || adminEmail || '';
+      const res = await sendTestPhoneAlert(email);
+      setNotifFeedback({
+        type: res.success ? 'success' : 'error',
+        message: res.message
+      });
+    } catch (err: any) {
+      setNotifFeedback({ type: 'error', message: err.message || 'Error triggering phone test.' });
+    } finally {
+      setIsTestingPhone(false);
+    }
+  };
+
+  const handleTestDesktop = async () => {
+    setIsTestingDesktop(true);
+    setNotifFeedback(null);
+    try {
+      const email = currentUser?.email || adminEmail || '';
+      const res = await sendTestDesktopAlert(email);
+      setNotifFeedback({
+        type: res.success ? 'success' : 'error',
+        message: res.message
+      });
+    } catch (err: any) {
+      setNotifFeedback({ type: 'error', message: err.message || 'Error triggering desktop test.' });
+    } finally {
+      setIsTestingDesktop(false);
+    }
+  };
+
+  const handleTestSound = () => {
+    setIsTestingSound(true);
+    try {
+      playNotificationChime();
+      setNotifFeedback({
+        type: 'success',
+        message: 'Visitor notification sound chime played successfully.'
+      });
+    } catch (err: any) {
+      setNotifFeedback({ type: 'error', message: 'Error playing audio chime: ' + err.message });
+    } finally {
+      setTimeout(() => setIsTestingSound(false), 700);
+    }
+  };
 
   if (!isAuthorized) {
     return (
@@ -1916,6 +2067,29 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Real-time Push & Sound Alerts Quick Indicator Badges */}
+            <div className="flex items-center gap-2.5 bg-[#06111F] px-3 py-1.5 rounded-xl border border-[#173653] text-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                title="Click to manage Push Notifications in Settings"
+                className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                <span className={`w-2 h-2 rounded-full ${notifSettings.pushNotifications ? 'bg-[#00E676] animate-pulse' : 'bg-gray-500'}`} />
+                <span className="text-[11px] font-bold text-[#F5F7FA]">Push {notifSettings.pushNotifications ? 'ON' : 'OFF'}</span>
+              </button>
+              <span className="text-[#173653] font-bold">|</span>
+              <button
+                type="button"
+                onClick={() => handleToggleSoundAlerts(!notifSettings.soundAlerts)}
+                title="Click to toggle Sound Alerts"
+                className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                {notifSettings.soundAlerts ? <Volume2 size={13} className="text-[#F5A623]" /> : <VolumeX size={13} className="text-[#7FA1C4]" />}
+                <span className="text-[11px] font-bold text-[#F5F7FA]">Sound {notifSettings.soundAlerts ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+
             {activeTab === 'users' && (
               <div className="flex items-center gap-2">
                 <button 
@@ -4087,8 +4261,223 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
             {/* 4. PLATFORM SETTINGS TAB */}
             {activeTab === 'settings' && (
-              <div className="bg-[#081728] border border-[#173653] rounded-xl p-6 md:p-8 w-full max-w-4xl shadow-xs">
-                <form onSubmit={handleSaveGlobalSettings} className="space-y-6">
+              <div className="flex flex-col gap-6 w-full max-w-4xl animate-in fade-in duration-300">
+                {/* 4A. CRITICAL REQUIREMENT: WEBSITE VISITOR NOTIFICATIONS & BACKGROUND PUSH ENGINE */}
+                <div className="bg-[#081728] border border-[#173653] rounded-2xl p-6 md:p-8 shadow-xs">
+                  <div className="pb-4 border-b border-[#173653] mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-[#9B22FF]/15 border border-[#9B22FF]/40 flex items-center justify-center text-[#C084FC] shrink-0">
+                        <Radio size={24} className="animate-pulse" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-black text-[#F5F7FA] uppercase font-display tracking-wider flex items-center gap-2">
+                          <span>Website Visitor Notifications & Background Push Engine</span>
+                        </h2>
+                        <p className="text-xs text-[#7FA1C4] mt-0.5">
+                          Receive operating-system push alerts when visitors open WorldVest Capital, even when the Admin Dashboard is closed.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Current Device Register Button & Permission Status */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleRegisterCurrentDevice}
+                        disabled={isRegisteringDevice}
+                        className="bg-[#248BFF] hover:bg-[#1A73E8] disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                      >
+                        {isRegisteringDevice ? (
+                          <Activity size={14} className="animate-spin" />
+                        ) : browserPermission === 'granted' ? (
+                          <CheckCircle size={14} className="text-[#00E676]" />
+                        ) : (
+                          <Smartphone size={14} />
+                        )}
+                        <span>
+                          {browserPermission === 'granted' ? 'This Device Registered' : 'Register This Device'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Feedback Notification Banner */}
+                  {notifFeedback && (
+                    <div className={`p-4 rounded-xl text-xs font-semibold mb-6 flex items-center gap-2.5 border ${
+                      notifFeedback.type === 'success' 
+                        ? 'bg-[#00E676]/15 border-[#00E676]/40 text-[#00E676]'
+                        : notifFeedback.type === 'error'
+                        ? 'bg-[#FF3B5F]/15 border-[#FF3B5F]/40 text-[#FF3B5F]'
+                        : 'bg-[#248BFF]/15 border-[#248BFF]/40 text-[#248BFF]'
+                    }`}>
+                      {notifFeedback.type === 'success' ? (
+                        <CheckCircle size={16} className="shrink-0 text-[#00E676]" />
+                      ) : notifFeedback.type === 'error' ? (
+                        <AlertCircle size={16} className="shrink-0 text-[#FF3B5F]" />
+                      ) : (
+                        <Bell size={16} className="shrink-0 text-[#248BFF]" />
+                      )}
+                      <span className="flex-1">{notifFeedback.message}</span>
+                      <button onClick={() => setNotifFeedback(null)} className="opacity-70 hover:opacity-100 cursor-pointer text-[#7FA1C4]">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Admin Settings Toggles: [✓] Push Notifications & [✓] Sound Alerts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {/* Push Notifications Toggle */}
+                    <div className="bg-[#06111F] border border-[#173653] rounded-xl p-4 flex items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-[#9B22FF]/15 border border-[#9B22FF]/30 flex items-center justify-center text-[#C084FC] shrink-0 mt-0.5">
+                          <BellRing size={18} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold uppercase tracking-wide text-[#F5F7FA] block cursor-pointer">
+                            Push Notifications
+                          </label>
+                          <p className="text-[11px] text-[#7FA1C4] mt-0.5 leading-relaxed">
+                            Delivers native system alerts to registered phones & laptops when dashboard is closed.
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={notifSettings.pushNotifications}
+                          onChange={(e) => handleTogglePushNotifications(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-[#173653] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00E676]"></div>
+                      </label>
+                    </div>
+
+                    {/* Sound Alerts Toggle */}
+                    <div className="bg-[#06111F] border border-[#173653] rounded-xl p-4 flex items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-[#F5A623]/15 border border-[#F5A623]/30 flex items-center justify-center text-[#F5A623] shrink-0 mt-0.5">
+                          <Volume2 size={18} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold uppercase tracking-wide text-[#F5F7FA] block cursor-pointer">
+                            Sound Alerts
+                          </label>
+                          <p className="text-[11px] text-[#7FA1C4] mt-0.5 leading-relaxed">
+                            Plays visitor-alert audio chime when incoming visitors arrive while dashboard is open.
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={notifSettings.soundAlerts}
+                          onChange={(e) => handleToggleSoundAlerts(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-[#173653] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00E676]"></div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Diagnostic Test Buttons: TEST PHONE NOTIFICATION, TEST DESKTOP NOTIFICATION, TEST SOUND */}
+                  <div className="bg-[#06111F] border border-[#173653] rounded-xl p-5 mb-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#F5A623] mb-3 flex items-center gap-2">
+                      <Radio size={14} />
+                      <span>Notification Diagnostics & Delivery Tests</span>
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* BUTTON 1: TEST PHONE NOTIFICATION */}
+                      <button
+                        type="button"
+                        onClick={handleTestPhone}
+                        disabled={isTestingPhone}
+                        className="bg-[#081728] hover:bg-[#0D243F] border border-[#173653] hover:border-[#9B22FF] text-[#F5F7FA] font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      >
+                        {isTestingPhone ? (
+                          <Activity size={14} className="animate-spin text-[#9B22FF]" />
+                        ) : (
+                          <Smartphone size={14} className="text-[#00E676]" />
+                        )}
+                        <span>TEST PHONE NOTIFICATION</span>
+                      </button>
+
+                      {/* BUTTON 2: TEST DESKTOP NOTIFICATION */}
+                      <button
+                        type="button"
+                        onClick={handleTestDesktop}
+                        disabled={isTestingDesktop}
+                        className="bg-[#081728] hover:bg-[#0D243F] border border-[#173653] hover:border-[#248BFF] text-[#F5F7FA] font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      >
+                        {isTestingDesktop ? (
+                          <Activity size={14} className="animate-spin text-[#248BFF]" />
+                        ) : (
+                          <Monitor size={14} className="text-[#248BFF]" />
+                        )}
+                        <span>TEST DESKTOP NOTIFICATION</span>
+                      </button>
+
+                      {/* BUTTON 3: TEST SOUND */}
+                      <button
+                        type="button"
+                        onClick={handleTestSound}
+                        disabled={isTestingSound}
+                        className="bg-[#081728] hover:bg-[#0D243F] border border-[#173653] hover:border-[#F5A623] text-[#F5F7FA] font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      >
+                        {isTestingSound ? (
+                          <Volume2 size={14} className="animate-bounce text-[#F5A623]" />
+                        ) : (
+                          <Volume2 size={14} className="text-[#F5A623]" />
+                        )}
+                        <span>TEST SOUND</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Connected Admin Devices Registry */}
+                  <div className="border-t border-[#173653] pt-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#7FA1C4] flex items-center gap-1.5">
+                        <Smartphone size={14} className="text-[#248BFF]" />
+                        <span>Connected Administrator Devices ({adminDevices.length})</span>
+                      </h3>
+                      <span className="text-[11px] text-[#7FA1C4]">
+                        Browser Permission: <strong className="text-[#F5F7FA] uppercase">{browserPermission}</strong>
+                      </span>
+                    </div>
+                    
+                    {adminDevices.length === 0 ? (
+                      <div className="text-center py-6 px-4 bg-[#06111F] rounded-xl border border-[#173653]/60 text-[#7FA1C4]">
+                        <p className="text-xs font-medium text-[#F5F7FA]">No devices registered yet</p>
+                        <p className="text-[11px] text-[#7FA1C4] mt-1">
+                          Open this Admin Dashboard on your Phone or Laptop and click <strong>"Register This Device"</strong> to receive background push notifications.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {adminDevices.map((dev) => (
+                          <div key={dev.id} className="bg-[#06111F] border border-[#173653] rounded-xl p-3 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-[#248BFF]/15 border border-[#248BFF]/30 flex items-center justify-center text-[#248BFF]">
+                                {dev.deviceType === 'mobile' ? <Smartphone size={16} /> : <Monitor size={16} />}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-[#F5F7FA]">{dev.deviceName}</p>
+                                <p className="text-[10px] text-[#7FA1C4]">{dev.os} • {dev.browser}</p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#00E676]/15 border border-[#00E676]/40 text-[#00E676]">
+                              Active
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4B. PLATFORM GLOBAL WALLETS & ANNOUNCEMENT SETTINGS */}
+                <div className="bg-[#081728] border border-[#173653] rounded-2xl p-6 md:p-8 shadow-xs">
+                  <form onSubmit={handleSaveGlobalSettings} className="space-y-6">
                   
                   {/* Announcement Banner */}
                   <div className="flex flex-col gap-2">
@@ -4169,9 +4558,10 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                   </div>
                 </form>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* 5. PASSWORD & SECURITY SUBMENU */}
+          {/* 5. PASSWORD & SECURITY SUBMENU */}
             {activeTab === 'password_security' && (
               <div className="flex flex-col gap-6 w-full max-w-2xl animate-in fade-in duration-300">
                 <div className="bg-[#081728] border border-[#173653] rounded-2xl p-6 sm:p-8 shadow-xs">

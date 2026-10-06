@@ -1,0 +1,5 @@
+{
+  "pushNotifications": true,
+  "soundAlerts": true,
+  "minSessionCooldownSeconds": 300
+}

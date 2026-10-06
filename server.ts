@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import webpush from 'web-push';
+import crypto from 'crypto';
 import { adminAuth, adminDb, adminStorage, hasAdminServiceAccount, configureServiceAccountKey } from './lib/firebase-admin';
 
 dotenv.config();
@@ -27,6 +28,215 @@ try {
 
 // Persistent file-backed and Firestore-backed admin devices storage
 const DEVICES_FILE = path.resolve(__dirname, 'admin_registered_devices.json');
+const NOTIF_SETTINGS_FILE = path.resolve(__dirname, 'admin_notification_settings.json');
+
+export interface AdminNotificationSettings {
+  pushNotifications: boolean;
+  soundAlerts: boolean;
+  minSessionCooldownSeconds: number;
+}
+
+function loadNotificationSettings(): AdminNotificationSettings {
+  try {
+    if (fs.existsSync(NOTIF_SETTINGS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(NOTIF_SETTINGS_FILE, 'utf-8'));
+      return {
+        pushNotifications: data.pushNotifications !== false,
+        soundAlerts: data.soundAlerts !== false,
+        minSessionCooldownSeconds: data.minSessionCooldownSeconds || 300
+      };
+    }
+  } catch (e) {}
+  return { pushNotifications: true, soundAlerts: true, minSessionCooldownSeconds: 300 };
+}
+
+function saveNotificationSettings(settings: AdminNotificationSettings) {
+  try {
+    fs.writeFileSync(NOTIF_SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[SERVER] Error saving notification settings:', e);
+  }
+}
+
+// Persistent storage files for Delegated Admin Access, Permissions & Immutable Audit Logs
+const PERMISSIONS_FILE = path.resolve(__dirname, 'admin_permissions.json');
+const DELEGATED_SESSIONS_FILE = path.resolve(__dirname, 'admin_delegated_sessions.json');
+const AUDIT_LOGS_FILE = path.resolve(__dirname, 'admin_audit_logs.json');
+
+export interface AdminPermissionsRecord {
+  email: string;
+  VIEW_ACCOUNTS: boolean;
+  ACT_AS_CLIENT: boolean;
+  VIEW_TRANSACTIONS?: boolean;
+  MANAGE_DEPOSITS?: boolean;
+  MANAGE_WITHDRAWALS?: boolean;
+  MANAGE_USERS?: boolean;
+  MANAGE_SUPPORT?: boolean;
+  MANAGE_INVESTMENTS?: boolean;
+  updatedAt?: number;
+  updatedBy?: string;
+}
+
+export interface DelegatedSessionRecord {
+  sessionId: string;
+  adminUid: string;
+  adminEmail: string;
+  adminName: string;
+  targetUid: string;
+  targetUser: any;
+  mode: 'VIEW_ACCOUNT' | 'ACT_AS_CLIENT';
+  permissionUsed: 'VIEW_ACCOUNTS' | 'ACT_AS_CLIENT';
+  createdAt: number;
+  expiresAt: number;
+  isActive: boolean;
+  actionsPerformed: string[];
+}
+
+export interface DelegatedAuditLogRecord {
+  id: string;
+  sessionId: string;
+  adminEmail: string;
+  adminUid: string;
+  targetUid: string;
+  targetEmail: string;
+  targetUsername: string;
+  targetName: string;
+  mode: 'VIEW_ACCOUNT' | 'ACT_AS_CLIENT';
+  startedAt: number;
+  endedAt: number | null;
+  status: 'active' | 'terminated' | 'expired';
+  actions: string[];
+  ip: string;
+  userAgent: string;
+}
+
+function loadAllPermissions(): AdminPermissionsRecord[] {
+  try {
+    if (fs.existsSync(PERMISSIONS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PERMISSIONS_FILE, 'utf-8'));
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveAllPermissions(perms: AdminPermissionsRecord[]) {
+  try {
+    fs.writeFileSync(PERMISSIONS_FILE, JSON.stringify(perms, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[SERVER] Error saving permissions file:', e);
+  }
+}
+
+function getPermissionsForEmail(email: string): AdminPermissionsRecord {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const all = loadAllPermissions();
+  const found = all.find(p => p.email.toLowerCase() === cleanEmail);
+  if (found) return found;
+
+  // Default permissions: Super Admins receive both VIEW_ACCOUNTS and ACT_AS_CLIENT
+  const isSuperAdmin = AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail);
+  const defRecord: AdminPermissionsRecord = {
+    email: cleanEmail,
+    VIEW_ACCOUNTS: true,
+    ACT_AS_CLIENT: isSuperAdmin, // Granular control: non-super admins do not get ACT_AS_CLIENT by default!
+    VIEW_TRANSACTIONS: true,
+    MANAGE_DEPOSITS: isSuperAdmin,
+    MANAGE_WITHDRAWALS: isSuperAdmin,
+    MANAGE_USERS: isSuperAdmin,
+    MANAGE_SUPPORT: true,
+    MANAGE_INVESTMENTS: isSuperAdmin,
+    updatedAt: Date.now(),
+    updatedBy: 'System'
+  };
+  return defRecord;
+}
+
+function loadDelegatedSessions(): DelegatedSessionRecord[] {
+  try {
+    if (fs.existsSync(DELEGATED_SESSIONS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DELEGATED_SESSIONS_FILE, 'utf-8'));
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveDelegatedSessions(sessions: DelegatedSessionRecord[]) {
+  try {
+    fs.writeFileSync(DELEGATED_SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[SERVER] Error saving delegated sessions file:', e);
+  }
+}
+
+function loadAuditLogs(): DelegatedAuditLogRecord[] {
+  try {
+    if (fs.existsSync(AUDIT_LOGS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(AUDIT_LOGS_FILE, 'utf-8'));
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveAuditLogs(logs: DelegatedAuditLogRecord[]) {
+  try {
+    fs.writeFileSync(AUDIT_LOGS_FILE, JSON.stringify(logs, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[SERVER] Error saving audit logs file:', e);
+  }
+}
+
+function recordAuditLog(log: Omit<DelegatedAuditLogRecord, 'id'>): DelegatedAuditLogRecord {
+  const id = `audit_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const fullLog: DelegatedAuditLogRecord = { id, ...log };
+  const logs = loadAuditLogs();
+  logs.unshift(fullLog);
+  saveAuditLogs(logs);
+
+  try {
+    adminDb.collection('admin_audit_logs').doc(id).set(fullLog);
+  } catch (e) {}
+
+  return fullLog;
+}
+
+async function fetchTargetUserProfile(targetUid: string): Promise<any> {
+  const cleanId = (targetUid || '').trim();
+  if (!cleanId) return null;
+
+  // 1. Direct doc lookup
+  try {
+    const docSnap = await adminDb.collection('users').doc(cleanId).get();
+    if (docSnap.exists) {
+      return { uid: docSnap.id, ...docSnap.data() };
+    }
+  } catch (e) {}
+
+  // 2. Query by username
+  try {
+    const byUsername = await adminDb.collection('users').where('username', '==', cleanId).limit(1).get();
+    if (!byUsername.empty) {
+      const d = byUsername.docs[0];
+      return { uid: d.id, ...d.data() };
+    }
+  } catch (e) {}
+
+  // 3. Query by email
+  try {
+    const byEmail = await adminDb.collection('users').where('email', '==', cleanId.toLowerCase()).limit(1).get();
+    if (!byEmail.empty) {
+      const d = byEmail.docs[0];
+      return { uid: d.id, ...d.data() };
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+// Memory cache for debouncing rapid visitor tracking pings (cooldown: 5 mins per visitor)
+const recentVisitorVisits = new Map<string, number>();
 
 function loadAdminDevices(): any[] {
   try {
@@ -354,6 +564,325 @@ async function startServer() {
   app.delete('/api/admin/delete-user', handleDeleteUserRequest);
   app.post('/api/admin/delete-user', handleDeleteUserRequest);
 
+  // =========================================================================
+  // SECURE ADMIN USER-ACCOUNT ACCESS SYSTEM (DELEGATED SESSIONS & AUDIT LOGS)
+  // =========================================================================
+
+  // 1. Get Administrator Permissions (VIEW_ACCOUNTS, ACT_AS_CLIENT, etc.)
+  app.get('/api/admin/permissions', async (req, res) => {
+    try {
+      const email = (req.query.email as string || '').toLowerCase().trim();
+      const perms = getPermissionsForEmail(email);
+      const all = loadAllPermissions();
+      return res.json({ success: true, permissions: perms, allPermissions: all });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 2. Update Administrator Permissions (Super Admin only)
+  app.post('/api/admin/permissions/update', async (req, res) => {
+    try {
+      const { targetEmail, permissions, adminEmail } = req.body;
+      const callerEmail = (adminEmail || '').toLowerCase().trim();
+      if (!AUTHORIZED_ADMIN_EMAILS.includes(callerEmail)) {
+        return res.status(403).json({ success: false, error: 'Only Super Administrators can modify administrator permissions.' });
+      }
+
+      if (!targetEmail) {
+        return res.status(400).json({ success: false, error: 'targetEmail is required.' });
+      }
+
+      const cleanTarget = targetEmail.toLowerCase().trim();
+      const all = loadAllPermissions();
+      const existingIdx = all.findIndex(p => p.email.toLowerCase() === cleanTarget);
+
+      const updatedRecord: AdminPermissionsRecord = {
+        email: cleanTarget,
+        VIEW_ACCOUNTS: permissions.VIEW_ACCOUNTS !== false,
+        ACT_AS_CLIENT: Boolean(permissions.ACT_AS_CLIENT),
+        VIEW_TRANSACTIONS: permissions.VIEW_TRANSACTIONS !== false,
+        MANAGE_DEPOSITS: Boolean(permissions.MANAGE_DEPOSITS),
+        MANAGE_WITHDRAWALS: Boolean(permissions.MANAGE_WITHDRAWALS),
+        MANAGE_USERS: Boolean(permissions.MANAGE_USERS),
+        MANAGE_SUPPORT: permissions.MANAGE_SUPPORT !== false,
+        MANAGE_INVESTMENTS: Boolean(permissions.MANAGE_INVESTMENTS),
+        updatedAt: Date.now(),
+        updatedBy: callerEmail
+      };
+
+      if (existingIdx >= 0) {
+        all[existingIdx] = updatedRecord;
+      } else {
+        all.push(updatedRecord);
+      }
+
+      saveAllPermissions(all);
+      try {
+        await adminDb.collection('admin_permissions').doc(cleanTarget).set(updatedRecord, { merge: true });
+      } catch (e) {}
+
+      console.log(`[SERVER-DELEGATION] Permissions updated for "${cleanTarget}" by "${callerEmail}":`, updatedRecord);
+      return res.json({ success: true, permissions: updatedRecord });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 3. Create Delegated Session (View Account [Read-Only] or Act as Client)
+  app.post('/api/admin/delegated-session/create', async (req, res) => {
+    try {
+      const { targetUid, mode, adminEmail, adminName } = req.body;
+      const cleanEmail = (adminEmail || '').toLowerCase().trim();
+
+      // 1. Verify caller is an authorized administrator
+      if (!AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
+        try {
+          await verifyAdminCaller(req.headers.authorization);
+        } catch (authErr) {
+          return res.status(403).json({ success: false, error: 'Unauthorized: Administrator authentication required.' });
+        }
+      }
+
+      const accessMode: 'VIEW_ACCOUNT' | 'ACT_AS_CLIENT' = mode === 'ACT_AS_CLIENT' ? 'ACT_AS_CLIENT' : 'VIEW_ACCOUNT';
+      const perms = getPermissionsForEmail(cleanEmail);
+
+      // 2. Enforce Granular Permission Check
+      if (accessMode === 'VIEW_ACCOUNT' && !perms.VIEW_ACCOUNTS) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Security restriction: Administrator does not have the VIEW_ACCOUNTS permission.' 
+        });
+      }
+
+      if (accessMode === 'ACT_AS_CLIENT' && !perms.ACT_AS_CLIENT) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Security restriction: Administrator does not have the high-risk ACT_AS_CLIENT permission.' 
+        });
+      }
+
+      // 3. Fetch Target User Profile without knowing or touching their password
+      if (!targetUid) {
+        return res.status(400).json({ success: false, error: 'targetUid is required.' });
+      }
+
+      const targetUser = (await fetchTargetUserProfile(targetUid)) || (req.body.targetUser ? req.body.targetUser : null);
+      if (!targetUser) {
+        return res.status(404).json({ success: false, error: `Target client account "${targetUid}" was not found.` });
+      }
+
+      // Prevent impersonating an authorized administrator
+      const targetUserEmail = (targetUser.email || '').toLowerCase().trim();
+      if (AUTHORIZED_ADMIN_EMAILS.includes(targetUserEmail)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Security restriction: Delegated access cannot be initiated on an administrative account.' 
+        });
+      }
+
+      // 4. Create Short-Lived Delegated Session (15 minutes expiration)
+      const now = Date.now();
+      const TTL_MS = 15 * 60 * 1000;
+      const sessionId = `del_sess_${now}_${crypto.randomBytes(12).toString('hex')}`;
+
+      const sessionRecord: DelegatedSessionRecord = {
+        sessionId,
+        adminUid: req.body.adminUid || `admin_${cleanEmail}`,
+        adminEmail: cleanEmail,
+        adminName: adminName || cleanEmail.split('@')[0],
+        targetUid: targetUser.uid || targetUid,
+        targetUser: {
+          uid: targetUser.uid || targetUid,
+          username: targetUser.username || 'client',
+          fullName: targetUser.fullName || targetUser.username || 'Client',
+          email: targetUser.email || '',
+          wallets: targetUser.wallets || { usdtTrc20: '', bitcoin: '', ethereum: '', usdtErc20: '' },
+          mainAccountBalance: targetUser.mainAccountBalance || 0,
+          accountBalance: targetUser.accountBalance || 0,
+          earnedTotal: targetUser.earnedTotal || 0,
+          pendingWithdrawal: targetUser.pendingWithdrawal || 0,
+          totalWithdrew: targetUser.totalWithdrew || 0,
+          activeDeposit: targetUser.activeDeposit || 0,
+          lastDeposit: targetUser.lastDeposit || 0,
+          totalDeposit: targetUser.totalDeposit || 0,
+          lastWithdrawal: targetUser.lastWithdrawal || 0,
+          profilePhoto: targetUser.profilePhoto || '',
+          suspended: Boolean(targetUser.suspended),
+          ipAddress: targetUser.ipAddress || '',
+          country: targetUser.country || '',
+          device: targetUser.device || '',
+          browser: targetUser.browser || ''
+        },
+        mode: accessMode,
+        permissionUsed: accessMode === 'VIEW_ACCOUNT' ? 'VIEW_ACCOUNTS' : 'ACT_AS_CLIENT',
+        createdAt: now,
+        expiresAt: now + TTL_MS,
+        isActive: true,
+        actionsPerformed: [`Session created in mode ${accessMode}`]
+      };
+
+      // Save to sessions store
+      const sessions = loadDelegatedSessions();
+      sessions.push(sessionRecord);
+      saveDelegatedSessions(sessions);
+
+      // Record immutable Audit Log entry
+      recordAuditLog({
+        sessionId,
+        adminEmail: cleanEmail,
+        adminUid: sessionRecord.adminUid,
+        targetUid: targetUser.uid || targetUid,
+        targetEmail: targetUser.email || '',
+        targetUsername: targetUser.username || '',
+        targetName: targetUser.fullName || targetUser.username || '',
+        mode: accessMode,
+        startedAt: now,
+        endedAt: null,
+        status: 'active',
+        actions: [`Admin ${cleanEmail} initiated ${accessMode} session for client ${targetUser.username || targetUser.email}`],
+        ip: (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1',
+        userAgent: (req.headers['user-agent'] as string) || 'Unknown'
+      });
+
+      console.log(`[SERVER-DELEGATION] Session created (${accessMode}) by "${cleanEmail}" for target "${targetUser.email}" [ID: ${sessionId}]`);
+
+      return res.json({
+        success: true,
+        session: sessionRecord
+      });
+    } catch (e: any) {
+      console.error('[SERVER-DELEGATION] create error:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 4. Validate Delegated Session (Called on page refresh / interval)
+  app.post('/api/admin/delegated-session/validate', async (req, res) => {
+    try {
+      const { sessionId } = req.body;
+      if (!sessionId) {
+        return res.status(400).json({ success: false, valid: false, error: 'sessionId is required.' });
+      }
+
+      const sessions = loadDelegatedSessions();
+      const session = sessions.find(s => s.sessionId === sessionId);
+
+      if (!session) {
+        return res.json({ success: true, valid: false, message: 'Delegated session not found.' });
+      }
+
+      const now = Date.now();
+      if (!session.isActive || now >= session.expiresAt) {
+        // Mark session expired
+        session.isActive = false;
+        saveDelegatedSessions(sessions);
+
+        // Update audit log
+        const logs = loadAuditLogs();
+        const log = logs.find(l => l.sessionId === sessionId);
+        if (log && log.status === 'active') {
+          log.status = 'expired';
+          log.endedAt = now;
+          log.actions.push('Session automatically expired due to 15-minute TTL limit.');
+          saveAuditLogs(logs);
+        }
+
+        return res.json({
+          success: true,
+          valid: false,
+          expired: true,
+          message: 'Your administrator client-access session has expired.'
+        });
+      }
+
+      const remainingSeconds = Math.max(0, Math.floor((session.expiresAt - now) / 1000));
+      return res.json({
+        success: true,
+        valid: true,
+        session,
+        remainingSeconds
+      });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5. Record Action in Delegated Session (for Act as Client operations)
+  app.post('/api/admin/delegated-session/action', async (req, res) => {
+    try {
+      const { sessionId, actionDescription } = req.body;
+      if (!sessionId || !actionDescription) {
+        return res.status(400).json({ success: false, error: 'sessionId and actionDescription are required.' });
+      }
+
+      const sessions = loadDelegatedSessions();
+      const session = sessions.find(s => s.sessionId === sessionId);
+
+      if (!session || !session.isActive || Date.now() >= session.expiresAt) {
+        return res.status(401).json({ success: false, error: 'Delegated session is invalid or expired.' });
+      }
+
+      const actionText = `[${new Date().toLocaleTimeString()}] ${actionDescription}`;
+      session.actionsPerformed.push(actionText);
+      saveDelegatedSessions(sessions);
+
+      const logs = loadAuditLogs();
+      const log = logs.find(l => l.sessionId === sessionId);
+      if (log) {
+        log.actions.push(actionText);
+        saveAuditLogs(logs);
+      }
+
+      return res.json({ success: true });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 6. Terminate Delegated Session (When Admin clicks Return to Administration / Exit Client Mode)
+  app.post('/api/admin/delegated-session/terminate', async (req, res) => {
+    try {
+      const { sessionId } = req.body;
+      if (!sessionId) {
+        return res.status(400).json({ success: false, error: 'sessionId is required.' });
+      }
+
+      const now = Date.now();
+      const sessions = loadDelegatedSessions();
+      const session = sessions.find(s => s.sessionId === sessionId);
+
+      if (session) {
+        session.isActive = false;
+        saveDelegatedSessions(sessions);
+      }
+
+      const logs = loadAuditLogs();
+      const log = logs.find(l => l.sessionId === sessionId);
+      if (log && log.status === 'active') {
+        log.status = 'terminated';
+        log.endedAt = now;
+        log.actions.push(`Admin terminated session manually at ${new Date(now).toLocaleTimeString()}`);
+        saveAuditLogs(logs);
+      }
+
+      console.log(`[SERVER-DELEGATION] Session terminated: ${sessionId}`);
+      return res.json({ success: true, message: 'Delegated session terminated successfully.' });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 7. Get Administrative Audit Logs (For Audit Viewer in Admin Dashboard)
+  app.get('/api/admin/audit-logs', async (_req, res) => {
+    try {
+      const logs = loadAuditLogs();
+      return res.json({ success: true, auditLogs: logs });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // ==========================================
   // Cross-Device Push Notification Endpoints
   // ==========================================
@@ -462,7 +991,39 @@ async function startServer() {
     }
   });
 
-  // 5. Send Test Notification Alert
+  // 4b. Notification Settings (Push Notifications & Sound Alerts toggles)
+  app.get('/api/notifications/settings', async (_req, res) => {
+    try {
+      const settings = loadNotificationSettings();
+      return res.json({ success: true, settings });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/notifications/settings', async (req, res) => {
+    try {
+      const current = loadNotificationSettings();
+      const updated: AdminNotificationSettings = {
+        pushNotifications: typeof req.body.pushNotifications === 'boolean' ? req.body.pushNotifications : current.pushNotifications,
+        soundAlerts: typeof req.body.soundAlerts === 'boolean' ? req.body.soundAlerts : current.soundAlerts,
+        minSessionCooldownSeconds: typeof req.body.minSessionCooldownSeconds === 'number' ? req.body.minSessionCooldownSeconds : current.minSessionCooldownSeconds
+      };
+      saveNotificationSettings(updated);
+
+      // Also persist to Firestore if available
+      try {
+        await adminDb.collection('admin_settings').doc('notifications').set(updated, { merge: true });
+      } catch (fErr) {}
+
+      console.log('[SERVER-PUSH] Updated notification settings:', updated);
+      return res.json({ success: true, settings: updated });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5. Send Test Notification Alert (Generic)
   app.post('/api/notifications/test', async (req, res) => {
     try {
       const { adminEmail } = req.body;
@@ -472,19 +1033,20 @@ async function startServer() {
       if (devices.length === 0) {
         return res.json({
           success: false,
-          message: 'No registered devices found. Click "Enable Notifications" first to register this device.'
+          message: 'No registered devices found. Click "Register This Device" first to enable background push.'
         });
       }
 
       const payload = JSON.stringify({
-        title: '🔔 WorldVest Live Support',
-        body: 'Test Notification: Cross-device Live Support alerts are active on your device!',
+        title: '🔔 WORLDVEST CAPITAL',
+        body: 'New website visitor detected.\n\nVisitor: Returning Client\nDevice: Android Phone / Laptop\nPage: Homepage',
         icon: '/logohead_light.png',
         badge: '/logohead_light.png',
-        tag: 'live-support-test',
+        tag: 'visitor-test-generic',
+        vibrate: [200, 100, 200, 100, 200],
         data: {
-          url: '/?tab=live_support',
-          type: 'TEST'
+          url: '/',
+          type: 'VISITOR_ALERT'
         }
       });
 
@@ -505,6 +1067,244 @@ async function startServer() {
       });
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5a. TEST PHONE NOTIFICATION - Exact Phone Specification
+  app.post('/api/notifications/test-phone', async (req, res) => {
+    try {
+      const { adminEmail } = req.body;
+      const cleanEmail = (adminEmail || '').trim().toLowerCase();
+      const devices = loadAdminDevices().filter((d: any) => !cleanEmail || d.adminEmail === cleanEmail);
+
+      if (devices.length === 0) {
+        return res.json({
+          success: false,
+          message: 'No registered devices found. Click "Register This Device" to enable background notifications.'
+        });
+      }
+
+      const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const phonePayload = JSON.stringify({
+        title: '🔔 WORLDVEST CAPITAL',
+        body: `New website visitor detected.\n\nVisitor: Returning Client\nDevice: Android Phone\nPage: Homepage\nTime: ${timeStr}`,
+        icon: '/logohead_light.png',
+        badge: '/logohead_light.png',
+        tag: 'visitor-test-phone',
+        vibrate: [200, 100, 200, 100, 200],
+        data: {
+          type: 'VISITOR_ALERT',
+          target: 'phone',
+          visitorType: 'Returning Client',
+          device: 'Android Phone',
+          page: 'Homepage',
+          time: timeStr,
+          url: '/'
+        }
+      });
+
+      let sentCount = 0;
+      for (const dev of devices) {
+        if (!dev.subscription) continue;
+        try {
+          await webpush.sendNotification(dev.subscription, phonePayload);
+          sentCount++;
+        } catch (err: any) {
+          console.warn(`[SERVER-PUSH] Phone test failed for ${dev.deviceName}:`, err.message);
+        }
+      }
+
+      return res.json({
+        success: true,
+        sentCount,
+        message: `Phone test notification dispatched to ${sentCount} device(s)!`
+      });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5b. TEST DESKTOP NOTIFICATION - Exact Laptop / Desktop Specification
+  app.post('/api/notifications/test-desktop', async (req, res) => {
+    try {
+      const { adminEmail } = req.body;
+      const cleanEmail = (adminEmail || '').trim().toLowerCase();
+      const devices = loadAdminDevices().filter((d: any) => !cleanEmail || d.adminEmail === cleanEmail);
+
+      if (devices.length === 0) {
+        return res.json({
+          success: false,
+          message: 'No registered devices found. Click "Register This Device" to enable background notifications.'
+        });
+      }
+
+      const desktopPayload = JSON.stringify({
+        title: '🔔 WORLDVEST CAPITAL',
+        body: 'New website visitor detected\nReturning Client • Windows Laptop • Homepage',
+        icon: '/logohead_light.png',
+        badge: '/logohead_light.png',
+        tag: 'visitor-test-desktop',
+        vibrate: [200, 100, 200],
+        data: {
+          type: 'VISITOR_ALERT',
+          target: 'desktop',
+          visitorType: 'Returning Client',
+          device: 'Windows Laptop',
+          page: 'Homepage',
+          url: '/'
+        }
+      });
+
+      let sentCount = 0;
+      for (const dev of devices) {
+        if (!dev.subscription) continue;
+        try {
+          await webpush.sendNotification(dev.subscription, desktopPayload);
+          sentCount++;
+        } catch (err: any) {
+          console.warn(`[SERVER-PUSH] Desktop test failed for ${dev.deviceName}:`, err.message);
+        }
+      }
+
+      return res.json({
+        success: true,
+        sentCount,
+        message: `Desktop test notification dispatched to ${sentCount} device(s)!`
+      });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5c. LIVE WEBSITE VISITOR TRACKING & BACKGROUND PUSH TRIGGER
+  app.post('/api/visitors/track', async (req, res) => {
+    try {
+      const { visitorId, visitorType, device, page, path: visitPath, isAdmin } = req.body;
+
+      // Never send alerts if the visitor is the administrator themselves
+      if (isAdmin) {
+        return res.json({ success: true, ignored: true, reason: 'Admin user browsing' });
+      }
+
+      const cleanVisitorId = (visitorId || `vis_${Date.now()}`).trim();
+      const cleanType = (visitorType || 'Returning Client').trim();
+      const cleanDevice = (device || 'Mobile Phone').trim();
+      const cleanPage = (page || 'Homepage').trim();
+      const now = Date.now();
+
+      // Check session debounce cooldown
+      const settings = loadNotificationSettings();
+      const lastAlertTime = recentVisitorVisits.get(cleanVisitorId);
+      const cooldownMs = (settings.minSessionCooldownSeconds || 300) * 1000;
+
+      let shouldAlert = true;
+      if (lastAlertTime && (now - lastAlertTime) < cooldownMs) {
+        shouldAlert = false;
+      }
+
+      const sessionRecord = {
+        id: `vis_${now}_${Math.random().toString(36).substring(2, 7)}`,
+        visitorId: cleanVisitorId,
+        visitorType: cleanType,
+        device: cleanDevice,
+        page: cleanPage,
+        path: visitPath || '/',
+        timestamp: now,
+        alertDispatched: shouldAlert && settings.pushNotifications
+      };
+
+      // Save to Firestore visitor sessions if database connected
+      try {
+        await adminDb.collection('visitor_sessions').doc(sessionRecord.id).set(sessionRecord);
+      } catch (dbErr) {
+        // non-fatal
+      }
+
+      if (!shouldAlert) {
+        return res.json({
+          success: true,
+          alertDispatched: false,
+          debounced: true,
+          message: 'Visitor activity logged (debounced within active session).'
+        });
+      }
+
+      recentVisitorVisits.set(cleanVisitorId, now);
+
+      // Check if Push Notifications are enabled
+      if (!settings.pushNotifications) {
+        return res.json({
+          success: true,
+          alertDispatched: false,
+          pushDisabled: true,
+          message: 'Visitor activity logged (push notifications disabled by admin).'
+        });
+      }
+
+      // Build notification payload according to user requirements
+      const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const pushPayload = JSON.stringify({
+        title: '🔔 WORLDVEST CAPITAL',
+        body: `New website visitor detected.\n\nVisitor: ${cleanType}\nDevice: ${cleanDevice}\nPage: ${cleanPage}\nTime: ${timeStr}`,
+        icon: '/logohead_light.png',
+        badge: '/logohead_light.png',
+        tag: `wv-visitor-${cleanVisitorId}-${now}`,
+        vibrate: [200, 100, 200, 100, 200],
+        data: {
+          type: 'VISITOR_ALERT',
+          visitorType: cleanType,
+          device: cleanDevice,
+          page: cleanPage,
+          time: timeStr,
+          url: visitPath || '/',
+          timestamp: now
+        }
+      });
+
+      const devices = loadAdminDevices();
+      let sentCount = 0;
+      const deadDeviceIds: string[] = [];
+
+      for (const dev of devices) {
+        if (!dev.enabled || !dev.subscription) continue;
+        try {
+          await webpush.sendNotification(dev.subscription, pushPayload);
+          sentCount++;
+          console.log(`[SERVER-PUSH] Visitor notification pushed to device "${dev.deviceName}" (${dev.deviceType})`);
+        } catch (err: any) {
+          console.warn(`[SERVER-PUSH] Push delivery note for ${dev.deviceName}:`, err.statusCode || err.message);
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            deadDeviceIds.push(dev.id);
+          }
+        }
+      }
+
+      if (deadDeviceIds.length > 0) {
+        const remaining = devices.filter((d: any) => !deadDeviceIds.includes(d.id));
+        saveAdminDevices(remaining);
+      }
+
+      return res.json({
+        success: true,
+        alertDispatched: true,
+        sentCount,
+        totalDevices: devices.length,
+        session: sessionRecord
+      });
+    } catch (e: any) {
+      console.error('[SERVER-PUSH] track visitor error:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5d. Get recent visitor traffic sessions (for admin inspection)
+  app.get('/api/visitors/recent', async (_req, res) => {
+    try {
+      const snap = await adminDb.collection('visitor_sessions').orderBy('timestamp', 'desc').limit(20).get();
+      const sessions = snap.docs.map(d => d.data());
+      return res.json({ success: true, sessions });
+    } catch (e: any) {
+      return res.json({ success: true, sessions: [] });
     }
   });
 
