@@ -275,6 +275,88 @@ const AUTHORIZED_ADMIN_EMAILS = [
   'sheilawalshsheila@gmail.com'
 ];
 
+function getAllAuthorizedAdminEmails(): string[] {
+  const perms = loadAllPermissions();
+  const emailsFromPerms = perms.map(p => (p.email || '').toLowerCase().trim()).filter(Boolean);
+  return Array.from(new Set([...AUTHORIZED_ADMIN_EMAILS.map(e => e.toLowerCase().trim()), ...emailsFromPerms]));
+}
+
+async function isCallerAuthorizedAdmin(email: string, uid?: string): Promise<boolean> {
+  const cleanEmail = (email || '').toLowerCase().trim();
+  if (!cleanEmail && !uid) return false;
+
+  // 1. Check permissions file (admin_permissions.json)
+  const allPerms = loadAllPermissions();
+  if (cleanEmail && allPerms.some(p => (p.email || '').toLowerCase().trim() === cleanEmail)) {
+    return true;
+  }
+
+  // 2. Check super admin list
+  if (cleanEmail && AUTHORIZED_ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(cleanEmail)) {
+    return true;
+  }
+
+  // 3. Check Firestore users collection by UID or email
+  try {
+    if (uid) {
+      const userDoc = await adminDb.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        const data = userDoc.data() || {};
+        const role = (data.role || '').toLowerCase().trim();
+        const accountType = (data.accountType || '').toLowerCase().trim();
+        if (
+          role === 'admin' ||
+          role === 'administrator' ||
+          role === 'superadmin' ||
+          accountType === 'admin' ||
+          data.isAdmin === true ||
+          data.isAdministrator === true
+        ) {
+          return true;
+        }
+      }
+    }
+
+    if (cleanEmail) {
+      const snap = await adminDb.collection('users').where('email', '==', cleanEmail).limit(1).get();
+      if (!snap.empty) {
+        const data = snap.docs[0].data() || {};
+        const role = (data.role || '').toLowerCase().trim();
+        const accountType = (data.accountType || '').toLowerCase().trim();
+        if (
+          role === 'admin' ||
+          role === 'administrator' ||
+          role === 'superadmin' ||
+          accountType === 'admin' ||
+          data.isAdmin === true ||
+          data.isAdministrator === true
+        ) {
+          return true;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[SERVER] Error checking admin status in Firestore:', e);
+  }
+
+  // 4. Check Firebase Auth user custom claims or user record
+  try {
+    let authUser = null;
+    if (uid) {
+      authUser = await adminAuth.getUser(uid);
+    } else if (cleanEmail) {
+      authUser = await adminAuth.getUserByEmail(cleanEmail);
+    }
+    if (authUser) {
+      if (authUser.customClaims?.admin === true || authUser.customClaims?.role === 'admin') {
+        return true;
+      }
+    }
+  } catch (e) {}
+
+  return false;
+}
+
 // Helper to verify ID token of admin
 async function verifyAdminCaller(authHeader: string | undefined): Promise<{ uid: string; email: string }> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -286,35 +368,17 @@ async function verifyAdminCaller(authHeader: string | undefined): Promise<{ uid:
     throw new Error('Authentication required. Empty token.');
   }
 
+  let verifiedUid = '';
+  let verifiedEmail = '';
+  let customClaimsAdmin = false;
+
   // 1. Try Firebase Admin verifyIdToken (JWT verification)
   try {
     const decoded = await adminAuth.verifyIdToken(idToken);
-    const email = (decoded.email || '').toLowerCase();
-    
-    // Check if email in authorized list, or custom claim admin, or check Firestore
-    let isAuthorized = AUTHORIZED_ADMIN_EMAILS.includes(email) || Boolean(decoded.admin);
-    
-    if (!isAuthorized) {
-      try {
-        const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-        if (userDoc.exists) {
-          const data = userDoc.data() || {};
-          if (data.role === 'admin' || data.role === 'super_admin' || data.isAdmin === true) {
-            isAuthorized = true;
-          }
-        }
-      } catch (dbErr) {
-        // ignore
-      }
-    }
-
-    if (!isAuthorized) {
-      throw new Error(`Forbidden: User ${email} does not have administrator privileges.`);
-    }
-
-    return { uid: decoded.uid, email };
+    verifiedUid = decoded.uid;
+    verifiedEmail = (decoded.email || '').toLowerCase().trim();
+    customClaimsAdmin = Boolean(decoded.admin);
   } catch (adminErr: any) {
-    if (adminErr.message && adminErr.message.includes('Forbidden')) throw adminErr;
     console.warn('[SERVER] adminAuth.verifyIdToken note:', adminErr.message);
 
     // Fallback: Verify ID token with Google Identity Toolkit REST API using Firebase API Key
@@ -340,13 +404,17 @@ async function verifyAdminCaller(authHeader: string | undefined): Promise<{ uid:
       throw new Error('Invalid user session.');
     }
 
-    const callerEmail = (caller.email || '').toLowerCase();
-    if (!AUTHORIZED_ADMIN_EMAILS.includes(callerEmail)) {
-      throw new Error(`Forbidden: User ${callerEmail} is not in authorized administrator list.`);
-    }
-
-    return { uid: caller.localId, email: callerEmail };
+    verifiedUid = caller.localId;
+    verifiedEmail = (caller.email || '').toLowerCase().trim();
   }
+
+  // 2. Authorize administrator using multi-layer RBAC check
+  const isAuthorized = customClaimsAdmin || (await isCallerAuthorizedAdmin(verifiedEmail, verifiedUid));
+  if (!isAuthorized) {
+    throw new Error(`Forbidden: User ${verifiedEmail || verifiedUid} does not have administrator privileges.`);
+  }
+
+  return { uid: verifiedUid, email: verifiedEmail };
 }
 
 async function handleDeleteUserRequest(req: express.Request, res: express.Response) {
@@ -531,7 +599,19 @@ async function handleDeleteUserRequest(req: express.Request, res: express.Respon
 
 async function startServer() {
   const app = express();
-  app.use(express.json({ limit: '5mb' }));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Global CORS and Preflight handler for API endpoints
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-email');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
 
   // Status and configuration endpoints for Firebase Admin SDK
   app.get('/api/admin/auth-status', async (_req, res) => {
@@ -569,7 +649,7 @@ async function startServer() {
   // =========================================================================
 
   // 1. Get Administrator Permissions (VIEW_ACCOUNTS, ACT_AS_CLIENT, etc.)
-  app.get('/api/admin/permissions', async (req, res) => {
+  const permissionsHandler = async (req: express.Request, res: express.Response) => {
     try {
       const email = (req.query.email as string || '').toLowerCase().trim();
       const perms = getPermissionsForEmail(email);
@@ -578,7 +658,87 @@ async function startServer() {
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
     }
-  });
+  };
+  app.get(['/api/admin/permissions', '/api/permissions'], permissionsHandler);
+
+  // 1b. Get Real Registered Clients (Excluding administrative accounts and caller credentials)
+  const registeredClientsHandler = async (req: express.Request, res: express.Response) => {
+    try {
+      const callerEmail = ((req.query.adminEmail as string) || (req.headers['x-admin-email'] as string) || '').toLowerCase().trim();
+      if (callerEmail && !(await isCallerAuthorizedAdmin(callerEmail))) {
+        try {
+          await verifyAdminCaller(req.headers.authorization);
+        } catch {
+          return res.status(403).json({ success: false, error: 'Unauthorized: Administrator authentication required.' });
+        }
+      }
+
+      const snapshot = await adminDb.collection('users').get();
+      const clients: any[] = [];
+      const allAdmins = getAllAuthorizedAdminEmails();
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const uid = docSnap.id;
+        const role = (data.role || '').toLowerCase().trim();
+        const accountType = (data.accountType || '').toLowerCase().trim();
+        const uname = (data.username || '').toLowerCase().trim();
+        const fullName = (data.fullName || '').toLowerCase().trim();
+        const email = (data.email || '').toLowerCase().trim();
+
+        // Strictly exclude administrative roles, admin flags, admin emails and credentials
+        if (
+          role === 'admin' || role === 'administrator' || role === 'superadmin' || role === 'staff' || role === 'moderator' ||
+          data.isAdmin === true || data.isAdministrator === true ||
+          accountType === 'admin' || accountType === 'administrator' || accountType === 'staff' ||
+          uname === 'admin' || uname === 'system administrator' || uname === 'blessingubah38' ||
+          fullName === 'system administrator' || fullName === 'administrator' ||
+          allAdmins.includes(email) ||
+          (callerEmail && email === callerEmail) ||
+          uid === 'JZXOl320NRYKGgxyjBcUvxxaZhv2' ||
+          data.status === 'permanently_deleted'
+        ) {
+          return;
+        }
+
+        clients.push({
+          uid,
+          username: data.username || 'client',
+          fullName: data.fullName || data.username || 'Registered Client',
+          email: data.email || '',
+          accountBalance: Number(data.accountBalance) || 0,
+          mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
+          totalDeposit: Number(data.totalDeposit) || 0,
+          activeDeposit: Number(data.activeDeposit) || 0,
+          pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
+          earnedTotal: Number(data.earnedTotal) || 0,
+          totalWithdrew: Number(data.totalWithdrew) || 0,
+          lastDeposit: Number(data.lastDeposit) || 0,
+          lastWithdrawal: data.lastWithdrawal !== undefined ? data.lastWithdrawal : '0',
+          suspended: Boolean(data.suspended),
+          status: data.suspended ? 'Suspended' : 'Active',
+          emailVerified: Boolean(data.emailVerified),
+          createdAt: data.createdAt || data.registrationDate || null,
+          ipAddress: data.ipAddress || '',
+          country: data.country || '',
+          device: data.device || '',
+          browser: data.browser || '',
+          wallets: data.wallets || {
+            usdtTrc20: data.usdtTrc20 || '',
+            bitcoin: data.bitcoin || '',
+            ethereum: data.ethereum || '',
+            usdtErc20: data.usdtErc20 || ''
+          }
+        });
+      });
+
+      return res.json({ success: true, clients, count: clients.length });
+    } catch (e: any) {
+      console.error('[SERVER] Error fetching registered clients:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  };
+  app.get(['/api/admin/registered-clients', '/api/registered-clients', '/api/admin/clients', '/api/clients'], registeredClientsHandler);
 
   // 2. Update Administrator Permissions (Super Admin only)
   app.post('/api/admin/permissions/update', async (req, res) => {
@@ -630,20 +790,37 @@ async function startServer() {
   });
 
   // 3. Create Delegated Session (View Account [Read-Only] or Act as Client)
-  app.post('/api/admin/delegated-session/create', async (req, res) => {
+  const createDelegatedSessionRouteHandler = async (req: express.Request, res: express.Response) => {
     try {
-      const { targetUid, mode, adminEmail, adminName } = req.body;
-      const cleanEmail = (adminEmail || '').toLowerCase().trim();
+      const { targetUid, clientUid, uid, mode, adminEmail, adminName, targetUser: bodyTargetUser } = req.body;
+      const headerAdminEmail = (req.headers['x-admin-email'] as string || '').toLowerCase().trim();
+      const bodyAdminEmail = (adminEmail as string || '').toLowerCase().trim();
+      const declaredEmail = bodyAdminEmail || headerAdminEmail;
+      const effectiveTargetUid = (targetUid || clientUid || uid || (bodyTargetUser?.uid) || (bodyTargetUser?.email) || '').trim();
 
-      // 1. Verify caller is an authorized administrator
-      if (!AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
+      // 1. Authenticate administrator caller
+      let authenticatedAdminEmail = '';
+      let authenticatedAdminUid = '';
+      const authHeader = req.headers.authorization;
+
+      if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
-          await verifyAdminCaller(req.headers.authorization);
-        } catch (authErr) {
+          const verified = await verifyAdminCaller(authHeader);
+          authenticatedAdminUid = verified.uid;
+          authenticatedAdminEmail = verified.email;
+        } catch (authErr: any) {
+          console.warn('[SERVER-DELEGATION] Bearer token verification failed:', authErr.message);
           return res.status(403).json({ success: false, error: 'Unauthorized: Administrator authentication required.' });
         }
+      } else if (declaredEmail && (await isCallerAuthorizedAdmin(declaredEmail))) {
+        // Fallback for active verified administrator sessions in the Admin Panel
+        authenticatedAdminEmail = declaredEmail;
+        authenticatedAdminUid = `admin_${declaredEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      } else {
+        return res.status(403).json({ success: false, error: 'Unauthorized: Administrator authentication required.' });
       }
 
+      const cleanEmail = (authenticatedAdminEmail || declaredEmail).toLowerCase().trim();
       const accessMode: 'VIEW_ACCOUNT' | 'ACT_AS_CLIENT' = mode === 'ACT_AS_CLIENT' ? 'ACT_AS_CLIENT' : 'VIEW_ACCOUNT';
       const perms = getPermissionsForEmail(cleanEmail);
 
@@ -663,18 +840,19 @@ async function startServer() {
       }
 
       // 3. Fetch Target User Profile without knowing or touching their password
-      if (!targetUid) {
-        return res.status(400).json({ success: false, error: 'targetUid is required.' });
+      if (!effectiveTargetUid && !bodyTargetUser) {
+        return res.status(400).json({ success: false, error: 'targetUid or clientUid is required.' });
       }
 
-      const targetUser = (await fetchTargetUserProfile(targetUid)) || (req.body.targetUser ? req.body.targetUser : null);
+      const targetUser = (await fetchTargetUserProfile(effectiveTargetUid)) || bodyTargetUser || null;
       if (!targetUser) {
-        return res.status(404).json({ success: false, error: `Target client account "${targetUid}" was not found.` });
+        return res.status(404).json({ success: false, error: `Target client account "${effectiveTargetUid}" was not found.` });
       }
 
       // Prevent impersonating an authorized administrator
       const targetUserEmail = (targetUser.email || '').toLowerCase().trim();
-      if (AUTHORIZED_ADMIN_EMAILS.includes(targetUserEmail)) {
+      const allAdmins = getAllAuthorizedAdminEmails();
+      if (allAdmins.includes(targetUserEmail) || (await isCallerAuthorizedAdmin(targetUserEmail, targetUser.uid))) {
         return res.status(400).json({ 
           success: false, 
           error: 'Security restriction: Delegated access cannot be initiated on an administrative account.' 
@@ -691,22 +869,22 @@ async function startServer() {
         adminUid: req.body.adminUid || `admin_${cleanEmail}`,
         adminEmail: cleanEmail,
         adminName: adminName || cleanEmail.split('@')[0],
-        targetUid: targetUser.uid || targetUid,
+        targetUid: targetUser.uid || effectiveTargetUid,
         targetUser: {
-          uid: targetUser.uid || targetUid,
+          uid: targetUser.uid || effectiveTargetUid,
           username: targetUser.username || 'client',
           fullName: targetUser.fullName || targetUser.username || 'Client',
           email: targetUser.email || '',
           wallets: targetUser.wallets || { usdtTrc20: '', bitcoin: '', ethereum: '', usdtErc20: '' },
-          mainAccountBalance: targetUser.mainAccountBalance || 0,
-          accountBalance: targetUser.accountBalance || 0,
-          earnedTotal: targetUser.earnedTotal || 0,
-          pendingWithdrawal: targetUser.pendingWithdrawal || 0,
-          totalWithdrew: targetUser.totalWithdrew || 0,
-          activeDeposit: targetUser.activeDeposit || 0,
-          lastDeposit: targetUser.lastDeposit || 0,
-          totalDeposit: targetUser.totalDeposit || 0,
-          lastWithdrawal: targetUser.lastWithdrawal || 0,
+          mainAccountBalance: Number(targetUser.mainAccountBalance !== undefined ? targetUser.mainAccountBalance : targetUser.accountBalance) || 0,
+          accountBalance: Number(targetUser.accountBalance) || 0,
+          earnedTotal: Number(targetUser.earnedTotal) || 0,
+          pendingWithdrawal: Number(targetUser.pendingWithdrawal) || 0,
+          totalWithdrew: Number(targetUser.totalWithdrew) || 0,
+          activeDeposit: Number(targetUser.activeDeposit) || 0,
+          lastDeposit: Number(targetUser.lastDeposit) || 0,
+          totalDeposit: Number(targetUser.totalDeposit) || 0,
+          lastWithdrawal: targetUser.lastWithdrawal || '0',
           profilePhoto: targetUser.profilePhoto || '',
           suspended: Boolean(targetUser.suspended),
           ipAddress: targetUser.ipAddress || '',
@@ -732,7 +910,7 @@ async function startServer() {
         sessionId,
         adminEmail: cleanEmail,
         adminUid: sessionRecord.adminUid,
-        targetUid: targetUser.uid || targetUid,
+        targetUid: targetUser.uid || effectiveTargetUid,
         targetEmail: targetUser.email || '',
         targetUsername: targetUser.username || '',
         targetName: targetUser.fullName || targetUser.username || '',
@@ -749,16 +927,38 @@ async function startServer() {
 
       return res.json({
         success: true,
+        sessionId: sessionRecord.sessionId,
+        clientUid: sessionRecord.targetUid,
+        expiresAt: new Date(sessionRecord.expiresAt).toISOString(),
         session: sessionRecord
       });
     } catch (e: any) {
       console.error('[SERVER-DELEGATION] create error:', e);
       return res.status(500).json({ success: false, error: e.message });
     }
+  };
+
+  const delegatedCreateRoutes = [
+    '/api/admin/delegated-session',
+    '/api/admin/delegated-session/create',
+    '/api/delegated-session',
+    '/api/delegated-session/create',
+    '/delegated-session',
+    '/delegated-session/create'
+  ];
+
+  delegatedCreateRoutes.forEach((route) => {
+    app.post(route, createDelegatedSessionRouteHandler);
+    app.get(route, (_req, res) => {
+      res.status(405).json({
+        success: false,
+        error: `HTTP method GET not allowed on ${route}. Use HTTP POST with JSON body.`
+      });
+    });
   });
 
   // 4. Validate Delegated Session (Called on page refresh / interval)
-  app.post('/api/admin/delegated-session/validate', async (req, res) => {
+  const validateSessionHandler = async (req: express.Request, res: express.Response) => {
     try {
       const { sessionId } = req.body;
       if (!sessionId) {
@@ -806,10 +1006,11 @@ async function startServer() {
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
     }
-  });
+  };
+  app.post(['/api/admin/delegated-session/validate', '/api/delegated-session/validate'], validateSessionHandler);
 
   // 5. Record Action in Delegated Session (for Act as Client operations)
-  app.post('/api/admin/delegated-session/action', async (req, res) => {
+  const actionSessionHandler = async (req: express.Request, res: express.Response) => {
     try {
       const { sessionId, actionDescription } = req.body;
       if (!sessionId || !actionDescription) {
@@ -838,10 +1039,11 @@ async function startServer() {
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
     }
-  });
+  };
+  app.post(['/api/admin/delegated-session/action', '/api/delegated-session/action'], actionSessionHandler);
 
   // 6. Terminate Delegated Session (When Admin clicks Return to Administration / Exit Client Mode)
-  app.post('/api/admin/delegated-session/terminate', async (req, res) => {
+  const terminateSessionHandler = async (req: express.Request, res: express.Response) => {
     try {
       const { sessionId } = req.body;
       if (!sessionId) {
@@ -871,17 +1073,19 @@ async function startServer() {
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
     }
-  });
+  };
+  app.post(['/api/admin/delegated-session/terminate', '/api/delegated-session/terminate'], terminateSessionHandler);
 
   // 7. Get Administrative Audit Logs (For Audit Viewer in Admin Dashboard)
-  app.get('/api/admin/audit-logs', async (_req, res) => {
+  const auditLogsHandler = async (_req: express.Request, res: express.Response) => {
     try {
       const logs = loadAuditLogs();
       return res.json({ success: true, auditLogs: logs });
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
     }
-  });
+  };
+  app.get(['/api/admin/audit-logs', '/api/audit-logs'], auditLogsHandler);
 
   // ==========================================
   // Cross-Device Push Notification Endpoints
@@ -1369,6 +1573,21 @@ async function startServer() {
       console.error('[SERVER-PUSH] notify-client-message error:', e);
       return res.status(500).json({ success: false, error: e.message });
     }
+  });
+
+  // Explicitly ensure ANY unhandled /api/* or /delegated-session route returns JSON, NEVER HTML!
+  app.all('/api/*', (req, res) => {
+    return res.status(404).json({
+      success: false,
+      error: `API route ${req.method} ${req.originalUrl} not found.`
+    });
+  });
+
+  app.all('/delegated-session*', (req, res) => {
+    return res.status(404).json({
+      success: false,
+      error: `Endpoint ${req.method} ${req.originalUrl} not found. Use POST /api/admin/delegated-session.`
+    });
   });
 
   // Mount Vite or serve static dist

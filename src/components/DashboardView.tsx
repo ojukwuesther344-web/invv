@@ -1005,7 +1005,7 @@ export default function DashboardView({
     }
 
     if (delegatedSession?.mode === 'ACT_AS_CLIENT' && onRecordDelegatedAction) {
-      onRecordDelegatedAction(`Requested withdrawal of $${amount} to ${withdrawSystem} for ${user.email}`);
+      onRecordDelegatedAction(`Requested withdrawal of $${amount} for ${user.email}`);
     }
     const uid = user.uid || `user_${user.username}`;
     const txId = `tx_with_${Date.now()}`;

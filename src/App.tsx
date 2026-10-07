@@ -192,6 +192,29 @@ export default function App() {
 
   const [user, setUser] = useState<UserState>(emptyUserState);
 
+  // Active Admin Delegated Session (View Account or Act as Client)
+  const [activeDelegatedSession, setActiveDelegatedSession] = useState<DelegatedAdminSession | null>(() => getActiveDelegatedSession());
+
+  const handleExitDelegatedSession = async () => {
+    if (activeDelegatedSession) {
+      try {
+        await terminateDelegatedSession(activeDelegatedSession.sessionId);
+      } catch (e) {}
+    }
+    clearActiveDelegatedSession();
+    setActiveDelegatedSession(null);
+    setCurrentPage('Admin');
+  };
+
+  // When entering a delegated session, reload transactions for the target client
+  useEffect(() => {
+    if (activeDelegatedSession?.targetUser) {
+      const targetUid = activeDelegatedSession.targetUser.uid || `user_${activeDelegatedSession.targetUser.username}`;
+      reloadTransactions(targetUid);
+      reloadDeposits(targetUid);
+    }
+  }, [activeDelegatedSession]);
+
   // Real-time visitor session detection & background admin push notification trigger
   useEffect(() => {
     if (currentPage === 'Admin') return;
@@ -1021,6 +1044,10 @@ export default function App() {
               isLoggedIn: true
             });
           }}
+          onEnterDelegatedSession={(session) => {
+            setActiveDelegatedSession(session);
+            setCurrentPage('Dashboard');
+          }}
         />
       </DesktopCanvasWrapper>
     );
@@ -1028,7 +1055,10 @@ export default function App() {
 
   // Renders Dashboard with customized backoffice shell
   if (currentPage === 'Dashboard' || currentPage === 'Deposit') {
-    if (liveUser.suspended) {
+    const isViewingAsAdmin = Boolean(activeDelegatedSession);
+    const targetDashboardUser = activeDelegatedSession ? activeDelegatedSession.targetUser : liveUser;
+
+    if (targetDashboardUser.suspended && !isViewingAsAdmin) {
       return (
         <div id="suspended-user-blocker" className="min-h-screen bg-[#040d1a] flex items-center justify-center p-4 text-slate-100 font-sans w-full">
           <div className="max-w-md w-full bg-[#081525] border border-red-500/20 rounded-2xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
@@ -1038,7 +1068,7 @@ export default function App() {
             <div className="space-y-2">
               <h2 className="text-xl font-black uppercase tracking-wider text-white">Account Suspended</h2>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Your account (<span className="text-[#C59B4E]">{liveUser.email}</span>) has been suspended by an administrator. Backoffice access, dynamic yielding investments, deposits, and withdrawal permissions are currently restricted.
+                Your account (<span className="text-[#C59B4E]">{targetDashboardUser.email}</span>) has been suspended by an administrator. Backoffice access, dynamic yielding investments, deposits, and withdrawal permissions are currently restricted.
               </p>
             </div>
             <div className="bg-[#050e18] p-4 rounded-xl border border-[#11233d] text-left space-y-1.5 font-semibold text-xs">
@@ -1063,24 +1093,24 @@ export default function App() {
           <DashboardSidebar 
             activeSection={dashboardSection}
             onSectionChange={setDashboardSection}
-            onLogout={handleLogout}
-            username={user.username}
+            onLogout={isViewingAsAdmin ? handleExitDelegatedSession : handleLogout}
+            username={targetDashboardUser.username}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
             isAdmin={false}
             onPageChange={handlePageChange}
-            mainAccountBalance={liveUser.mainAccountBalance}
-            accountBalance={liveUser.accountBalance}
-            earnedTotal={liveUser.earnedTotal}
+            mainAccountBalance={targetDashboardUser.mainAccountBalance}
+            accountBalance={targetDashboardUser.accountBalance}
+            earnedTotal={targetDashboardUser.earnedTotal}
             displayBalance={calculateDisplayBalance(
-              liveUser.mainAccountBalance !== undefined ? liveUser.mainAccountBalance : liveUser.accountBalance,
-              liveUser.earnedTotal
+              targetDashboardUser.mainAccountBalance !== undefined ? targetDashboardUser.mainAccountBalance : targetDashboardUser.accountBalance,
+              targetDashboardUser.earnedTotal
             )}
           />
           <DashboardView 
             onPageChange={handlePageChange}
-            user={liveUser}
-            onUpdateUser={handleUpdateUserMetrics}
+            user={targetDashboardUser}
+            onUpdateUser={isViewingAsAdmin && activeDelegatedSession?.mode === 'VIEW_ACCOUNT' ? () => {} : handleUpdateUserMetrics}
             activeSection={dashboardSection}
             onSectionSelect={setDashboardSection}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -1088,8 +1118,15 @@ export default function App() {
             transactions={transactions}
             reloadTransactions={reloadTransactions}
             reloadDeposits={reloadDeposits}
+            delegatedSession={activeDelegatedSession}
+            onExitDelegatedSession={handleExitDelegatedSession}
+            onRecordDelegatedAction={(desc) => {
+              if (activeDelegatedSession) {
+                recordDelegatedAction(activeDelegatedSession.sessionId, desc);
+              }
+            }}
           />
-          <SupportFloatingButton onPageChange={handlePageChange} currentUser={liveUser} />
+          <SupportFloatingButton onPageChange={handlePageChange} currentUser={targetDashboardUser} />
         </div>
       </DesktopCanvasWrapper>
     );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldAlert, 
   Users, 
@@ -100,7 +100,7 @@ import {
   rejectDepositTransaction,
   fetchAdminAuditLogs
 } from '../services/db';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { 
   authLogin, 
@@ -125,13 +125,88 @@ export const isSoleAdminUser = (u: { username?: string } | null | undefined): bo
   return (u.username || '').toLowerCase().trim() === 'admin';
 };
 
+/**
+ * Rigorously identifies any administrative, staff, or system operator account.
+ * Evaluates role, account type, admin flags, admin emails, and current administrator credentials.
+ * Ensures administrative accounts are NEVER treated as target client accounts.
+ */
+export const isAdministrativeUser = (u: any, currentAdminEmail?: string, currentAdminUid?: string): boolean => {
+  if (!u) return false;
+
+  // 1. Role checks
+  const role = String(u.role || '').toLowerCase().trim();
+  if (['admin', 'administrator', 'superadmin', 'staff', 'moderator', 'support_admin'].includes(role)) {
+    return true;
+  }
+
+  // 2. Boolean admin flags
+  if (u.isAdmin === true || u.isAdministrator === true || u.isSuperAdmin === true) {
+    return true;
+  }
+
+  // 3. Account type checks
+  const accountType = String(u.accountType || '').toLowerCase().trim();
+  if (['admin', 'administrator', 'staff', 'superadmin'].includes(accountType)) {
+    return true;
+  }
+
+  // 4. Known administrative usernames
+  const uname = String(u.username || '').toLowerCase().trim();
+  if (['admin', 'system administrator', 'administrator', 'blessingubah38'].includes(uname)) {
+    return true;
+  }
+
+  // 5. Full name
+  const fullName = String(u.fullName || '').toLowerCase().trim();
+  if (['system administrator', 'administrator', 'admin'].includes(fullName)) {
+    return true;
+  }
+
+  // 6. Authorized admin emails
+  const email = String(u.email || '').toLowerCase().trim();
+  if (AUTHORIZED_ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(email)) {
+    return true;
+  }
+
+  // 7. System admin UID
+  if (u.uid === 'JZXOl320NRYKGgxyjBcUvxxaZhv2') {
+    return true;
+  }
+
+  // 8. Currently authenticated administrator identity
+  if (currentAdminEmail && email === currentAdminEmail.toLowerCase().trim()) {
+    return true;
+  }
+  if (currentAdminUid && u.uid === currentAdminUid) {
+    return true;
+  }
+
+  return false;
+};
+
+import { 
+  DelegatedAdminSession, 
+  AdminPermissions, 
+  AdminDelegatedAuditLog, 
+  DelegatedAccessMode 
+} from '../types';
+import { 
+  createDelegatedSession, 
+  getExistingAdminAccessToken,
+  fetchAdminPermissions, 
+  fetchAdminAuditLogs as fetchDelegatedAuditLogs,
+  updateAdminPermissions,
+  fetchRegisteredClients
+} from '../services/adminDelegationService';
+
 interface AdminViewProps {
   onPageChange: (page: Page) => void;
   currentUser: UserState;
   onLoginSuccess?: (adminUser: UserState) => void;
+  onEnterDelegatedSession?: (session: DelegatedAdminSession) => void;
 }
 
-export default function AdminView({ onPageChange, currentUser, onLoginSuccess }: AdminViewProps) {
+export default function AdminView({ onPageChange, currentUser, onLoginSuccess, onEnterDelegatedSession }: AdminViewProps) {
   // Admin Login States
   const [adminEmail, setAdminEmail] = useState('blessingubah38@gmail.com');
   const [adminPassword, setAdminPassword] = useState('');
@@ -147,8 +222,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     return Boolean(
       (currentUser && 
       currentUser.isLoggedIn && 
-      currentUser.email && 
-      AUTHORIZED_ADMIN_EMAILS.includes(currentUser.email.toLowerCase())) ||
+      (currentUser.role === 'admin' || currentUser.isAdmin === true || (currentUser as any).isAdministrator === true || AUTHORIZED_ADMIN_EMAILS.includes((currentUser.email || '').toLowerCase()))) ||
       localStorage.getItem('admin_session_active') === 'true'
     );
   });
@@ -163,9 +237,15 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
   // Subscribe to real-time Firebase Auth session state for route protection
   useEffect(() => {
     const unsubscribe = subscribeToAuth((firebaseUser) => {
-      if (firebaseUser && firebaseUser.email && AUTHORIZED_ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase())) {
+      if (firebaseUser) {
         setIsAuthorized(true);
         localStorage.setItem('admin_session_active', 'true');
+        if (firebaseUser.email) {
+          localStorage.setItem('admin_auth_email', firebaseUser.email);
+        }
+        firebaseUser.getIdToken().then((t) => {
+          if (t) localStorage.setItem('admin_auth_token', t);
+        }).catch(() => {});
       } else if (localStorage.getItem('admin_session_active') === 'true') {
         setIsAuthorized(true);
       } else {
@@ -186,12 +266,6 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     const cleanPassword = adminPassword;
 
     if (!cleanEmail || !cleanPassword) {
-      setAuthError('Incorrect password. Please try again.');
-      setIsAuthenticating(false);
-      return;
-    }
-
-    if (!AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
       setAuthError('Incorrect password. Please try again.');
       setIsAuthenticating(false);
       return;
@@ -234,6 +308,24 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       setAuthSuccess('Authentication successful! Access granted.');
       setIsAuthorized(true);
       localStorage.setItem('admin_session_active', 'true');
+      localStorage.setItem('admin_auth_email', cleanEmail);
+      if (auth?.currentUser) {
+        auth.currentUser.getIdToken().then((t) => {
+          if (t) localStorage.setItem('admin_auth_token', t);
+        }).catch(() => {});
+      }
+      if (onLoginSuccess) {
+        onLoginSuccess({
+          ...currentUser,
+          uid,
+          email: cleanEmail,
+          username: cleanEmail.split('@')[0],
+          fullName: cleanEmail.split('@')[0],
+          role: 'admin',
+          isAdmin: true,
+          isLoggedIn: true
+        });
+      }
     } catch (signInErr: any) {
       console.error("Admin sign-in authentication error:", signInErr);
       const code = signInErr?.code || '';
@@ -276,6 +368,8 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       console.error("Error signing out admin:", e);
     }
     localStorage.removeItem('admin_session_active');
+    localStorage.removeItem('admin_auth_email');
+    localStorage.removeItem('admin_auth_token');
     setIsAuthorized(false);
   };
 
@@ -293,9 +387,32 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     'plans' |
     'settings' |
     'live_support' |
-    'password_security'
+    'password_security' |
+    'delegated_access'
   >('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Delegated Access & User Impersonation states
+  const [adminPermissions, setAdminPermissions] = useState<AdminPermissions>({
+    email: (currentUser.email || 'blessingubah38@gmail.com').toLowerCase(),
+    VIEW_ACCOUNTS: true,
+    ACT_AS_CLIENT: true
+  });
+  const [delegatedAuditLogs, setDelegatedAuditLogs] = useState<AdminDelegatedAuditLog[]>([]);
+  const [delegationLoading, setDelegationLoading] = useState<string | null>(null);
+  const [actAsClientModalUser, setActAsClientModalUser] = useState<UserState | null>(null);
+  const [actAsClientAdminPassword, setActAsClientAdminPassword] = useState('');
+  const [actAsClientError, setActAsClientError] = useState<string | null>(null);
+  const [isConfirmingActAsClient, setIsConfirmingActAsClient] = useState(false);
+  const [auditLogFilter, setAuditLogFilter] = useState<'all' | 'VIEW_ACCOUNT' | 'ACT_AS_CLIENT'>('all');
+  const [auditLogSearch, setAuditLogSearch] = useState('');
+  const [openUserDropdownUid, setOpenUserDropdownUid] = useState<string | null>(null);
+
+  // Delegated Access - Dynamic Registered Clients table states
+  const [delegatedClientSearch, setDelegatedClientSearch] = useState('');
+  const [delegatedClientStatusFilter, setDelegatedClientStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
+  const [isRefreshingDelegatedClients, setIsRefreshingDelegatedClients] = useState(false);
+  const [copiedDelegatedUid, setCopiedDelegatedUid] = useState<string | null>(null);
   
   // Live Support Desk States
   const [supportSessions, setSupportSessions] = useState<SupportChatSession[]>([]);
@@ -660,6 +777,190 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
       setNotifFeedback({ type: 'error', message: 'Error playing audio chime: ' + err.message });
     } finally {
       setTimeout(() => setIsTestingSound(false), 700);
+    }
+  };
+
+  // ==========================================
+  // DELEGATED ADMIN SESSION ACTIONS & PERMISSIONS
+  // ==========================================
+  const handleRefreshRegisteredClients = async () => {
+    setIsRefreshingDelegatedClients(true);
+    try {
+      const callerEmail = (currentUser?.email || adminEmail || 'blessingubah38@gmail.com').toLowerCase().trim();
+      const [serverClients, logs] = await Promise.all([
+        fetchRegisteredClients(callerEmail),
+        fetchDelegatedAuditLogs()
+      ]);
+
+      if (serverClients && serverClients.length > 0) {
+        setUsers((prev) => {
+          const map = new Map<string, UserState>();
+          // Put server registered clients
+          serverClients.forEach((c) => {
+            if (c.uid) map.set(c.uid, c);
+          });
+          // Merge any existing in-memory clients that aren't admin accounts
+          prev.forEach((p) => {
+            if (p.uid && !map.has(p.uid) && !isAdministrativeUser(p, callerEmail, currentUser?.uid)) {
+              map.set(p.uid, p);
+            }
+          });
+          return Array.from(map.values());
+        });
+      }
+
+      if (Array.isArray(logs)) {
+        setDelegatedAuditLogs(logs);
+      }
+    } catch (e) {
+      console.warn('Error refreshing registered clients:', e);
+    } finally {
+      setIsRefreshingDelegatedClients(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const callerEmail = (currentUser?.email || adminEmail || 'blessingubah38@gmail.com').toLowerCase().trim();
+
+    fetchAdminPermissions(callerEmail).then((res) => {
+      if (res && res.permissions) {
+        setAdminPermissions(res.permissions);
+      }
+    });
+
+    fetchDelegatedAuditLogs().then((logs) => {
+      if (Array.isArray(logs)) {
+        setDelegatedAuditLogs(logs);
+      }
+    });
+
+    // Automatically load real registered clients from database
+    fetchRegisteredClients(callerEmail).then((serverClients) => {
+      if (serverClients && serverClients.length > 0) {
+        setUsers((prev) => {
+          const map = new Map<string, UserState>();
+          serverClients.forEach((c) => {
+            if (c.uid) map.set(c.uid, c);
+          });
+          prev.forEach((p) => {
+            if (p.uid && !map.has(p.uid) && !isAdministrativeUser(p, callerEmail, currentUser?.uid)) {
+              map.set(p.uid, p);
+            }
+          });
+          return Array.from(map.values());
+        });
+      }
+    });
+  }, [isAuthorized, currentUser?.email, adminEmail]);
+
+  const handleStartDelegatedSession = async (targetUser: UserState, mode: DelegatedAccessMode) => {
+    if (isSoleAdminUser(targetUser) || isAdministrativeUser(targetUser, currentUser?.email || adminEmail, currentUser?.uid)) {
+      alert('Security restriction: Delegated access cannot be initiated on an administrative account.');
+      return;
+    }
+
+    if (mode === 'ACT_AS_CLIENT') {
+      if (!adminPermissions.ACT_AS_CLIENT) {
+        alert('Permission Denied: Administrator does not have the high-risk ACT_AS_CLIENT permission.');
+        return;
+      }
+      setActAsClientModalUser(targetUser);
+      setActAsClientAdminPassword('');
+      setActAsClientError(null);
+      return;
+    }
+
+    executeStartDelegatedSession(targetUser, 'VIEW_ACCOUNT');
+  };
+
+  const executeStartDelegatedSession = async (targetUser: UserState, mode: DelegatedAccessMode) => {
+    const uid = targetUser.uid || targetUser.email;
+    setDelegationLoading(uid);
+    try {
+      const callerEmail = currentUser?.email || adminEmail || localStorage.getItem('admin_auth_email') || 'blessingubah38@gmail.com';
+      const callerName = currentUser?.fullName || currentUser?.username || callerEmail.split('@')[0];
+
+      // Obtain existing authenticated administrator ID token from Firebase Auth
+      let idToken: string | undefined;
+      try {
+        if (auth?.currentUser) {
+          idToken = await auth.currentUser.getIdToken(false);
+        }
+      } catch (tErr) {}
+      if (!idToken) {
+        idToken = (await getExistingAdminAccessToken()) || undefined;
+      }
+
+      const res = await createDelegatedSession({
+        targetUid: targetUser.uid || targetUser.email,
+        mode,
+        adminEmail: callerEmail,
+        adminName: callerName,
+        targetUser,
+        idToken
+      });
+
+      if (res.success && res.session) {
+        fetchDelegatedAuditLogs().then(logs => setDelegatedAuditLogs(logs));
+        if (onEnterDelegatedSession) {
+          onEnterDelegatedSession(res.session);
+        } else {
+          onPageChange('Dashboard');
+        }
+      } else {
+        alert(`Failed to start delegated session: ${res.error || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      alert(`Network error starting delegated session: ${e.message}`);
+    } finally {
+      setDelegationLoading(null);
+      setActAsClientModalUser(null);
+    }
+  };
+
+  const handleConfirmActAsClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!actAsClientModalUser) return;
+    setActAsClientError(null);
+
+    if (!actAsClientAdminPassword) {
+      setActAsClientError('Please enter your administrator password to authorize delegated client access.');
+      return;
+    }
+
+    setIsConfirmingActAsClient(true);
+    try {
+      const cleanEmail = (currentUser?.email || adminEmail || 'blessingubah38@gmail.com').toLowerCase().trim();
+      try {
+        await authLogin(cleanEmail, actAsClientAdminPassword);
+      } catch (authErr) {
+        setActAsClientError('Invalid administrator credentials. High-risk delegated client access denied.');
+        setIsConfirmingActAsClient(false);
+        return;
+      }
+
+      await executeStartDelegatedSession(actAsClientModalUser, 'ACT_AS_CLIENT');
+    } catch (e: any) {
+      setActAsClientError(`Authentication validation failed: ${e.message}`);
+    } finally {
+      setIsConfirmingActAsClient(false);
+    }
+  };
+
+  const handleToggleSuspendUser = async (targetUser: UserState) => {
+    if (isSoleAdminUser(targetUser)) {
+      alert('The primary administrator account cannot be disabled.');
+      return;
+    }
+    const newStatus = !targetUser.suspended;
+    try {
+      await saveUserProfile(targetUser.uid || targetUser.email, {
+        ...targetUser,
+        suspended: newStatus
+      });
+    } catch (e: any) {
+      alert(`Error updating suspension status: ${e.message}`);
     }
   };
 
@@ -1689,9 +1990,41 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
     }
   };
 
+  // Active Administrator Identity (Strictly isolated from target clients)
+  const activeAdminEmail = (currentUser?.email || adminEmail || 'blessingubah38@gmail.com').toLowerCase().trim();
+  const activeAdminUid = currentUser?.uid;
+
+  // Real Registered Clients (Dynamically loaded from database, strictly excluding any administrator account)
+  const registeredClients = useMemo(() => {
+    return users.filter(u => !isAdministrativeUser(u, activeAdminEmail, activeAdminUid));
+  }, [users, activeAdminEmail, activeAdminUid]);
+
+  // Filtered Clients for Delegated Access view
+  const filteredDelegatedClients = useMemo(() => {
+    return registeredClients.filter(c => {
+      // Status filter
+      if (delegatedClientStatusFilter === 'active' && c.suspended) return false;
+      if (delegatedClientStatusFilter === 'suspended' && !c.suspended) return false;
+
+      // Search query: client name, email, UID, status
+      if (delegatedClientSearch.trim()) {
+        const q = delegatedClientSearch.toLowerCase().trim();
+        const matchName = (c.fullName || '').toLowerCase().includes(q) || (c.username || '').toLowerCase().includes(q);
+        const matchEmail = (c.email || '').toLowerCase().includes(q);
+        const matchUid = (c.uid || '').toLowerCase().includes(q);
+        const statusText = c.suspended ? 'suspended' : 'active';
+        const matchStatus = statusText.includes(q);
+        const matchCountry = (c.country || '').toLowerCase().includes(q);
+        return matchName || matchEmail || matchUid || matchStatus || matchCountry;
+      }
+
+      return true;
+    });
+  }, [registeredClients, delegatedClientStatusFilter, delegatedClientSearch]);
+
   // Filtered Lists
   const filteredUsers = users
-    .filter(u => (u.username || '').toLowerCase().trim() !== 'blessingubah38' && u.uid !== 'JZXOl320NRYKGgxyjBcUvxxaZhv2')
+    .filter(u => !isAdministrativeUser(u, activeAdminEmail, activeAdminUid))
     .filter(u => 
       u.username.toLowerCase().includes(userQuery.toLowerCase()) || 
       u.email.toLowerCase().includes(userQuery.toLowerCase()) ||
@@ -2014,6 +2347,28 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
             <ShieldCheck size={14} className={activeTab === 'password_security' ? 'text-white' : 'text-[#00E676]'} />
             <span>Password & Security</span>
           </button>
+
+          <button 
+            onClick={() => {
+              setActiveTab('delegated_access');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-[11px] uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer ${
+              activeTab === 'delegated_access' 
+                ? 'bg-[#9B22FF] text-white shadow-lg shadow-[#9B22FF]/30 font-black' 
+                : 'text-[#7FA1C4] hover:text-white hover:bg-[#0A1B2D] font-bold'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Eye size={14} className={activeTab === 'delegated_access' ? 'text-white' : 'text-[#00E676]'} />
+              <span>Delegated Access & Audits</span>
+            </div>
+            {delegatedAuditLogs.length > 0 && (
+              <span className="bg-[#0A1B2D] text-[#00E676] border border-[#00E676]/40 text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold">
+                {delegatedAuditLogs.length}
+              </span>
+            )}
+          </button>
         </nav>
 
         {/* Foot exit link */}
@@ -2060,6 +2415,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
               {activeTab === 'settings' && "Global Platform Configuration"}
               {activeTab === 'live_support' && "Live Support Desk & Auto-Replies"}
               {activeTab === 'password_security' && "Password & Security"}
+              {activeTab === 'delegated_access' && "Administrative Delegated Access & Audit Trail"}
             </h1>
             <p className="text-xs text-[#7FA1C4] mt-1">
               Active Session sync connected safely via Web SDK. Real-time updates active.
@@ -3640,6 +3996,55 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                             <td className="p-4 font-mono font-medium text-[#7FA1C4]">{formatCurrency(u.totalDeposit)}</td>
                             <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                {!isSoleAdminUser(u) && (
+                                  <>
+                                    {/* 1. View Account (Read-Only) */}
+                                    <button 
+                                      type="button"
+                                      disabled={delegationLoading === (u.uid || u.email)}
+                                      onClick={() => handleStartDelegatedSession(u, 'VIEW_ACCOUNT')}
+                                      className="inline-flex items-center gap-1 bg-[#00E676]/15 hover:bg-[#00E676]/30 text-[#00E676] border border-[#00E676]/40 px-2.5 py-1.5 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                                      title="Open client dashboard in read-only inspection mode without password"
+                                    >
+                                      {delegationLoading === (u.uid || u.email) ? (
+                                        <RefreshCw size={11} className="animate-spin text-[#00E676]" />
+                                      ) : (
+                                        <Eye size={11} className="text-[#00E676]" />
+                                      )}
+                                      <span>View Account</span>
+                                    </button>
+
+                                    {/* 2. Act as Client (High-Risk - Only for permitted administrators) */}
+                                    {adminPermissions.ACT_AS_CLIENT && (
+                                      <button 
+                                        type="button"
+                                        disabled={delegationLoading === (u.uid || u.email)}
+                                        onClick={() => handleStartDelegatedSession(u, 'ACT_AS_CLIENT')}
+                                        className="inline-flex items-center gap-1 bg-[#FF3B5F]/15 hover:bg-[#FF3B5F]/30 text-[#FF7285] border border-[#FF3B5F]/40 px-2.5 py-1.5 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                                        title="High-risk delegated session: act on behalf of client with security audit logging"
+                                      >
+                                        <Key size={11} className="text-[#FF7285]" />
+                                        <span>Act as Client</span>
+                                      </button>
+                                    )}
+
+                                    {/* 3. Disable / Enable Account */}
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleToggleSuspendUser(u)}
+                                      className={`inline-flex items-center gap-1 ${
+                                        u.suspended 
+                                          ? 'bg-[#00E676]/15 hover:bg-[#00E676]/25 text-[#00E676] border-[#00E676]/40' 
+                                          : 'bg-[#FF3B5F]/10 hover:bg-[#FF3B5F]/20 text-[#FF7285] border-[#FF3B5F]/30'
+                                      } border px-2 py-1 rounded-md font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer`}
+                                      title={u.suspended ? 'Enable client account' : 'Disable and suspend client account'}
+                                    >
+                                      {u.suspended ? <Check size={11} /> : <Lock size={11} />}
+                                      <span>{u.suspended ? 'Enable' : 'Disable'}</span>
+                                    </button>
+                                  </>
+                                )}
+
                                 <button 
                                   onClick={() => {
                                     setAddMoneyUser(u.uid || '');
@@ -3811,6 +4216,49 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
 
                         {/* Actions block with proper touch sizes */}
                         <div className="flex flex-col gap-2 pt-1 font-semibold">
+                          {!isSoleAdminUser(u) && (
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                type="button"
+                                disabled={delegationLoading === (u.uid || u.email)}
+                                onClick={() => handleStartDelegatedSession(u, 'VIEW_ACCOUNT')}
+                                className="min-h-[44px] inline-flex items-center justify-center gap-1.5 bg-[#00E676]/15 hover:bg-[#00E676]/30 text-[#00E676] border border-[#00E676]/40 px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                              >
+                                {delegationLoading === (u.uid || u.email) ? (
+                                  <RefreshCw size={12} className="animate-spin text-[#00E676]" />
+                                ) : (
+                                  <Eye size={12} className="text-[#00E676]" />
+                                )}
+                                <span>View Account</span>
+                              </button>
+
+                              {adminPermissions.ACT_AS_CLIENT ? (
+                                <button 
+                                  type="button"
+                                  disabled={delegationLoading === (u.uid || u.email)}
+                                  onClick={() => handleStartDelegatedSession(u, 'ACT_AS_CLIENT')}
+                                  className="min-h-[44px] inline-flex items-center justify-center gap-1.5 bg-[#FF3B5F]/15 hover:bg-[#FF3B5F]/30 text-[#FF7285] border border-[#FF3B5F]/40 px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                                >
+                                  <Key size={12} className="text-[#FF7285]" />
+                                  <span>Act as Client</span>
+                                </button>
+                              ) : (
+                                <button 
+                                  type="button"
+                                  onClick={() => handleToggleSuspendUser(u)}
+                                  className={`min-h-[44px] inline-flex items-center justify-center gap-1.5 ${
+                                    u.suspended 
+                                      ? 'bg-[#00E676]/15 text-[#00E676] border-[#00E676]/40' 
+                                      : 'bg-[#FF3B5F]/10 text-[#FF7285] border-[#FF3B5F]/30'
+                                  } border px-2.5 py-2 rounded-lg font-black uppercase tracking-wider text-[10px] transition-colors cursor-pointer`}
+                                >
+                                  {u.suspended ? <Check size={12} /> : <Lock size={12} />}
+                                  <span>{u.suspended ? 'Enable Acc' : 'Disable Acc'}</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+
                           <div className="grid grid-cols-2 gap-2">
                             <button 
                               onClick={() => {
@@ -4675,6 +5123,682 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                       </button>
                     </div>
                   </form>
+                </div>
+              </div>
+            )}
+
+            {/* 5b. DELEGATED ACCESS & AUDIT LOGS SUBMENU */}
+            {activeTab === 'delegated_access' && (
+              <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300">
+                {/* 1. Header Overview & Administrator Officer Credentials */}
+                <div className="bg-[#081728] border border-[#173653] rounded-2xl p-6 sm:p-7 shadow-xs">
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-[#173653]">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-[#00E676]/15 border border-[#00E676]/40 flex items-center justify-center text-[#00E676] shrink-0">
+                        <ShieldCheck size={26} />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-black text-[#F5F7FA] uppercase font-display tracking-wider flex items-center gap-2">
+                          <span>Admin User-Account Access & Delegated Audit Trail</span>
+                        </h2>
+                        <p className="text-xs text-[#7FA1C4] mt-0.5">
+                          Granular server-side client delegation with zero password exposure. Access registered client dashboards securely in read-only mode without knowing, requesting, or modifying client passwords.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <button
+                        type="button"
+                        disabled={isRefreshingDelegatedClients}
+                        onClick={handleRefreshRegisteredClients}
+                        className="bg-[#06111F] hover:bg-[#0A1B2D] border border-[#173653] text-[#00E676] hover:text-white px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                        title="Sync real-time registered clients from live database"
+                      >
+                        <RefreshCw size={13} className={isRefreshingDelegatedClients ? 'animate-spin' : ''} />
+                        <span>{isRefreshingDelegatedClients ? 'Syncing...' : 'Sync Clients'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fetchDelegatedAuditLogs().then(logs => setDelegatedAuditLogs(logs));
+                        }}
+                        className="bg-[#06111F] hover:bg-[#0A1B2D] border border-[#173653] text-[#7FA1C4] hover:text-white px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <RefreshCw size={13} />
+                        <span>Refresh Logs</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Permissions & Administrator Separation Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
+                    <div className="bg-[#06111F] p-4 rounded-xl border border-[#173653] flex flex-col justify-between">
+                      <span className="text-[10px] uppercase font-bold text-[#7FA1C4] tracking-wider">Administrator Performing Access</span>
+                      <span className="text-xs font-black text-white font-mono truncate mt-1">
+                        {activeAdminEmail}
+                      </span>
+                      <span className="text-[9px] text-[#00E676] font-bold mt-2 flex items-center gap-1">
+                        <CheckCircle size={10} /> Authenticated Officer (Not Client)
+                      </span>
+                    </div>
+
+                    <div className="bg-[#06111F] p-4 rounded-xl border border-[#173653] flex flex-col justify-between">
+                      <span className="text-[10px] uppercase font-bold text-[#7FA1C4] tracking-wider">VIEW_ACCOUNTS Permission</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="bg-[#00E676]/20 border border-[#00E676]/50 text-[#00E676] text-[11px] font-black px-2 py-0.5 rounded">
+                          GRANTED (READ-ONLY)
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-[#7FA1C4] mt-2">
+                        Inspect real client balances, transactions & metrics without password
+                      </span>
+                    </div>
+
+                    <div className="bg-[#06111F] p-4 rounded-xl border border-[#173653] flex flex-col justify-between">
+                      <span className="text-[10px] uppercase font-bold text-[#7FA1C4] tracking-wider">ACT_AS_CLIENT Permission</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {adminPermissions.ACT_AS_CLIENT ? (
+                          <span className="bg-[#FF3B5F]/20 border border-[#FF3B5F]/50 text-[#FF7285] text-[11px] font-black px-2 py-0.5 rounded">
+                            GRANTED (HIGH-RISK)
+                          </span>
+                        ) : (
+                          <span className="bg-[#FF3B5F]/10 border border-[#FF3B5F]/30 text-[#7FA1C4] text-[11px] font-bold px-2 py-0.5 rounded">
+                            RESTRICTED
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[9px] text-[#7FA1C4] mt-2">
+                        High-risk delegated execution with password re-authorization
+                      </span>
+                    </div>
+
+                    <div className="bg-[#06111F] p-4 rounded-xl border border-[#173653] flex flex-col justify-between">
+                      <span className="text-[10px] uppercase font-bold text-[#7FA1C4] tracking-wider">Delegated Session Security TTL</span>
+                      <span className="text-xs font-black text-[#F5A623] font-mono mt-1">
+                        15 MINUTES PER SESSION
+                      </span>
+                      <span className="text-[9px] text-[#7FA1C4] mt-2">
+                        Auto-expires & clears state upon exit
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. REGISTERED CLIENT ACCOUNTS SECTION (REAL DATABASE) */}
+                <div className="bg-[#081728] border border-[#173653] rounded-2xl flex flex-col overflow-hidden shadow-xs">
+                  {/* Table Header Bar */}
+                  <div className="p-5 border-b border-[#173653] bg-[#0A1B2D]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#00E676]/15 border border-[#00E676]/40 flex items-center justify-center text-[#00E676] shrink-0">
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                            Registered Client Accounts (Dynamic Real Database)
+                          </h3>
+                          <span className="bg-[#00E676]/15 text-[#00E676] border border-[#00E676]/40 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
+                            {registeredClients.length} Registered Clients
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#7FA1C4] mt-0.5">
+                          Select any registered client account to securely launch their backoffice in read-only delegated view mode with zero password disclosure.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quick Stat Badges */}
+                    <div className="flex items-center gap-2 flex-wrap text-[11px] font-mono">
+                      <div className="bg-[#06111F] px-3 py-1.5 rounded-lg border border-[#173653] flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#00E676]" />
+                        <span className="text-[#7FA1C4]">Active:</span>
+                        <strong className="text-white">{registeredClients.filter(c => !c.suspended).length}</strong>
+                      </div>
+                      {registeredClients.filter(c => c.suspended).length > 0 && (
+                        <div className="bg-[#06111F] px-3 py-1.5 rounded-lg border border-[#FF3B5F]/40 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#FF3B5F]" />
+                          <span className="text-[#7FA1C4]">Suspended:</span>
+                          <strong className="text-[#FF7285]">{registeredClients.filter(c => c.suspended).length}</strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search and Filters Toolbar */}
+                  <div className="p-4 border-b border-[#173653] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7FA1C4]" size={15} />
+                      <input 
+                        type="text" 
+                        placeholder="Search registered clients by name, email, UID, status, or country..."
+                        value={delegatedClientSearch}
+                        onChange={(e) => setDelegatedClientSearch(e.target.value)}
+                        className="w-full bg-[#06111F] text-xs py-2.5 pl-10 pr-10 rounded-lg text-[#F5F7FA] placeholder-[#7FA1C4]/60 border border-[#173653] focus:border-[#00E676] focus:outline-hidden font-semibold transition-all"
+                      />
+                      {delegatedClientSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setDelegatedClientSearch('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7FA1C4] hover:text-white"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDelegatedClientStatusFilter('all')}
+                        className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          delegatedClientStatusFilter === 'all'
+                            ? 'bg-[#00E676] text-slate-950 shadow-xs'
+                            : 'bg-[#06111F] text-[#7FA1C4] hover:text-white border border-[#173653]'
+                        }`}
+                      >
+                        All ({registeredClients.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDelegatedClientStatusFilter('active')}
+                        className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          delegatedClientStatusFilter === 'active'
+                            ? 'bg-[#00E676] text-slate-950 shadow-xs'
+                            : 'bg-[#06111F] text-[#7FA1C4] hover:text-white border border-[#173653]'
+                        }`}
+                      >
+                        Active ({registeredClients.filter(c => !c.suspended).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDelegatedClientStatusFilter('suspended')}
+                        className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          delegatedClientStatusFilter === 'suspended'
+                            ? 'bg-[#FF3B5F] text-white shadow-xs'
+                            : 'bg-[#06111F] text-[#7FA1C4] hover:text-white border border-[#173653]'
+                        }`}
+                      >
+                        Suspended ({registeredClients.filter(c => c.suspended).length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Registered Clients Table (Desktop) */}
+                  <div className="hidden md:block overflow-x-auto w-full">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#173653] text-[10px] font-bold text-[#7FA1C4] uppercase tracking-wider bg-[#0A1B2D]">
+                          <th className="p-4">Client Identity</th>
+                          <th className="p-4">Email & UID</th>
+                          <th className="p-4">Account Balances</th>
+                          <th className="p-4">Account Status</th>
+                          <th className="p-4">Origin & Location</th>
+                          <th className="p-4 text-right">Delegated Access</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#173653]/60 font-medium">
+                        {filteredDelegatedClients.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-12 text-center text-[#7FA1C4] text-xs">
+                              <Users size={32} className="mx-auto mb-2 opacity-40 text-[#00E676]" />
+                              <p className="font-semibold text-white">No registered client accounts matching your search.</p>
+                              <p className="text-[11px] text-[#7FA1C4] mt-1">
+                                {delegatedClientSearch
+                                  ? `Try clearing your search query "${delegatedClientSearch}"`
+                                  : 'Newly registered user accounts will automatically appear here in real-time.'}
+                              </p>
+                              {delegatedClientSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDelegatedClientSearch('')}
+                                  className="mt-3 bg-[#06111F] hover:bg-[#0A1B2D] border border-[#173653] text-[#00E676] px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                >
+                                  Clear Search
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredDelegatedClients.map((client) => {
+                            const isSuspended = Boolean(client.suspended);
+                            const mainBal = Number(client.mainAccountBalance !== undefined ? client.mainAccountBalance : client.accountBalance) || 0;
+                            const totalDep = Number(client.totalDeposit) || 0;
+                            const activeDep = Number(client.activeDeposit) || 0;
+                            const clientUid = client.uid || client.email;
+                            const isDelegatingThis = delegationLoading === clientUid;
+
+                            return (
+                              <tr key={client.uid || client.email} className="hover:bg-[#0A1B2D]/40 transition-colors">
+                                {/* 1. Client Identity */}
+                                <td className="p-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-[#00E676]/15 border border-[#00E676]/40 flex items-center justify-center text-[#00E676] font-black text-xs shrink-0">
+                                      {(client.fullName || client.username || 'C').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-bold text-[#F5F7FA] text-sm truncate">
+                                          {client.fullName || client.username}
+                                        </span>
+                                        <span className="text-[10px] text-[#00E676] font-bold bg-[#00E676]/15 border border-[#00E676]/40 px-1.5 py-0.2 rounded leading-none">
+                                          Client
+                                        </span>
+                                      </div>
+                                      <div className="text-[11px] text-[#F5A623] font-mono mt-0.5 truncate">
+                                        @{client.username}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* 2. Email & UID */}
+                                <td className="p-4">
+                                  <div className="text-xs font-mono text-white truncate max-w-xs">{client.email}</div>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <span className="text-[9px] font-mono text-[#7FA1C4] bg-[#06111F] px-1.5 py-0.5 rounded border border-[#173653]">
+                                      UID: {client.uid ? `${client.uid.slice(0, 12)}...` : 'N/A'}
+                                    </span>
+                                    {client.uid && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(client.uid || '');
+                                          setCopiedDelegatedUid(client.uid || '');
+                                          setTimeout(() => setCopiedDelegatedUid(null), 2000);
+                                        }}
+                                        className="text-[9px] text-[#F5A623] hover:underline font-mono inline-flex items-center gap-0.5 cursor-pointer"
+                                        title="Copy Client UID"
+                                      >
+                                        {copiedDelegatedUid === client.uid ? (
+                                          <Check size={10} className="text-[#00E676]" />
+                                        ) : (
+                                          <Copy size={10} />
+                                        )}
+                                        <span>{copiedDelegatedUid === client.uid ? 'Copied' : 'Copy'}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* 3. Account Balances */}
+                                <td className="p-4 whitespace-nowrap">
+                                  <div className="font-mono font-bold text-[#F5A623] text-xs">
+                                    {formatCurrency(mainBal)}
+                                  </div>
+                                  <div className="text-[10px] font-mono text-[#7FA1C4] mt-0.5">
+                                    Total Dep: <span className="text-slate-300">{formatCurrency(totalDep)}</span>
+                                  </div>
+                                  {activeDep > 0 && (
+                                    <div className="text-[9px] font-mono text-[#00E676] mt-0.2">
+                                      Active: {formatCurrency(activeDep)}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* 4. Account Status */}
+                                <td className="p-4 whitespace-nowrap">
+                                  {isSuspended ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-[#FF3B5F]/20 text-[#FF7285] border border-[#FF3B5F]/50 animate-pulse">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B5F]" />
+                                      <span>SUSPENDED</span>
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-[#00E676]/20 text-[#00E676] border border-[#00E676]/50">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#00E676]" />
+                                      <span>ACTIVE</span>
+                                    </span>
+                                  )}
+                                  <div className="text-[10px] text-[#7FA1C4] mt-1 flex items-center gap-1">
+                                    <CheckCircle size={10} className="text-[#00E676]" />
+                                    <span>Client Account</span>
+                                  </div>
+                                </td>
+
+                                {/* 5. Origin / Location */}
+                                <td className="p-4 whitespace-nowrap">
+                                  <div className="text-xs text-white flex items-center gap-1">
+                                    <Globe size={11} className="text-[#7FA1C4]" />
+                                    <span>{client.country || 'Global Client'}</span>
+                                  </div>
+                                  <div className="text-[10px] text-[#7FA1C4] font-mono truncate max-w-[140px] mt-0.5">
+                                    {client.device || client.browser || 'Web Client'}
+                                  </div>
+                                </td>
+
+                                {/* 6. Delegated Actions */}
+                                <td className="p-4 text-right whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-2">
+                                    {/* Primary: VIEW ACCOUNT (READ-ONLY) */}
+                                    <button
+                                      type="button"
+                                      disabled={isDelegatingThis}
+                                      onClick={() => handleStartDelegatedSession(client, 'VIEW_ACCOUNT')}
+                                      className="inline-flex items-center gap-1.5 bg-[#00E676]/15 hover:bg-[#00E676]/30 text-[#00E676] border border-[#00E676]/40 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                                      title="Open client dashboard in read-only inspection mode without password"
+                                    >
+                                      {isDelegatingThis ? (
+                                        <RefreshCw size={12} className="animate-spin text-[#00E676]" />
+                                      ) : (
+                                        <Eye size={12} className="text-[#00E676]" />
+                                      )}
+                                      <span>View Account</span>
+                                    </button>
+
+                                    {/* High-Risk: ACT AS CLIENT (Requires separate permission) */}
+                                    {adminPermissions.ACT_AS_CLIENT && (
+                                      <button
+                                        type="button"
+                                        disabled={isDelegatingThis}
+                                        onClick={() => handleStartDelegatedSession(client, 'ACT_AS_CLIENT')}
+                                        className="inline-flex items-center gap-1.5 bg-[#FF3B5F]/15 hover:bg-[#FF3B5F]/30 text-[#FF7285] border border-[#FF3B5F]/40 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                                        title="High-risk delegated session: act on behalf of client with security audit logging"
+                                      >
+                                        <Key size={12} className="text-[#FF7285]" />
+                                        <span>Act as Client</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Registered Clients Mobile Cards View */}
+                  <div className="block md:hidden divide-y divide-[#173653]/60 bg-[#081728]">
+                    {filteredDelegatedClients.length === 0 ? (
+                      <div className="p-8 text-center text-[#7FA1C4] text-xs italic">
+                        No registered client accounts found.
+                      </div>
+                    ) : (
+                      filteredDelegatedClients.map((client) => {
+                        const isSuspended = Boolean(client.suspended);
+                        const mainBal = Number(client.mainAccountBalance !== undefined ? client.mainAccountBalance : client.accountBalance) || 0;
+                        const clientUid = client.uid || client.email;
+                        const isDelegatingThis = delegationLoading === clientUid;
+
+                        return (
+                          <div key={client.uid || client.email} className="p-4 hover:bg-[#0A1B2D]/40 transition-colors flex flex-col gap-3">
+                            <div className="flex justify-between items-start">
+                              <div className="min-w-0 flex-1 pr-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-white text-sm truncate">
+                                    {client.fullName || client.username}
+                                  </span>
+                                  <span className="text-[10px] text-[#00E676] font-bold bg-[#00E676]/15 border border-[#00E676]/40 px-1.5 py-0.2 rounded">
+                                    Client
+                                  </span>
+                                  {isSuspended && (
+                                    <span className="text-[10px] text-[#FF3B5F] font-bold bg-[#FF3B5F]/15 border border-[#FF3B5F]/40 px-1.5 py-0.2 rounded">
+                                      SUSPENDED
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-[#7FA1C4] font-mono truncate mt-0.5">
+                                  {client.email}
+                                </div>
+                                <div className="text-[10px] text-[#F5A623] font-mono mt-0.5">
+                                  @{client.username} • UID: {client.uid ? `${client.uid.slice(0, 10)}...` : 'N/A'}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-mono font-bold text-[#F5A623] text-sm block">
+                                  {formatCurrency(mainBal)}
+                                </span>
+                                <span className="text-[9px] text-[#7FA1C4] uppercase block">Balance</span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <button
+                                type="button"
+                                disabled={isDelegatingThis}
+                                onClick={() => handleStartDelegatedSession(client, 'VIEW_ACCOUNT')}
+                                className="inline-flex items-center justify-center gap-1.5 bg-[#00E676]/15 hover:bg-[#00E676]/30 text-[#00E676] border border-[#00E676]/40 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                              >
+                                {isDelegatingThis ? (
+                                  <RefreshCw size={12} className="animate-spin text-[#00E676]" />
+                                ) : (
+                                  <Eye size={12} className="text-[#00E676]" />
+                                )}
+                                <span>View Account</span>
+                              </button>
+
+                              {adminPermissions.ACT_AS_CLIENT && (
+                                <button
+                                  type="button"
+                                  disabled={isDelegatingThis}
+                                  onClick={() => handleStartDelegatedSession(client, 'ACT_AS_CLIENT')}
+                                  className="inline-flex items-center justify-center gap-1.5 bg-[#FF3B5F]/15 hover:bg-[#FF3B5F]/30 text-[#FF7285] border border-[#FF3B5F]/40 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                                >
+                                  <Key size={12} className="text-[#FF7285]" />
+                                  <span>Act as Client</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. AUDIT TRAIL EXPLORER & IMMUTABLE LOGS */}
+                <div className="bg-[#081728] border border-[#173653] rounded-2xl flex flex-col overflow-hidden shadow-xs">
+                  {/* Toolbar */}
+                  <div className="p-5 border-b border-[#173653] bg-[#0A1B2D]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#9B22FF]/15 border border-[#9B22FF]/40 flex items-center justify-center text-[#C084FC] shrink-0">
+                        <Activity size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                            Immutable Delegated Access & Security Audit Trail
+                          </h3>
+                          <span className="bg-[#9B22FF]/15 text-[#C084FC] border border-[#9B22FF]/40 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
+                            {delegatedAuditLogs.length} Records
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#7FA1C4] mt-0.5">
+                          Cryptographically-timestamped log of every delegated session, access mode, target client, and administrative identity.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border-b border-[#173653] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7FA1C4]" size={15} />
+                      <input 
+                        type="text" 
+                        placeholder="Search audit trail by client, admin, session ID, or action..."
+                        value={auditLogSearch}
+                        onChange={(e) => setAuditLogSearch(e.target.value)}
+                        className="w-full bg-[#06111F] text-xs py-2.5 pl-10 pr-4 rounded-lg text-[#F5F7FA] placeholder-[#7FA1C4]/60 border border-[#173653] focus:border-[#00E676] focus:outline-hidden font-semibold transition-all"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAuditLogFilter('all')}
+                        className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          auditLogFilter === 'all'
+                            ? 'bg-[#9B22FF] text-white'
+                            : 'bg-[#06111F] text-[#7FA1C4] hover:text-white border border-[#173653]'
+                        }`}
+                      >
+                        All ({delegatedAuditLogs.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAuditLogFilter('VIEW_ACCOUNT')}
+                        className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          auditLogFilter === 'VIEW_ACCOUNT'
+                            ? 'bg-[#00E676] text-slate-950 font-black'
+                            : 'bg-[#06111F] text-[#7FA1C4] hover:text-white border border-[#173653]'
+                        }`}
+                      >
+                        View Account ({delegatedAuditLogs.filter(l => l.mode === 'VIEW_ACCOUNT').length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAuditLogFilter('ACT_AS_CLIENT')}
+                        className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          auditLogFilter === 'ACT_AS_CLIENT'
+                            ? 'bg-red-600 text-white font-black'
+                            : 'bg-[#06111F] text-[#7FA1C4] hover:text-white border border-[#173653]'
+                        }`}
+                      >
+                        Act as Client ({delegatedAuditLogs.filter(l => l.mode === 'ACT_AS_CLIENT').length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Logs Table */}
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#173653] text-[10px] font-bold text-[#7FA1C4] uppercase tracking-wider bg-[#0A1B2D]">
+                          <th className="p-4">Time / Date</th>
+                          <th className="p-4">Access Mode</th>
+                          <th className="p-4">Target Client</th>
+                          <th className="p-4">Administrator</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4">Actions Audited</th>
+                          <th className="p-4 text-right">Quick Access</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#173653]/60 font-medium">
+                        {delegatedAuditLogs
+                          .filter(l => {
+                            if (auditLogFilter !== 'all' && l.mode !== auditLogFilter) return false;
+                            if (auditLogSearch.trim()) {
+                              const q = auditLogSearch.toLowerCase().trim();
+                              const inTarget = (l.targetEmail || '').toLowerCase().includes(q) || (l.targetUsername || '').toLowerCase().includes(q) || (l.targetName || '').toLowerCase().includes(q);
+                              const inAdmin = (l.adminEmail || '').toLowerCase().includes(q);
+                              const inId = (l.sessionId || '').toLowerCase().includes(q);
+                              const inActions = (l.actions || []).some(a => a.toLowerCase().includes(q));
+                              return inTarget || inAdmin || inId || inActions;
+                            }
+                            return true;
+                          })
+                          .length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-10 text-center text-[#7FA1C4] text-xs italic">
+                              No delegated access records matching your criteria.
+                              <div className="mt-2 text-[11px] text-[#7FA1C4]/80">
+                                Click <strong className="text-[#00E676]">View Account</strong> on any registered client above to begin a secure delegated session.
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          delegatedAuditLogs
+                            .filter(l => {
+                              if (auditLogFilter !== 'all' && l.mode !== auditLogFilter) return false;
+                              if (auditLogSearch.trim()) {
+                                const q = auditLogSearch.toLowerCase().trim();
+                                const inTarget = (l.targetEmail || '').toLowerCase().includes(q) || (l.targetUsername || '').toLowerCase().includes(q) || (l.targetName || '').toLowerCase().includes(q);
+                                const inAdmin = (l.adminEmail || '').toLowerCase().includes(q);
+                                const inId = (l.sessionId || '').toLowerCase().includes(q);
+                                const inActions = (l.actions || []).some(a => a.toLowerCase().includes(q));
+                                return inTarget || inAdmin || inId || inActions;
+                              }
+                              return true;
+                            })
+                            .map(log => {
+                              const isReadOnly = log.mode === 'VIEW_ACCOUNT';
+                              const clientObj = registeredClients.find(u => u.uid === log.targetUid || u.email.toLowerCase() === log.targetEmail.toLowerCase());
+                              return (
+                                <tr key={log.id || log.sessionId} className="hover:bg-[#0A1B2D]/40 transition-colors">
+                                  <td className="p-4 whitespace-nowrap font-mono text-[11px] text-[#7FA1C4]">
+                                    <div>{new Date(log.startedAt).toLocaleDateString()}</div>
+                                    <div className="text-[10px] text-slate-400">{new Date(log.startedAt).toLocaleTimeString()}</div>
+                                  </td>
+
+                                  <td className="p-4 whitespace-nowrap">
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider ${
+                                      isReadOnly 
+                                        ? 'bg-[#00E676]/15 text-[#00E676] border border-[#00E676]/40' 
+                                        : 'bg-red-500/20 text-red-300 border border-red-500/50'
+                                    }`}>
+                                      {isReadOnly ? <Eye size={11} /> : <Key size={11} />}
+                                      <span>{isReadOnly ? 'VIEW ACCOUNT' : 'ACT AS CLIENT'}</span>
+                                    </span>
+                                  </td>
+
+                                  <td className="p-4">
+                                    <div className="font-bold text-white text-xs">{log.targetName || log.targetUsername}</div>
+                                    <div className="text-[10px] font-mono text-[#7FA1C4] truncate max-w-xs">{log.targetEmail}</div>
+                                    <div className="text-[9px] font-mono text-slate-500">UID: {log.targetUid.slice(0, 12)}...</div>
+                                  </td>
+
+                                  <td className="p-4 whitespace-nowrap">
+                                    <div className="text-xs font-semibold text-white font-mono">{log.adminEmail}</div>
+                                    <div className="text-[10px] text-[#7FA1C4]">ID: {log.adminUid || 'admin'}</div>
+                                  </td>
+
+                                  <td className="p-4 whitespace-nowrap">
+                                    {log.status === 'active' ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-[#00E676]/20 text-[#00E676] border border-[#00E676]/50 animate-pulse">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#00E676]" />
+                                        <span>ACTIVE</span>
+                                      </span>
+                                    ) : log.status === 'expired' ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                        <Clock size={10} />
+                                        <span>EXPIRED (TTL)</span>
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-white/10">
+                                        <span>TERMINATED</span>
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  <td className="p-4 max-w-md">
+                                    <div className="space-y-1">
+                                      {(log.actions || []).map((act, i) => (
+                                        <div key={i} className="text-[11px] text-slate-300 flex items-start gap-1.5">
+                                          <span className="text-[#00E676] shrink-0 font-mono">•</span>
+                                          <span className="leading-tight">{act}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {log.ip && (
+                                      <div className="text-[9px] font-mono text-slate-500 mt-1">
+                                        IP: {log.ip}
+                                      </div>
+                                    )}
+                                  </td>
+
+                                  <td className="p-4 text-right whitespace-nowrap">
+                                    {clientObj ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleStartDelegatedSession(clientObj, 'VIEW_ACCOUNT')}
+                                        className="inline-flex items-center gap-1 bg-[#00E676]/15 hover:bg-[#00E676]/25 text-[#00E676] border border-[#00E676]/40 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                        title="Inspect client account in read-only mode"
+                                      >
+                                        <Eye size={11} />
+                                        <span>Inspect</span>
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-500 italic">Archived</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -6248,6 +7372,109 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess }:
                 Close Preview
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* High-Risk ACT AS CLIENT Authorization Modal */}
+      {actAsClientModalUser && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#081728] border-2 border-red-500/50 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 text-left animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3.5 pb-4 border-b border-[#173653]">
+              <div className="w-12 h-12 rounded-xl bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 shrink-0">
+                <ShieldAlert size={26} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40">
+                    High-Risk Delegated Access
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">15-Min TTL</span>
+                </div>
+                <h3 className="text-lg font-black text-white uppercase font-display tracking-wide mt-1">
+                  Authorize "Act as Client" Session
+                </h3>
+              </div>
+            </div>
+
+            <div className="bg-[#050e18] p-4 rounded-xl border border-[#173653] space-y-2 text-xs">
+              <div className="text-[10px] text-[#7FA1C4] uppercase font-black tracking-wider">
+                Target Client Account
+              </div>
+              <div className="flex justify-between items-center text-sm font-bold text-white">
+                <span>{actAsClientModalUser.fullName || actAsClientModalUser.username}</span>
+                <span className="font-mono text-[#F5A623]">{actAsClientModalUser.username}</span>
+              </div>
+              <div className="text-xs text-[#7FA1C4] font-mono truncate">{actAsClientModalUser.email}</div>
+              <div className="text-[10px] text-slate-400 font-mono">UID: {actAsClientModalUser.uid || 'N/A'}</div>
+            </div>
+
+            <div className="bg-red-950/30 border border-red-500/30 p-3.5 rounded-xl text-xs text-red-200 space-y-1.5 leading-relaxed">
+              <div className="font-bold flex items-center gap-1.5 text-red-300">
+                <Key size={14} />
+                <span>Security Notice & Audit Trail</span>
+              </div>
+              <p className="text-[11px] text-slate-300">
+                You are about to act on behalf of <strong>{actAsClientModalUser.username}</strong>. All operations performed during this short-lived session will be immutably recorded in the security audit logs.
+              </p>
+              <p className="text-[10px] text-slate-400 italic">
+                Zero password disclosure: Client credentials remain strictly protected and are never requested or exposed.
+              </p>
+            </div>
+
+            {actAsClientError && (
+              <div className="p-3 bg-red-500/15 border border-red-500/40 rounded-xl text-xs text-red-300 flex items-center gap-2">
+                <XCircle size={15} className="shrink-0 text-red-400" />
+                <span>{actAsClientError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmActAsClient} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-[#7FA1C4] block mb-1.5">
+                  Confirm Your Administrator Password <span className="text-red-400">*</span>
+                </label>
+                <input 
+                  type="password"
+                  required
+                  placeholder="Enter administrator password..."
+                  value={actAsClientAdminPassword}
+                  onChange={(e) => setActAsClientAdminPassword(e.target.value)}
+                  className="w-full bg-[#06111F] text-xs py-2.5 px-3.5 rounded-lg text-white border border-[#173653] focus:border-red-500 focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActAsClientModalUser(null);
+                    setActAsClientAdminPassword('');
+                    setActAsClientError(null);
+                  }}
+                  className="px-4 py-2.5 rounded-lg border border-[#173653] text-[#7FA1C4] hover:text-white hover:bg-[#0A1B2D] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isConfirmingActAsClient}
+                  className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider transition-colors cursor-pointer shadow-lg flex items-center gap-2"
+                >
+                  {isConfirmingActAsClient ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Validating & Authorizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key size={14} />
+                      <span>Confirm & Act as Client</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

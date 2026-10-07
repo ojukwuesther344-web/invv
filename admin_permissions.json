@@ -1,0 +1,41 @@
+[
+  {
+    "email": "blessingubah38@gmail.com",
+    "VIEW_ACCOUNTS": true,
+    "ACT_AS_CLIENT": true,
+    "VIEW_TRANSACTIONS": true,
+    "MANAGE_DEPOSITS": true,
+    "MANAGE_WITHDRAWALS": true,
+    "MANAGE_USERS": true,
+    "MANAGE_SUPPORT": true,
+    "MANAGE_INVESTMENTS": true,
+    "updatedAt": 1791314278016,
+    "updatedBy": "System"
+  },
+  {
+    "email": "sheilawalshsheila@gmail.com",
+    "VIEW_ACCOUNTS": true,
+    "ACT_AS_CLIENT": true,
+    "VIEW_TRANSACTIONS": true,
+    "MANAGE_DEPOSITS": true,
+    "MANAGE_WITHDRAWALS": true,
+    "MANAGE_USERS": true,
+    "MANAGE_SUPPORT": true,
+    "MANAGE_INVESTMENTS": true,
+    "updatedAt": 1791314278016,
+    "updatedBy": "System"
+  },
+  {
+    "email": "holy@mail.com",
+    "VIEW_ACCOUNTS": true,
+    "ACT_AS_CLIENT": true,
+    "VIEW_TRANSACTIONS": true,
+    "MANAGE_DEPOSITS": true,
+    "MANAGE_WITHDRAWALS": true,
+    "MANAGE_USERS": true,
+    "MANAGE_SUPPORT": true,
+    "MANAGE_INVESTMENTS": true,
+    "updatedAt": 1791314278016,
+    "updatedBy": "System"
+  }
+]

@@ -1,0 +1,156 @@
+[
+  {
+    "id": "audit_1791359205484_e62513e3",
+    "sessionId": "del_sess_1791359205483_d4709d99cc92f199b657b6bd",
+    "adminEmail": "holy@mail.com",
+    "adminUid": "admin_holy@mail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791359205483,
+    "endedAt": 1791359205513,
+    "status": "terminated",
+    "actions": [
+      "Admin holy@mail.com initiated VIEW_ACCOUNT session for client Mary",
+      "Admin terminated session manually at 7:46:45 AM"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "node"
+  },
+  {
+    "id": "audit_1791359076503_7539d657",
+    "sessionId": "del_sess_1791359076502_b0f8d0dac4e2fb4803a66cb9",
+    "adminEmail": "holy@mail.com",
+    "adminUid": "admin_holy@mail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791359076502,
+    "endedAt": null,
+    "status": "active",
+    "actions": [
+      "Admin holy@mail.com initiated VIEW_ACCOUNT session for client Mary"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "node"
+  },
+  {
+    "id": "audit_1791359060775_a4a5df6b",
+    "sessionId": "del_sess_1791359060774_0a6f7cc99b4c01afd367a790",
+    "adminEmail": "holy@mail.com",
+    "adminUid": "admin_holy@mail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791359060774,
+    "endedAt": null,
+    "status": "active",
+    "actions": [
+      "Admin holy@mail.com initiated VIEW_ACCOUNT session for client Mary"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1"
+  },
+  {
+    "id": "audit_1791358568228_3415454e",
+    "sessionId": "del_sess_1791358568226_c92c47676990d574322ee02c",
+    "adminEmail": "holy@mail.com",
+    "adminUid": "admin_holy@mail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791358568226,
+    "endedAt": null,
+    "status": "active",
+    "actions": [
+      "Admin holy@mail.com initiated VIEW_ACCOUNT session for client Mary"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "node"
+  },
+  {
+    "id": "audit_1791314669638_12fa05a1",
+    "sessionId": "del_sess_1791314669638_8b1a3ba8afbc2dd05bf8d6b6",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791314669638,
+    "endedAt": null,
+    "status": "active",
+    "actions": [
+      "Admin blessingubah38@gmail.com initiated VIEW_ACCOUNT session for client Mary"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1"
+  },
+  {
+    "id": "audit_1791314664729_fc9e8fd3",
+    "sessionId": "del_sess_1791314664728_9f2f49a7de89cec3557e5a0a",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791314664728,
+    "endedAt": null,
+    "status": "active",
+    "actions": [
+      "Admin blessingubah38@gmail.com initiated VIEW_ACCOUNT session for client Mary"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1"
+  },
+  {
+    "id": "audit_1791314393288_8cfa23ab",
+    "sessionId": "del_sess_1791314393287_971429f1760d5d73358fd19d",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791314393287,
+    "endedAt": null,
+    "status": "active",
+    "actions": [
+      "Admin blessingubah38@gmail.com initiated VIEW_ACCOUNT session for client Mary"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1"
+  },
+  {
+    "id": "audit_1791312939424_663c56a7",
+    "sessionId": "del_sess_1791312939423_93883d10a95da31dd7751e4d",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetEmail": "mayemusk0371@gmail.com",
+    "targetUsername": "Mary",
+    "targetName": "Lena",
+    "mode": "VIEW_ACCOUNT",
+    "startedAt": 1791312939423,
+    "endedAt": 1791312943892,
+    "status": "terminated",
+    "actions": [
+      "Admin blessingubah38@gmail.com initiated VIEW_ACCOUNT session for client Mary",
+      "Admin terminated session manually at 6:55:43 PM"
+    ],
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1"
+  }
+]

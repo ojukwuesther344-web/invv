@@ -1,0 +1,338 @@
+[
+  {
+    "sessionId": "del_sess_1791312939423_93883d10a95da31dd7751e4d",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminName": "Blessing Ubah",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791312939423,
+    "expiresAt": 1791313839423,
+    "isActive": false,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  },
+  {
+    "sessionId": "del_sess_1791314393287_971429f1760d5d73358fd19d",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminName": "blessingubah38",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791314393287,
+    "expiresAt": 1791315293287,
+    "isActive": true,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  },
+  {
+    "sessionId": "del_sess_1791314664728_9f2f49a7de89cec3557e5a0a",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminName": "blessingubah38",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791314664728,
+    "expiresAt": 1791315564728,
+    "isActive": true,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  },
+  {
+    "sessionId": "del_sess_1791314669638_8b1a3ba8afbc2dd05bf8d6b6",
+    "adminUid": "admin_blessingubah38@gmail.com",
+    "adminEmail": "blessingubah38@gmail.com",
+    "adminName": "blessingubah38",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791314669638,
+    "expiresAt": 1791315569638,
+    "isActive": true,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  },
+  {
+    "sessionId": "del_sess_1791358568226_c92c47676990d574322ee02c",
+    "adminUid": "admin_holy@mail.com",
+    "adminEmail": "holy@mail.com",
+    "adminName": "Holy",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791358568226,
+    "expiresAt": 1791359468226,
+    "isActive": true,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  },
+  {
+    "sessionId": "del_sess_1791359060774_0a6f7cc99b4c01afd367a790",
+    "adminUid": "admin_holy@mail.com",
+    "adminEmail": "holy@mail.com",
+    "adminName": "Holy",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791359060774,
+    "expiresAt": 1791359960774,
+    "isActive": true,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  },
+  {
+    "sessionId": "del_sess_1791359076502_b0f8d0dac4e2fb4803a66cb9",
+    "adminUid": "admin_holy@mail.com",
+    "adminEmail": "holy@mail.com",
+    "adminName": "Holy",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791359076502,
+    "expiresAt": 1791359976502,
+    "isActive": true,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  },
+  {
+    "sessionId": "del_sess_1791359205483_d4709d99cc92f199b657b6bd",
+    "adminUid": "admin_holy@mail.com",
+    "adminEmail": "holy@mail.com",
+    "adminName": "Holy",
+    "targetUid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+    "targetUser": {
+      "uid": "rRDwcbArfZPcekxRLKA7EDAHoNW2",
+      "username": "Mary",
+      "fullName": "Lena",
+      "email": "mayemusk0371@gmail.com",
+      "wallets": {
+        "usdtTrc20": "",
+        "bitcoin": "",
+        "ethereum": "",
+        "usdtErc20": ""
+      },
+      "mainAccountBalance": 0,
+      "accountBalance": 0,
+      "earnedTotal": 0,
+      "pendingWithdrawal": 0,
+      "totalWithdrew": 0,
+      "activeDeposit": 0,
+      "lastDeposit": 0,
+      "totalDeposit": 0,
+      "lastWithdrawal": "$0.00",
+      "profilePhoto": "",
+      "suspended": false,
+      "ipAddress": "2605:59c1:1b58:df08:e4cb:9aaf:5ce1:8ec9",
+      "country": "Nigeria",
+      "device": "Android Mobile (OS 10)",
+      "browser": "Google Chrome"
+    },
+    "mode": "VIEW_ACCOUNT",
+    "permissionUsed": "VIEW_ACCOUNTS",
+    "createdAt": 1791359205483,
+    "expiresAt": 1791360105483,
+    "isActive": false,
+    "actionsPerformed": [
+      "Session created in mode VIEW_ACCOUNT"
+    ]
+  }
+]
