@@ -41,7 +41,8 @@ import {
   syncLocalDataToFirebase,
   subscribeToUserProfile,
   isUserPermanentlyDeleted,
-  normalizeIdentifier
+  normalizeIdentifier,
+  updateUserSessionTelemetry
 } from './services/db';
 import { db } from './firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -192,12 +193,16 @@ export default function App() {
 
   const [user, setUser] = useState<UserState>(() => {
     try {
+      // 1. Check primary active user cache
       const cached = localStorage.getItem('wv_active_user');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && parsed.isLoggedIn) {
           const mainBal = Number(parsed.mainAccountBalance !== undefined ? parsed.mainAccountBalance : parsed.accountBalance) || 0;
-          const earnedBal = Number(parsed.earnedTotal) || 0;
+          let earnedBal = Number(parsed.earnedTotal) || 0;
+          if (earnedBal === 0 && Number(parsed.accountBalance) > mainBal) {
+            earnedBal = Number((Number(parsed.accountBalance) - mainBal).toFixed(2));
+          }
           const accBal = Number((mainBal + earnedBal).toFixed(2));
           return {
             ...parsed,
@@ -208,9 +213,52 @@ export default function App() {
           };
         }
       }
+
+      // 2. Fallback to any valid user_profile_* cache in localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('user_profile_')) {
+          const profileStr = localStorage.getItem(key);
+          if (profileStr) {
+            const parsed = JSON.parse(profileStr);
+            if (parsed && parsed.isLoggedIn && !parsed.suspended) {
+              const mainBal = Number(parsed.mainAccountBalance !== undefined ? parsed.mainAccountBalance : parsed.accountBalance) || 0;
+              let earnedBal = Number(parsed.earnedTotal) || 0;
+              if (earnedBal === 0 && Number(parsed.accountBalance) > mainBal) {
+                earnedBal = Number((Number(parsed.accountBalance) - mainBal).toFixed(2));
+              }
+              const accBal = Number((mainBal + earnedBal).toFixed(2));
+              return {
+                ...parsed,
+                mainAccountBalance: mainBal,
+                earnedTotal: earnedBal,
+                accountBalance: accBal > 0 ? accBal : (Number(parsed.accountBalance) || 0),
+                totalDeposit: Number(parsed.totalDeposit) || 0
+              };
+            }
+          }
+        }
+      }
     } catch {}
     return emptyUserState;
   });
+
+  // Track initial profile loading state from Firebase Auth / Firestore
+  const [loadingUserProfile, setLoadingUserProfile] = useState(true);
+
+  // Synchronize active user state to persistent local session cache safely
+  useEffect(() => {
+    if (user.isLoggedIn && user.uid) {
+      try {
+        localStorage.setItem('wv_active_user', JSON.stringify(user));
+        localStorage.setItem(`user_profile_${user.uid}`, JSON.stringify(user));
+      } catch {}
+    } else if (!user.isLoggedIn) {
+      try {
+        localStorage.removeItem('wv_active_user');
+      } catch {}
+    }
+  }, [user]);
 
   // Active Admin Delegated Session (View Account or Act as Client)
   const [activeDelegatedSession, setActiveDelegatedSession] = useState<DelegatedAdminSession | null>(() => getActiveDelegatedSession());
@@ -342,11 +390,21 @@ export default function App() {
             setCurrentPage('Register');
             return;
           }
-          setUser((prev) => ({
-            ...prev,
-            ...profile,
-            isLoggedIn: true
-          }));
+          setUser((prev) => {
+            const mainBal = Number(profile.mainAccountBalance !== undefined ? profile.mainAccountBalance : profile.accountBalance) || prev.mainAccountBalance || 0;
+            const earnedBal = Number(profile.earnedTotal) || (prev.earnedTotal > 0 ? prev.earnedTotal : 0);
+            const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
+            const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(profile.accountBalance) || prev.accountBalance || 0);
+            return {
+              ...prev,
+              ...profile,
+              mainAccountBalance: mainBal,
+              earnedTotal: earnedBal,
+              accountBalance: accBal,
+              totalDeposit: Number(profile.totalDeposit) || prev.totalDeposit || 0,
+              isLoggedIn: true
+            };
+          });
         },
         (error) => {
           console.error("Error subscribing to user profile:", error);
@@ -462,6 +520,7 @@ export default function App() {
     // 1. Data Integrity & Cleanup Check:
     // If user has no approved deposits and no approved investments, but has Profit transactions or earnedTotal > 0, purge them!
     const cleanErroneousRecords = async () => {
+      if (loadingTransactions || transactions.length === 0) return;
       let needsReload = false;
       const profitTransactions = transactions.filter(t => t.type === 'Profit');
 
@@ -469,16 +528,12 @@ export default function App() {
         let isErroneous = false;
         if (pTx.referenceId) {
           const parent = transactions.find(t => t.id === pTx.referenceId);
-          if (!parent) {
-            isErroneous = true;
-          } else {
+          if (parent) {
             const pStatus = (parent.status || '').toLowerCase();
-            if (pStatus !== 'approved' && pStatus !== 'completed') {
+            if (pStatus === 'rejected') {
               isErroneous = true;
             }
           }
-        } else if (approvedInvestments.length === 0 && approvedDeposits.length === 0) {
-          isErroneous = true;
         }
 
         if (isErroneous) {
@@ -750,24 +805,27 @@ export default function App() {
 
     // FINANCIAL DATA RULES:
     // 1. MAIN ACCOUNT BALANCE: Authoritative persisted value
-    const finalMainAccountBalance = typeof user.mainAccountBalance === 'number' && !isNaN(user.mainAccountBalance)
+    const finalMainAccountBalance = typeof user.mainAccountBalance === 'number' && !isNaN(user.mainAccountBalance) && user.mainAccountBalance > 0
       ? user.mainAccountBalance
       : (typeof user.accountBalance === 'number' && !isNaN(user.accountBalance) ? user.accountBalance : 0);
 
     // 2. EARNED TOTAL: Authoritative persisted value + valid transactions / dynamic accrual.
     // NEVER overwrite with temporary 0!
     const persistedEarnedTotal = typeof user.earnedTotal === 'number' && !isNaN(user.earnedTotal) ? user.earnedTotal : 0;
-    const resolvedEarnedTotal = validProfitTxTotal > 0
-      ? Number((Math.max(persistedEarnedTotal, validProfitTxTotal) + Number(liveEarnedTotal.toFixed(4))).toFixed(2))
-      : (persistedEarnedTotal > 0
-          ? Number((persistedEarnedTotal + Number(liveEarnedTotal.toFixed(4))).toFixed(2))
-          : (hasApprovedDepositsOrInvestments ? Number(liveEarnedTotal.toFixed(4)) : 0));
+    let resolvedEarnedTotal = 0;
+    if (persistedEarnedTotal > 0) {
+      resolvedEarnedTotal = Number((persistedEarnedTotal + Number(liveEarnedTotal.toFixed(4))).toFixed(2));
+    } else if (validProfitTxTotal > 0) {
+      resolvedEarnedTotal = Number((validProfitTxTotal + Number(liveEarnedTotal.toFixed(4))).toFixed(2));
+    } else if (hasApprovedDepositsOrInvestments) {
+      resolvedEarnedTotal = Number(liveEarnedTotal.toFixed(4));
+    }
 
     // 3. ACCOUNT BALANCE: Strictly calculated as MAIN ACCOUNT BALANCE + EARNED TOTAL
     const finalAccountBalance = Number((finalMainAccountBalance + resolvedEarnedTotal).toFixed(2));
 
     // 4. TOTAL DEPOSIT: Strictly persisted total deposit, NEVER added to earnings
-    const finalTotalDeposit = typeof user.totalDeposit === 'number' && !isNaN(user.totalDeposit)
+    const finalTotalDeposit = typeof user.totalDeposit === 'number' && !isNaN(user.totalDeposit) && user.totalDeposit > 0
       ? user.totalDeposit
       : (totalDeposits > 0 ? totalDeposits : 0);
 
@@ -880,7 +938,10 @@ export default function App() {
 
   // Auth restore listener - connects logged-in Firebase Console user to Firestore
   useEffect(() => {
-    if (!isFirebaseReady) return;
+    if (!isFirebaseReady) {
+      setLoadingUserProfile(false);
+      return;
+    }
     const unsubscribe = subscribeToAuth(async (firebaseUser) => {
       if (firebaseUser) {
         try {
@@ -926,12 +987,26 @@ export default function App() {
               setCurrentPage('Register');
               return;
             }
-            setUser({
+
+            const mainBal = Number(profile.mainAccountBalance !== undefined ? profile.mainAccountBalance : profile.accountBalance) || 0;
+            let earnedBal = Number(profile.earnedTotal) || 0;
+            if (earnedBal === 0 && Number(profile.accountBalance) > mainBal) {
+              earnedBal = Number((Number(profile.accountBalance) - mainBal).toFixed(2));
+            }
+            const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
+            const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(profile.accountBalance) || 0);
+
+            setUser(prev => ({
+              ...prev,
               ...profile,
               uid: firebaseUser.uid,
               email: firebaseUser.email || profile.email,
+              mainAccountBalance: mainBal,
+              earnedTotal: earnedBal > 0 ? earnedBal : (prev.earnedTotal > 0 ? prev.earnedTotal : 0),
+              accountBalance: accBal > 0 ? accBal : (prev.accountBalance > 0 ? prev.accountBalance : 0),
+              totalDeposit: Number(profile.totalDeposit) || prev.totalDeposit || 0,
               isLoggedIn: true
-            });
+            }));
             syncLocalDataToFirebase(firebaseUser.uid, profile.username || '').catch(console.error);
           } else {
             // Profile does NOT exist in Firestore: MUST NEVER AUTOMATICALLY CREATE A USER!
@@ -942,7 +1017,11 @@ export default function App() {
           }
         } catch (err) {
           console.error("Auth restore error: ", err);
+        } finally {
+          setLoadingUserProfile(false);
         }
+      } else {
+        setLoadingUserProfile(false);
       }
     });
     return () => unsubscribe();
@@ -952,7 +1031,7 @@ export default function App() {
   useEffect(() => {
     const protectedPages: Page[] = ['Dashboard', 'Deposit'];
     if (protectedPages.includes(currentPage)) {
-      if (!user.isLoggedIn) {
+      if (!loadingUserProfile && !user.isLoggedIn) {
         setCurrentPage('Register');
       } else if (
         isSystemAdminIdentity(user.username) ||
@@ -964,7 +1043,7 @@ export default function App() {
         setCurrentPage('Admin');
       }
     }
-  }, [currentPage, user.isLoggedIn, user.username, user.fullName, user.email]);
+  }, [currentPage, user.isLoggedIn, user.username, user.fullName, user.email, loadingUserProfile]);
 
   // Adjust browser tab title dynamically and scale viewport gracefully for a perfect zoomed-out high-fidelity desktop experience
   useEffect(() => {
@@ -1028,17 +1107,21 @@ export default function App() {
           session.device !== liveUser.device;
           
         if (didSessionChange) {
-          const updatedUser: UserState = {
-            ...liveUser,
+          // Update ONLY session telemetry fields in persistent database & cache
+          await updateUserSessionTelemetry(liveUser.uid, {
             ipAddress: session.ipAddress,
             country: session.country,
             browser: session.browser,
             device: session.device
-          };
-          // Save updated session state to persistent Firestore DB & cache
-          await saveUserProfile(liveUser.uid, updatedUser);
-          // Set local component user state
-          setUser(updatedUser);
+          });
+          // Update local component user state for session fields only
+          setUser(prev => ({
+            ...prev,
+            ipAddress: session.ipAddress,
+            country: session.country,
+            browser: session.browser,
+            device: session.device
+          }));
           console.log("Logged dynamic client session telemetry:", session);
         }
       } catch (checkErr) {
@@ -1112,6 +1195,12 @@ export default function App() {
       );
     }
 
+    const isFinancialDataLoading = 
+      !targetDashboardUser.isLoggedIn ||
+      (!targetDashboardUser.username && !targetDashboardUser.email) ||
+      loadingUserProfile ||
+      (loadingTransactions && (targetDashboardUser.earnedTotal === 0 || targetDashboardUser.mainAccountBalance === 0));
+
     return (
       <DesktopCanvasWrapper desktopWidth={1200}>
         <div className="flex h-screen overflow-hidden bg-[var(--bg-main)] text-[var(--text-primary)] font-sans w-full transition-colors duration-200">
@@ -1131,7 +1220,7 @@ export default function App() {
               targetDashboardUser.mainAccountBalance !== undefined ? targetDashboardUser.mainAccountBalance : targetDashboardUser.accountBalance,
               targetDashboardUser.earnedTotal
             )}
-            financialDataLoading={!targetDashboardUser.isLoggedIn || (!targetDashboardUser.username && !targetDashboardUser.email)}
+            financialDataLoading={isFinancialDataLoading}
           />
           <DashboardView 
             onPageChange={handlePageChange}
@@ -1151,7 +1240,7 @@ export default function App() {
                 recordDelegatedAction(activeDelegatedSession.sessionId, desc);
               }
             }}
-            financialDataLoading={!targetDashboardUser.isLoggedIn || (!targetDashboardUser.username && !targetDashboardUser.email)}
+            financialDataLoading={isFinancialDataLoading}
           />
           <SupportFloatingButton onPageChange={handlePageChange} currentUser={targetDashboardUser} />
         </div>

@@ -1,5 +1,7 @@
 // src/services/notificationService.ts
 // Cross-Device Admin Push Notification Service for WorldVest Live Support
+import { db } from '../firebase';
+import { doc, setDoc, getDocs, collection, deleteDoc } from 'firebase/firestore';
 
 export const VAPID_PUBLIC_KEY = 'BMCMyoJbMGSP0mwY1nSh4C3M6xVUYL_RKVPDjMQYbMeKirB9-OV_wreCbUPKMjq5ZaXcVRjSns6bHYBiDV675qM';
 
@@ -14,6 +16,60 @@ export interface AdminDevice {
   enabled: boolean;
   createdAt: number;
   lastActiveAt: number;
+}
+
+/**
+ * Robust JSON fetch wrapper that guards against HTML responses, network errors,
+ * and ensures response.json() is NEVER called on non-JSON payloads.
+ */
+async function safeFetchJson<T = any>(
+  url: string,
+  init?: RequestInit
+): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
+  try {
+    const res = await fetch(url, {
+      credentials: 'same-origin',
+      ...init,
+      headers: {
+        'Accept': 'application/json',
+        ...(init?.headers || {})
+      }
+    });
+
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    const rawText = await res.text();
+
+    // Check if the response returned an HTML document (e.g. <!doctype or <html>) instead of JSON
+    if (rawText.trim().startsWith('<') || contentType.includes('text/html')) {
+      return {
+        ok: false,
+        status: res.status,
+        error: `Endpoint ${url} returned HTML (${res.status}) rather than JSON. Please verify backend route.`
+      };
+    }
+
+    try {
+      const data = JSON.parse(rawText);
+      return {
+        ok: res.ok,
+        status: res.status,
+        data,
+        error: res.ok ? undefined : (data?.error || data?.message || `Request failed (${res.status})`)
+      };
+    } catch {
+      return {
+        ok: false,
+        status: res.status,
+        error: `Invalid JSON response from ${url}: ${rawText.slice(0, 80)}`
+      };
+    }
+  } catch (netErr: any) {
+    return {
+      ok: false,
+      status: 0,
+      error: netErr.message || 'Network request failed'
+    };
+  }
 }
 
 /**

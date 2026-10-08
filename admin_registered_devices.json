@@ -1,0 +1,53 @@
+[
+  {
+    "id": "dev_holy@mail.com_test-123",
+    "adminEmail": "holy@mail.com",
+    "deviceId": "test-123",
+    "deviceName": "Device (Browser)",
+    "deviceType": "desktop",
+    "browser": "Unknown",
+    "os": "Unknown",
+    "subscription": {
+      "endpoint": "https://fcm.googleapis.com/test",
+      "keys": {
+        "p256dh": "key",
+        "auth": "auth"
+      }
+    },
+    "enabled": true,
+    "createdAt": 1791470830561,
+    "lastActiveAt": 1791470830561
+  },
+  {
+    "id": "dev_test@admin.com_dev_123",
+    "adminEmail": "test@admin.com",
+    "deviceId": "dev_123",
+    "deviceName": "Device (Browser)",
+    "deviceType": "desktop",
+    "browser": "Unknown",
+    "os": "Unknown",
+    "subscription": {
+      "endpoint": "https://fcm.googleapis.com/fcm/send/abc",
+      "keys": {
+        "p256dh": "k",
+        "auth": "a"
+      }
+    },
+    "enabled": true,
+    "createdAt": 1791471586173,
+    "lastActiveAt": 1791471586173
+  },
+  {
+    "id": "dev_test@admin.com_123",
+    "adminEmail": "test@admin.com",
+    "deviceId": "123",
+    "deviceName": "Device (Browser)",
+    "deviceType": "desktop",
+    "browser": "Unknown",
+    "os": "Unknown",
+    "subscription": {},
+    "enabled": true,
+    "createdAt": 1791471704284,
+    "lastActiveAt": 1791471704284
+  }
+]

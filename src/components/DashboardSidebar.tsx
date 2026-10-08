@@ -57,10 +57,10 @@ export default function DashboardSidebar({
   displayBalance,
   financialDataLoading = false
 }: SidebarProps) {
-  // Dynamic Display Balance calculation: BASE/CURRENT BALANCE + EARNED TOTAL
-  const calculatedDisplayBalance = displayBalance !== undefined
-    ? displayBalance
-    : calculateDisplayBalance(mainAccountBalance !== undefined ? mainAccountBalance : accountBalance, earnedTotal);
+  // Sidebar Main Account Balance: displays the authoritative MAIN ACCOUNT BALANCE
+  const sidebarMainAccountBalance = mainAccountBalance !== undefined
+    ? mainAccountBalance
+    : (accountBalance !== undefined ? accountBalance : 0);
   // Primary menu matching screenshot exactly
   const primaryMenuItems = [
     { 
@@ -152,7 +152,7 @@ export default function DashboardSidebar({
             ) : (
               <>
                 <span className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
-                  {formatCurrency(calculatedDisplayBalance)}
+                  {formatCurrency(sidebarMainAccountBalance)}
                 </span>
                 <span className="text-xs font-semibold text-[var(--text-muted)]">
                   USD

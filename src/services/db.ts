@@ -33,7 +33,8 @@ import {
   dbCheckDuplicateTxHash,
   dbApproveDepositTransaction,
   dbRejectDepositTransaction,
-  dbFetchAdminAuditLogs
+  dbFetchAdminAuditLogs,
+  dbUpdateUserSessionTelemetry
 } from './firebaseService';
 import { LedgerAdjustmentParams, LedgerAdjustmentResult } from '../types';
 
@@ -50,7 +51,8 @@ export {
   dbCheckDuplicateTxHash as checkDuplicateTxHash,
   dbApproveDepositTransaction as approveDepositTransaction,
   dbRejectDepositTransaction as rejectDepositTransaction,
-  dbFetchAdminAuditLogs as fetchAdminAuditLogs
+  dbFetchAdminAuditLogs as fetchAdminAuditLogs,
+  dbUpdateUserSessionTelemetry as updateUserSessionTelemetry
 };
 
 export async function getAdminPasswordKey(): Promise<string> {
@@ -101,7 +103,17 @@ export async function saveUserProfile(uid: string, profile: UserState): Promise<
       console.warn("Failed saving profile to Firebase: ", error);
     }
   } else {
-    // Optional local-only fallback
+    // Optional local-only fallback with safe preservation
+    const cached = localStorage.getItem(`user_profile_${uid}`);
+    if (cached) {
+      try {
+        const prev = JSON.parse(cached);
+        if (Number(profileWithUid.earnedTotal) === 0 && Number(prev.earnedTotal) > 0) {
+          profileWithUid.earnedTotal = Number(prev.earnedTotal);
+          profileWithUid.accountBalance = Number(((Number(profileWithUid.mainAccountBalance) || 0) + profileWithUid.earnedTotal).toFixed(2));
+        }
+      } catch {}
+    }
     localStorage.setItem(`user_profile_${uid}`, JSON.stringify(profileWithUid));
   }
 }
@@ -127,7 +139,20 @@ export async function fetchUserProfile(uid: string): Promise<UserState | null> {
   const cached = localStorage.getItem(`user_profile_${uid}`);
   if (cached) {
     try {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      const mainBal = Number(parsed.mainAccountBalance !== undefined ? parsed.mainAccountBalance : parsed.accountBalance) || 0;
+      let earnedBal = Number(parsed.earnedTotal) || 0;
+      if (earnedBal === 0 && Number(parsed.accountBalance) > mainBal) {
+        earnedBal = Number((Number(parsed.accountBalance) - mainBal).toFixed(2));
+      }
+      const accBal = Number((mainBal + earnedBal).toFixed(2));
+      return {
+        ...parsed,
+        mainAccountBalance: mainBal,
+        earnedTotal: earnedBal,
+        accountBalance: accBal > 0 ? accBal : (Number(parsed.accountBalance) || 0),
+        totalDeposit: Number(parsed.totalDeposit) || 0
+      };
     } catch (e) {
       return null;
     }

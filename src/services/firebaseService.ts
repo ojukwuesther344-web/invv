@@ -23,7 +23,8 @@ import {
   onSnapshot,
   deleteDoc,
   writeBatch,
-  runTransaction
+  runTransaction,
+  updateDoc
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -55,7 +56,8 @@ export async function lookupEmailByUsername(username: string): Promise<string | 
 }
 
 /**
- * Creates/saves a standard user profile in Firestore
+ * Creates/saves a standard user profile in Firestore.
+ * Financial Data Safeguard: Never allow temporary zero values to overwrite existing positive persisted balances.
  */
 export async function dbSaveUserProfile(uid: string, profile: UserState): Promise<void> {
   try {
@@ -67,10 +69,59 @@ export async function dbSaveUserProfile(uid: string, profile: UserState): Promis
 
   try {
     const docRef = doc(db, 'users', uid);
-    const mainBal = Number(profile.mainAccountBalance !== undefined ? profile.mainAccountBalance : profile.accountBalance) || 0;
-    const earnedBal = Number(profile.earnedTotal) || 0;
+    let mainBal = Number(profile.mainAccountBalance !== undefined ? profile.mainAccountBalance : profile.accountBalance) || 0;
+    let earnedBal = Number(profile.earnedTotal) || 0;
+    let totalDep = Number(profile.totalDeposit) || 0;
+
+    // Financial Data Safeguard: Check existing document to prevent temporary zeros from erasing real data
+    try {
+      const existingSnap = await getDoc(docRef);
+      if (existingSnap.exists()) {
+        const existingData = existingSnap.data();
+        const existingEarned = Number(existingData.earnedTotal) || 0;
+        const existingMain = Number(existingData.mainAccountBalance !== undefined ? existingData.mainAccountBalance : existingData.accountBalance) || 0;
+        const existingTotalDep = Number(existingData.totalDeposit) || 0;
+
+        // Never overwrite positive persisted earnings with 0
+        if (earnedBal === 0 && existingEarned > 0) {
+          earnedBal = existingEarned;
+        }
+        // Never overwrite positive persisted main balance with 0
+        if (mainBal === 0 && existingMain > 0) {
+          mainBal = existingMain;
+        }
+        // Never overwrite positive persisted total deposit with 0
+        if (totalDep === 0 && existingTotalDep > 0) {
+          totalDep = existingTotalDep;
+        }
+      }
+    } catch (checkErr) {
+      // Offline fallback: check local cache
+      const cachedStr = localStorage.getItem(`user_profile_${uid}`);
+      if (cachedStr) {
+        try {
+          const cached = JSON.parse(cachedStr);
+          if (earnedBal === 0 && Number(cached.earnedTotal) > 0) earnedBal = Number(cached.earnedTotal);
+          if (mainBal === 0 && Number(cached.mainAccountBalance) > 0) mainBal = Number(cached.mainAccountBalance);
+          if (totalDep === 0 && Number(cached.totalDeposit) > 0) totalDep = Number(cached.totalDeposit);
+        } catch {}
+      }
+    }
+
+    // Calculation Rule: ACCOUNT BALANCE = MAIN ACCOUNT BALANCE + EARNED TOTAL
     const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
     const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(profile.accountBalance) || 0);
+
+    const safeProfile: UserState = {
+      ...profile,
+      mainAccountBalance: mainBal,
+      accountBalance: accBal,
+      earnedTotal: earnedBal,
+      totalDeposit: totalDep
+    };
+    try {
+      localStorage.setItem(`user_profile_${uid}`, JSON.stringify(safeProfile));
+    } catch {}
 
     await setDoc(docRef, {
       uid,
@@ -84,7 +135,7 @@ export async function dbSaveUserProfile(uid: string, profile: UserState): Promis
       totalWithdrew: Number(profile.totalWithdrew) || 0,
       activeDeposit: Number(profile.activeDeposit) || 0,
       lastDeposit: Number(profile.lastDeposit) || 0,
-      totalDeposit: Number(profile.totalDeposit) || 0,
+      totalDeposit: totalDep,
       lastWithdrawal: profile.lastWithdrawal !== undefined ? String(profile.lastWithdrawal) : '0',
       usdtTrc20: profile.wallets?.usdtTrc20 || '',
       bitcoin: profile.wallets?.bitcoin || '',
@@ -99,9 +150,42 @@ export async function dbSaveUserProfile(uid: string, profile: UserState): Promis
       referredBy: profile.referredBy || '',
       referralsCount: Number(profile.referralsCount) || 0,
       referralEarnings: Number(profile.referralEarnings) || 0
-    });
+    }, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Updates ONLY user session telemetry fields in Firestore without touching any financial fields
+ */
+export async function dbUpdateUserSessionTelemetry(
+  uid: string,
+  session: { ipAddress?: string; browser?: string; device?: string; country?: string }
+): Promise<void> {
+  if (!uid) return;
+  // Update local cache
+  const cachedStr = localStorage.getItem(`user_profile_${uid}`);
+  if (cachedStr) {
+    try {
+      const cached = JSON.parse(cachedStr);
+      localStorage.setItem(`user_profile_${uid}`, JSON.stringify({ ...cached, ...session }));
+    } catch {}
+  }
+  if (!isFirebaseReady) return;
+  try {
+    const docRef = doc(db, 'users', uid);
+    await updateDoc(docRef, {
+      ...session
+    });
+  } catch (err) {
+    // If updateDoc fails (e.g. doc doesn't exist yet), merge safely
+    try {
+      const docRef = doc(db, 'users', uid);
+      await setDoc(docRef, session, { merge: true });
+    } catch (innerErr) {
+      console.warn("Session telemetry update error:", innerErr);
+    }
   }
 }
 
@@ -124,7 +208,12 @@ export async function dbFetchUserProfile(uid: string): Promise<UserState | null>
     if (snap.exists()) {
       const data = snap.data();
       const mainBal = Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0;
-      const earnedBal = Number(data.earnedTotal) || 0;
+      let earnedBal = Number(data.earnedTotal) || 0;
+      // If earnedTotal was not explicitly set but accountBalance > mainBal, recover earnedTotal:
+      if (earnedBal === 0 && Number(data.accountBalance) > mainBal) {
+        earnedBal = Number((Number(data.accountBalance) - mainBal).toFixed(2));
+      }
+      // Rule: ACCOUNT BALANCE = MAIN ACCOUNT BALANCE + EARNED TOTAL
       const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
       const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(data.accountBalance) || 0);
 
@@ -204,7 +293,11 @@ export function subscribeToUserProfile(
       if (snap.exists()) {
         const data = snap.data();
         const mainBal = Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0;
-        const earnedBal = Number(data.earnedTotal) || 0;
+        let earnedBal = Number(data.earnedTotal) || 0;
+        if (earnedBal === 0 && Number(data.accountBalance) > mainBal) {
+          earnedBal = Number((Number(data.accountBalance) - mainBal).toFixed(2));
+        }
+        // Rule: ACCOUNT BALANCE = MAIN ACCOUNT BALANCE + EARNED TOTAL
         const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
         const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(data.accountBalance) || 0);
 
