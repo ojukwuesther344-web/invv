@@ -190,7 +190,27 @@ export default function App() {
     profilePhoto: ''
   };
 
-  const [user, setUser] = useState<UserState>(emptyUserState);
+  const [user, setUser] = useState<UserState>(() => {
+    try {
+      const cached = localStorage.getItem('wv_active_user');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.isLoggedIn) {
+          const mainBal = Number(parsed.mainAccountBalance !== undefined ? parsed.mainAccountBalance : parsed.accountBalance) || 0;
+          const earnedBal = Number(parsed.earnedTotal) || 0;
+          const accBal = Number((mainBal + earnedBal).toFixed(2));
+          return {
+            ...parsed,
+            mainAccountBalance: mainBal,
+            earnedTotal: earnedBal,
+            accountBalance: accBal > 0 ? accBal : (Number(parsed.accountBalance) || 0),
+            totalDeposit: Number(parsed.totalDeposit) || 0
+          };
+        }
+      }
+    } catch {}
+    return emptyUserState;
+  });
 
   // Active Admin Delegated Session (View Account or Act as Client)
   const [activeDelegatedSession, setActiveDelegatedSession] = useState<DelegatedAdminSession | null>(() => getActiveDelegatedSession());
@@ -467,15 +487,8 @@ export default function App() {
         }
       }
 
-      // If user has NO approved deposits and NO approved investments, reset user.earnedTotal to 0!
-      if (approvedInvestments.length === 0 && approvedDeposits.length === 0 && (user.earnedTotal > 0 || user.activeDeposit > 0)) {
-        await saveUserProfile(uid, {
-          ...user,
-          earnedTotal: 0,
-          activeDeposit: 0
-        });
-        setUser(prev => ({ ...prev, earnedTotal: 0, activeDeposit: 0 }));
-      }
+      // Data integrity: Erroneous profit records cleaned if unassociated with approved parents.
+      // Persisted user profile financial metrics (earnedTotal, balances) are strictly preserved from the authoritative database.
 
       if (needsReload) {
         await reloadTransactions(uid);
@@ -735,22 +748,34 @@ export default function App() {
       })
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-    // If user has NO approved deposits and NO approved investments: Earned Total MUST BE 0.00!
-    const resolvedEarnedTotal = !hasApprovedDepositsOrInvestments 
-      ? 0 
-      : (validProfitTxTotal > 0 ? validProfitTxTotal : Number(liveEarnedTotal.toFixed(4)));
-
+    // FINANCIAL DATA RULES:
+    // 1. MAIN ACCOUNT BALANCE: Authoritative persisted value
     const finalMainAccountBalance = typeof user.mainAccountBalance === 'number' && !isNaN(user.mainAccountBalance)
       ? user.mainAccountBalance
       : (typeof user.accountBalance === 'number' && !isNaN(user.accountBalance) ? user.accountBalance : 0);
 
-    const finalAccountBalance = typeof user.accountBalance === 'number' && !isNaN(user.accountBalance)
-      ? user.accountBalance
-      : 0;
+    // 2. EARNED TOTAL: Authoritative persisted value + valid transactions / dynamic accrual.
+    // NEVER overwrite with temporary 0!
+    const persistedEarnedTotal = typeof user.earnedTotal === 'number' && !isNaN(user.earnedTotal) ? user.earnedTotal : 0;
+    const resolvedEarnedTotal = validProfitTxTotal > 0
+      ? Number((Math.max(persistedEarnedTotal, validProfitTxTotal) + Number(liveEarnedTotal.toFixed(4))).toFixed(2))
+      : (persistedEarnedTotal > 0
+          ? Number((persistedEarnedTotal + Number(liveEarnedTotal.toFixed(4))).toFixed(2))
+          : (hasApprovedDepositsOrInvestments ? Number(liveEarnedTotal.toFixed(4)) : 0));
 
+    // 3. ACCOUNT BALANCE: Strictly calculated as MAIN ACCOUNT BALANCE + EARNED TOTAL
+    const finalAccountBalance = Number((finalMainAccountBalance + resolvedEarnedTotal).toFixed(2));
+
+    // 4. TOTAL DEPOSIT: Strictly persisted total deposit, NEVER added to earnings
     const finalTotalDeposit = typeof user.totalDeposit === 'number' && !isNaN(user.totalDeposit)
       ? user.totalDeposit
-      : 0;
+      : (totalDeposits > 0 ? totalDeposits : 0);
+
+    // 5. ACTIVE DEPOSIT: Preserved from persisted user state or dynamic active investments
+    const persistedActiveDeposit = typeof user.activeDeposit === 'number' && !isNaN(user.activeDeposit) ? user.activeDeposit : 0;
+    const finalActiveDeposit = activeInvestments > 0
+      ? Number(activeInvestments.toFixed(2))
+      : (persistedActiveDeposit > 0 ? persistedActiveDeposit : 0);
 
     const liveUser: UserState = {
       ...user,
@@ -758,7 +783,7 @@ export default function App() {
       accountBalance: finalAccountBalance,
       totalDeposit: finalTotalDeposit,
       earnedTotal: resolvedEarnedTotal,
-      activeDeposit: hasApprovedDepositsOrInvestments ? Number(activeInvestments.toFixed(2)) : 0,
+      activeDeposit: finalActiveDeposit,
       lastDeposit: user.lastDeposit > 0 ? user.lastDeposit : Number(lastDeposit.toFixed(2)),
       pendingWithdrawal: Number(pendingWithdrawalVals.toFixed(2)),
       totalWithdrew: user.totalWithdrew > 0 ? user.totalWithdrew : Number(approvedWithdrawals.toFixed(2)),
@@ -1106,6 +1131,7 @@ export default function App() {
               targetDashboardUser.mainAccountBalance !== undefined ? targetDashboardUser.mainAccountBalance : targetDashboardUser.accountBalance,
               targetDashboardUser.earnedTotal
             )}
+            financialDataLoading={!targetDashboardUser.isLoggedIn || (!targetDashboardUser.username && !targetDashboardUser.email)}
           />
           <DashboardView 
             onPageChange={handlePageChange}
@@ -1125,6 +1151,7 @@ export default function App() {
                 recordDelegatedAction(activeDelegatedSession.sessionId, desc);
               }
             }}
+            financialDataLoading={!targetDashboardUser.isLoggedIn || (!targetDashboardUser.username && !targetDashboardUser.email)}
           />
           <SupportFloatingButton onPageChange={handlePageChange} currentUser={targetDashboardUser} />
         </div>

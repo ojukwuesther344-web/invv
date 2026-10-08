@@ -67,14 +67,19 @@ export async function dbSaveUserProfile(uid: string, profile: UserState): Promis
 
   try {
     const docRef = doc(db, 'users', uid);
+    const mainBal = Number(profile.mainAccountBalance !== undefined ? profile.mainAccountBalance : profile.accountBalance) || 0;
+    const earnedBal = Number(profile.earnedTotal) || 0;
+    const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
+    const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(profile.accountBalance) || 0);
+
     await setDoc(docRef, {
       uid,
       username: profile.username || '',
       fullName: profile.fullName || '',
       email: profile.email || '',
-      mainAccountBalance: Number(profile.mainAccountBalance !== undefined ? profile.mainAccountBalance : profile.accountBalance) || 0,
-      accountBalance: Number(profile.accountBalance) || 0,
-      earnedTotal: Number(profile.earnedTotal) || 0,
+      mainAccountBalance: mainBal,
+      accountBalance: accBal,
+      earnedTotal: earnedBal,
       pendingWithdrawal: Number(profile.pendingWithdrawal) || 0,
       totalWithdrew: Number(profile.totalWithdrew) || 0,
       activeDeposit: Number(profile.activeDeposit) || 0,
@@ -118,6 +123,11 @@ export async function dbFetchUserProfile(uid: string): Promise<UserState | null>
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const data = snap.data();
+      const mainBal = Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0;
+      const earnedBal = Number(data.earnedTotal) || 0;
+      const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
+      const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(data.accountBalance) || 0);
+
       const profile: UserState = {
         uid,
         isLoggedIn: true,
@@ -130,9 +140,9 @@ export async function dbFetchUserProfile(uid: string): Promise<UserState | null>
           ethereum: data.ethereum || '',
           usdtErc20: data.usdtErc20 || ''
         },
-        mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
-        accountBalance: Number(data.accountBalance) || 0,
-        earnedTotal: Number(data.earnedTotal) || 0,
+        mainAccountBalance: mainBal,
+        accountBalance: accBal,
+        earnedTotal: earnedBal,
         pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
         totalWithdrew: Number(data.totalWithdrew) || 0,
         activeDeposit: Number(data.activeDeposit) || 0,
@@ -193,6 +203,11 @@ export function subscribeToUserProfile(
     (snap) => {
       if (snap.exists()) {
         const data = snap.data();
+        const mainBal = Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0;
+        const earnedBal = Number(data.earnedTotal) || 0;
+        const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
+        const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(data.accountBalance) || 0);
+
         const profile: UserState = {
           uid,
           isLoggedIn: true,
@@ -205,9 +220,9 @@ export function subscribeToUserProfile(
             ethereum: data.ethereum || '',
             usdtErc20: data.usdtErc20 || ''
           },
-          mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
-          accountBalance: Number(data.accountBalance) || 0,
-          earnedTotal: Number(data.earnedTotal) || 0,
+          mainAccountBalance: mainBal,
+          accountBalance: accBal,
+          earnedTotal: earnedBal,
           pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
           totalWithdrew: Number(data.totalWithdrew) || 0,
           activeDeposit: Number(data.activeDeposit) || 0,
@@ -1016,6 +1031,11 @@ export function subscribeToAllUsers(
         return;
       }
 
+      const mainBal = Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0;
+      const earnedBal = Number(data.earnedTotal) || 0;
+      const calculatedAccBal = Number((mainBal + earnedBal).toFixed(2));
+      const accBal = calculatedAccBal > 0 ? calculatedAccBal : (Number(data.accountBalance) || 0);
+
       list.push({
         uid: docSnap.id,
         isLoggedIn: true,
@@ -1028,9 +1048,9 @@ export function subscribeToAllUsers(
           ethereum: data.ethereum || '',
           usdtErc20: data.usdtErc20 || ''
         },
-        mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
-        accountBalance: Number(data.accountBalance) || 0,
-        earnedTotal: Number(data.earnedTotal) || 0,
+        mainAccountBalance: mainBal,
+        accountBalance: accBal,
+        earnedTotal: earnedBal,
         pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
         totalWithdrew: Number(data.totalWithdrew) || 0,
         activeDeposit: Number(data.activeDeposit) || 0,
@@ -1555,17 +1575,22 @@ export async function dbExecuteLedgerAdjustment(params: LedgerAdjustmentParams):
           txType = 'Withdrawal';
         }
 
+        let newEarnedTotal = Number(userData.earnedTotal) || 0;
+        if (operationType === 'ADD_PROFIT' || operationType === 'AWARD_BONUS') {
+          newEarnedTotal += numericAmount;
+        }
+
         // Prepare user updates
         const userUpdates: Record<string, any> = {
           mainAccountBalance: newMainAccountBalance,
-          accountBalance: newAccountBalance,
+          accountBalance: Number((newMainAccountBalance + newEarnedTotal).toFixed(2)),
           totalDeposit: newTotalDeposit,
         };
 
         if (operationType === 'ADD_DEPOSIT') {
           userUpdates.lastDeposit = numericAmount;
         } else if (operationType === 'ADD_PROFIT' || operationType === 'AWARD_BONUS') {
-          userUpdates.earnedTotal = (Number(userData.earnedTotal) || 0) + numericAmount;
+          userUpdates.earnedTotal = newEarnedTotal;
         } else if (operationType === 'WITHDRAWAL') {
           userUpdates.totalWithdrew = (Number(userData.totalWithdrew) || 0) + numericAmount;
           if (userData.pendingWithdrawal) {
@@ -1721,13 +1746,18 @@ export async function dbExecuteLedgerAdjustment(params: LedgerAdjustmentParams):
     txType = 'Withdrawal';
   }
 
+  let newEarnedTotal = Number(userData.earnedTotal) || 0;
+  if (operationType === 'ADD_PROFIT' || operationType === 'AWARD_BONUS') {
+    newEarnedTotal += numericAmount;
+  }
+
   const updatedUser: UserState = {
     ...userData,
     mainAccountBalance: newMainAccountBalance,
-    accountBalance: newAccountBalance,
+    accountBalance: Number((newMainAccountBalance + newEarnedTotal).toFixed(2)),
     totalDeposit: newTotalDeposit,
     ...(operationType === 'ADD_DEPOSIT' ? { lastDeposit: numericAmount } : {}),
-    ...(operationType === 'ADD_PROFIT' || operationType === 'AWARD_BONUS' ? { earnedTotal: (Number(userData.earnedTotal) || 0) + numericAmount } : {}),
+    ...(operationType === 'ADD_PROFIT' || operationType === 'AWARD_BONUS' ? { earnedTotal: newEarnedTotal } : {}),
     ...(operationType === 'WITHDRAWAL' ? { 
       totalWithdrew: (Number(userData.totalWithdrew) || 0) + numericAmount,
       pendingWithdrawal: Math.max(0, (Number(userData.pendingWithdrawal) || 0) - numericAmount)

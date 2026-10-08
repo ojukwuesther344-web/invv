@@ -39,6 +39,7 @@ interface SidebarProps {
   accountBalance?: number;
   earnedTotal?: number;
   displayBalance?: number;
+  financialDataLoading?: boolean;
 }
 
 export default function DashboardSidebar({ 
@@ -53,7 +54,8 @@ export default function DashboardSidebar({
   mainAccountBalance,
   accountBalance = 0,
   earnedTotal = 0,
-  displayBalance
+  displayBalance,
+  financialDataLoading = false
 }: SidebarProps) {
   // Dynamic Display Balance calculation: BASE/CURRENT BALANCE + EARNED TOTAL
   const calculatedDisplayBalance = displayBalance !== undefined
@@ -145,12 +147,18 @@ export default function DashboardSidebar({
             MAIN ACCOUNT BALANCE
           </span>
           <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
-              {formatCurrency(calculatedDisplayBalance)}
-            </span>
-            <span className="text-xs font-semibold text-[var(--text-muted)]">
-              USD
-            </span>
+            {financialDataLoading ? (
+              <div className="h-7 w-36 bg-[var(--bg-secondary)] animate-pulse rounded my-0.5" />
+            ) : (
+              <>
+                <span className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
+                  {formatCurrency(calculatedDisplayBalance)}
+                </span>
+                <span className="text-xs font-semibold text-[var(--text-muted)]">
+                  USD
+                </span>
+              </>
+            )}
           </div>
 
           {/* Action buttons Deposit & Withdraw */}

@@ -701,17 +701,22 @@ async function startServer() {
           return;
         }
 
+        const clientMain = Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0;
+        const clientEarned = Number(data.earnedTotal) || 0;
+        const clientCalculatedAccBal = Number((clientMain + clientEarned).toFixed(2));
+        const clientAccBal = clientCalculatedAccBal > 0 ? clientCalculatedAccBal : (Number(data.accountBalance) || 0);
+
         clients.push({
           uid,
           username: data.username || 'client',
           fullName: data.fullName || data.username || 'Registered Client',
           email: data.email || '',
-          accountBalance: Number(data.accountBalance) || 0,
-          mainAccountBalance: Number(data.mainAccountBalance !== undefined ? data.mainAccountBalance : data.accountBalance) || 0,
+          accountBalance: clientAccBal,
+          mainAccountBalance: clientMain,
           totalDeposit: Number(data.totalDeposit) || 0,
           activeDeposit: Number(data.activeDeposit) || 0,
           pendingWithdrawal: Number(data.pendingWithdrawal) || 0,
-          earnedTotal: Number(data.earnedTotal) || 0,
+          earnedTotal: clientEarned,
           totalWithdrew: Number(data.totalWithdrew) || 0,
           lastDeposit: Number(data.lastDeposit) || 0,
           lastWithdrawal: data.lastWithdrawal !== undefined ? data.lastWithdrawal : '0',
@@ -864,6 +869,11 @@ async function startServer() {
       const TTL_MS = 15 * 60 * 1000;
       const sessionId = `del_sess_${now}_${crypto.randomBytes(12).toString('hex')}`;
 
+      const tgtMain = Number(targetUser.mainAccountBalance !== undefined ? targetUser.mainAccountBalance : targetUser.accountBalance) || 0;
+      const tgtEarned = Number(targetUser.earnedTotal) || 0;
+      const tgtCalculatedAccBal = Number((tgtMain + tgtEarned).toFixed(2));
+      const tgtAccBal = tgtCalculatedAccBal > 0 ? tgtCalculatedAccBal : (Number(targetUser.accountBalance) || 0);
+
       const sessionRecord: DelegatedSessionRecord = {
         sessionId,
         adminUid: req.body.adminUid || `admin_${cleanEmail}`,
@@ -876,9 +886,9 @@ async function startServer() {
           fullName: targetUser.fullName || targetUser.username || 'Client',
           email: targetUser.email || '',
           wallets: targetUser.wallets || { usdtTrc20: '', bitcoin: '', ethereum: '', usdtErc20: '' },
-          mainAccountBalance: Number(targetUser.mainAccountBalance !== undefined ? targetUser.mainAccountBalance : targetUser.accountBalance) || 0,
-          accountBalance: Number(targetUser.accountBalance) || 0,
-          earnedTotal: Number(targetUser.earnedTotal) || 0,
+          mainAccountBalance: tgtMain,
+          accountBalance: tgtAccBal,
+          earnedTotal: tgtEarned,
           pendingWithdrawal: Number(targetUser.pendingWithdrawal) || 0,
           totalWithdrew: Number(targetUser.totalWithdrew) || 0,
           activeDeposit: Number(targetUser.activeDeposit) || 0,

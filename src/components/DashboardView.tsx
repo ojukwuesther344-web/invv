@@ -69,6 +69,7 @@ interface DashboardViewProps {
   delegatedSession?: DelegatedAdminSession | null;
   onExitDelegatedSession?: () => void;
   onRecordDelegatedAction?: (actionText: string) => void;
+  financialDataLoading?: boolean;
 }
 
 export default function DashboardView({ 
@@ -84,7 +85,8 @@ export default function DashboardView({
   reloadDeposits,
   delegatedSession,
   onExitDelegatedSession,
-  onRecordDelegatedAction
+  onRecordDelegatedAction,
+  financialDataLoading = false
 }: DashboardViewProps) {
   // Security guard: System Administrator account is only for the Admin Portal and must never be displayed in the client dashboard
   useEffect(() => {
@@ -1766,19 +1768,33 @@ export default function DashboardView({
                   </span>
                 </div>
                 <div className="my-4">
-                  <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
-                    {formatCurrency(displayBalance)}
-                  </span>
-                  <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
+                  {financialDataLoading ? (
+                    <div className="h-8 sm:h-9 w-52 bg-[var(--bg-card-elevated)] animate-pulse rounded my-0.5" />
+                  ) : (
+                    <>
+                      <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
+                        {formatCurrency(displayBalance)}
+                      </span>
+                      <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
+                    </>
+                  )}
                 </div>
                 <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-1">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">MAIN ACCOUNT BALANCE</span>
-                    <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.mainAccountBalance !== undefined ? user.mainAccountBalance : user.accountBalance)} USD</span>
+                    {financialDataLoading ? (
+                      <div className="h-3.5 w-24 bg-[var(--bg-card-elevated)] animate-pulse rounded" />
+                    ) : (
+                      <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.mainAccountBalance !== undefined ? user.mainAccountBalance : user.accountBalance)} USD</span>
+                    )}
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">EARNED TOTAL</span>
-                    <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.earnedTotal)} USD</span>
+                    {financialDataLoading ? (
+                      <div className="h-3.5 w-24 bg-[var(--bg-card-elevated)] animate-pulse rounded" />
+                    ) : (
+                      <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.earnedTotal)} USD</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1792,15 +1808,25 @@ export default function DashboardView({
                   </span>
                 </div>
                 <div className="my-4">
-                  <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
-                    {formatCurrency(user.totalDeposit)}
-                  </span>
-                  <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
+                  {financialDataLoading ? (
+                    <div className="h-8 sm:h-9 w-52 bg-[var(--bg-card-elevated)] animate-pulse rounded my-0.5" />
+                  ) : (
+                    <>
+                      <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
+                        {formatCurrency(user.totalDeposit)}
+                      </span>
+                      <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
+                    </>
+                  )}
                 </div>
                 <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-1">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">ACTIVE DEPOSIT</span>
-                    <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.activeDeposit)} USD</span>
+                    {financialDataLoading ? (
+                      <div className="h-3.5 w-24 bg-[var(--bg-card-elevated)] animate-pulse rounded" />
+                    ) : (
+                      <span className="font-bold text-[var(--text-primary)]">{formatCurrency(user.activeDeposit)} USD</span>
+                    )}
                   </div>
                   {pendingDepositSum > 0 ? (
                     <div className="flex justify-between items-center text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
@@ -1810,7 +1836,11 @@ export default function DashboardView({
                   ) : (
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">PENDING DEPOSIT</span>
-                      <span className="font-bold text-[var(--text-primary)] font-mono">$0.00 USD</span>
+                      {financialDataLoading ? (
+                        <div className="h-3.5 w-16 bg-[var(--bg-card-elevated)] animate-pulse rounded" />
+                      ) : (
+                        <span className="font-bold text-[var(--text-primary)] font-mono">$0.00 USD</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1825,14 +1855,24 @@ export default function DashboardView({
                   </span>
                 </div>
                 <div className="my-4">
-                  <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
-                    {formatCurrency(user.totalWithdrew)}
-                  </span>
-                  <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
+                  {financialDataLoading ? (
+                    <div className="h-8 sm:h-9 w-32 bg-[var(--bg-card-elevated)] animate-pulse rounded my-0.5" />
+                  ) : (
+                    <>
+                      <span className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight font-display">
+                        {formatCurrency(user.totalWithdrew)}
+                      </span>
+                      <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] ml-1.5">USD</span>
+                    </>
+                  )}
                 </div>
                 <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">PENDING WITHDRAWAL</span>
-                  <span className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">{formatCurrency(user.pendingWithdrawal)} USD</span>
+                  {financialDataLoading ? (
+                    <div className="h-3.5 w-20 bg-[var(--bg-card-elevated)] animate-pulse rounded" />
+                  ) : (
+                    <span className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">{formatCurrency(user.pendingWithdrawal)} USD</span>
+                  )}
                 </div>
               </div>
             </div>
