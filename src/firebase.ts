@@ -8,9 +8,9 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-// Suppress noisy internal lease/polling logs in multi-tab iframe environments
+// Suppress noisy internal offline/polling warning logs in multi-tab iframe environments
 try {
-  setLogLevel('error');
+  setLogLevel('silent');
 } catch {}
 
 // Initialize or reuse Firebase App instance
@@ -26,7 +26,8 @@ let firestoreDb: any;
 try {
   firestoreDb = initializeFirestore(app, {
     localCache: memoryLocalCache(),
-    experimentalForceLongPolling: true
+    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: true
   }, databaseId);
 } catch {
   try {
