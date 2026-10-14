@@ -602,6 +602,15 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  // Canonical domain redirect: ensure www redirects to apex domain preserving query parameters
+  app.use((req, res, next) => {
+    const host = (req.headers.host || '').split(':')[0].toLowerCase();
+    if (host === 'www.worldvestcapital.ltd') {
+      return res.redirect(301, `https://worldvestcapital.ltd${req.originalUrl}`);
+    }
+    next();
+  });
+
   // Global CORS and Preflight handler for API endpoints
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -1586,7 +1595,8 @@ async function startServer() {
   });
 
   // Explicitly ensure ANY unhandled /api/* or /delegated-session route returns JSON, NEVER HTML!
-  app.all('/api/*', (req, res) => {
+  app.all(['/api', '/api/*'], (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
     return res.status(404).json({
       success: false,
       error: `API route ${req.method} ${req.originalUrl} not found.`

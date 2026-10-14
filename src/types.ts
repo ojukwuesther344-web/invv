@@ -179,6 +179,10 @@ export interface UserState {
   referredBy?: string;
   referralsCount?: number;
   referralEarnings?: number;
+  referralRewardCredited?: boolean;
+  referralRewardCreditedAt?: number;
+  referralRewardAmount?: number;
+  referralRewardedTo?: string;
 }
 
 export type DelegatedAccessMode = 'VIEW_ACCOUNT' | 'ACT_AS_CLIENT';

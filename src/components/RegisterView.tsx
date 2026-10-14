@@ -43,7 +43,19 @@ export default function RegisterView({ onPageChange, onRegisterSuccess }: Regist
   const [agree, setAgree] = useState(false);
   const [referredByInput, setReferredByInput] = useState(() => {
     try {
-      return new URLSearchParams(window.location.search).get('ref') || '';
+      // 1. Check current URL query parameter
+      const urlRef = new URLSearchParams(window.location.search).get('ref');
+      if (urlRef && urlRef.trim()) return urlRef.trim();
+
+      // 2. Check localStorage preserved referral code
+      const storedRef = localStorage.getItem('wv_ref_code');
+      if (storedRef && storedRef.trim()) return storedRef.trim();
+
+      // 3. Check cookie preserved referral code
+      const match = document.cookie.match(/(?:^|;\s*)wv_ref_code=([^;]+)/);
+      if (match && match[1]) return decodeURIComponent(match[1]).trim();
+
+      return '';
     } catch {
       return '';
     }

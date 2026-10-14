@@ -190,7 +190,7 @@ export default function DashboardView({
     onSectionSelect('make-deposit');
   };
 
-  const officialReferralLink = `https://www.worldvestcapital.ltd/?ref=${user.username}`;
+  const officialReferralLink = `https://worldvestcapital.ltd/?ref=${user.username}`;
 
   const handleCopyRefLink = (customText?: string) => {
     const link = customText || officialReferralLink;
@@ -3452,7 +3452,7 @@ export default function DashboardView({
               {renderBackButton()}
               <div className="text-right">
                 <span className="text-xs font-semibold text-[var(--text-muted)]">Host Domain</span>
-                <p className="text-xs font-mono font-bold text-[var(--text-secondary)]">www.worldvestcapital.ltd</p>
+                <p className="text-xs font-mono font-bold text-[var(--text-secondary)]">worldvestcapital.ltd</p>
               </div>
             </div>
 
@@ -3511,7 +3511,7 @@ export default function DashboardView({
                   Your Personal Referral Link
                 </h3>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  Hosted on official Namecheap cPanel domain: <code className="text-[var(--text-primary)] font-bold bg-[var(--bg-card-elevated)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">www.worldvestcapital.ltd</code>
+                  Canonical domain: <code className="text-[var(--text-primary)] font-bold bg-[var(--bg-card-elevated)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">worldvestcapital.ltd</code>
                 </p>
               </div>
 
@@ -3578,11 +3578,11 @@ export default function DashboardView({
               </p>
               <div className="bg-[var(--bg-card-elevated)] text-[var(--text-secondary)] rounded-xl p-3.5 font-mono text-xs overflow-x-auto border border-[var(--border-subtle)] flex items-center justify-between gap-3">
                 <code className="select-all text-[11px] text-[#D6B25E]">
-                  {`<a href="${officialReferralLink}" target="_blank"><img src="https://www.worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`}
+                  {`<a href="${officialReferralLink}" target="_blank"><img src="https://worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`}
                 </code>
                 <button
                   type="button"
-                  onClick={() => handleCopyRefLink(`<a href="${officialReferralLink}" target="_blank"><img src="https://www.worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`)}
+                  onClick={() => handleCopyRefLink(`<a href="${officialReferralLink}" target="_blank"><img src="https://worldvestcapital.ltd/assets/images/logohead.png" alt="WorldVest Capital LTD" /></a>`)}
                   className="px-2.5 py-1 bg-[#19B86B] hover:bg-[#159a59] text-white rounded text-[11px] font-bold shrink-0 cursor-pointer"
                 >
                   Copy Code

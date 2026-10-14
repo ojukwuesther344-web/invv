@@ -665,6 +665,9 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess, o
   const [isTestingSound, setIsTestingSound] = useState(false);
   const [notifFeedback, setNotifFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [browserPermission, setBrowserPermission] = useState<string>('default');
+  const [isDeviceRegistered, setIsDeviceRegistered] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && localStorage.getItem('wv_admin_push_registered') === 'true';
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -715,6 +718,7 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess, o
       const email = currentUser?.email || adminEmail || 'blessingubah38@gmail.com';
       const res = await registerAdminPushDevice(email, 'Administrator');
       if (res.success) {
+        setIsDeviceRegistered(true);
         if (typeof window !== 'undefined' && 'Notification' in window) {
           setBrowserPermission(Notification.permission);
         }
@@ -722,9 +726,11 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess, o
         const devs = await fetchAdminDevices();
         setAdminDevices(devs);
       } else {
+        setIsDeviceRegistered(false);
         setNotifFeedback({ type: 'error', message: res.message });
       }
     } catch (err: any) {
+      setIsDeviceRegistered(false);
       setNotifFeedback({ type: 'error', message: err.message || 'Error registering device.' });
     } finally {
       setIsRegisteringDevice(false);
@@ -4737,13 +4743,17 @@ export default function AdminView({ onPageChange, currentUser, onLoginSuccess, o
                       >
                         {isRegisteringDevice ? (
                           <Activity size={14} className="animate-spin" />
-                        ) : browserPermission === 'granted' ? (
+                        ) : (isDeviceRegistered && browserPermission === 'granted') ? (
                           <CheckCircle size={14} className="text-[#00E676]" />
                         ) : (
                           <Smartphone size={14} />
                         )}
                         <span>
-                          {browserPermission === 'granted' ? 'This Device Registered' : 'Register This Device'}
+                          {isRegisteringDevice 
+                            ? 'Registering Device...' 
+                            : (isDeviceRegistered && browserPermission === 'granted') 
+                            ? 'This Device Registered' 
+                            : 'Register This Device'}
                         </span>
                       </button>
                     </div>

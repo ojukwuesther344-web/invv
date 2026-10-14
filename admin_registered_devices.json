@@ -49,5 +49,24 @@
     "enabled": true,
     "createdAt": 1791471704284,
     "lastActiveAt": 1791471704284
+  },
+  {
+    "id": "dev_blessingubah38@gmail.com_test-device-1",
+    "adminEmail": "blessingubah38@gmail.com",
+    "deviceId": "test-device-1",
+    "deviceName": "Device (Browser)",
+    "deviceType": "desktop",
+    "browser": "Unknown",
+    "os": "Unknown",
+    "subscription": {
+      "endpoint": "https://test",
+      "keys": {
+        "p256dh": "k",
+        "auth": "a"
+      }
+    },
+    "enabled": true,
+    "createdAt": 1791840484809,
+    "lastActiveAt": 1791840484809
   }
 ]

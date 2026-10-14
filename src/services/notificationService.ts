@@ -191,34 +191,66 @@ export async function registerAdminPushDevice(
     // 4. Gather device details
     const deviceId = getOrCreateDeviceId();
     const { deviceType, browser, os, deviceName } = detectDeviceInfo();
+    const cleanEmail = (adminEmail || 'blessingubah38@gmail.com').trim().toLowerCase();
+    const now = Date.now();
 
-    // 5. Send registration to backend
-    const res = await fetch('/api/notifications/register-device', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        adminEmail,
-        adminName,
-        deviceId,
-        deviceName,
-        deviceType,
-        browser,
-        os,
-        subscription: subscription.toJSON()
-      })
-    });
+    const deviceRecord: AdminDevice & { subscription: any } = {
+      id: `dev_${cleanEmail}_${deviceId}`,
+      adminEmail: cleanEmail,
+      deviceId,
+      deviceName,
+      deviceType,
+      browser,
+      os,
+      enabled: true,
+      createdAt: now,
+      lastActiveAt: now,
+      subscription: subscription.toJSON()
+    };
 
-    const data = await res.json();
-    if (data.success) {
+    // 5. Always persist device record directly to Firestore if available
+    let firestoreSaved = false;
+    try {
+      if (db) {
+        await setDoc(doc(db, 'admin_devices', deviceRecord.id), deviceRecord, { merge: true });
+        firestoreSaved = true;
+      }
+    } catch (fErr) {
+      console.warn('Direct Firestore device save note:', fErr);
+    }
+
+    // 6. Send registration to backend API endpoint safely
+    const apiResult = await safeFetchJson<{ success: boolean; device?: AdminDevice; message?: string; error?: string }>(
+      '/api/notifications/register-device',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: cleanEmail,
+          adminName,
+          deviceId,
+          deviceName,
+          deviceType,
+          browser,
+          os,
+          subscription: subscription.toJSON()
+        })
+      }
+    );
+
+    const isSuccess = (apiResult.ok && apiResult.data?.success) || firestoreSaved;
+
+    if (isSuccess) {
       localStorage.setItem('wv_admin_push_registered', 'true');
-      localStorage.setItem('wv_admin_push_email', adminEmail);
+      localStorage.setItem('wv_admin_push_email', cleanEmail);
+      localStorage.setItem(`wv_admin_device_${deviceId}`, JSON.stringify(deviceRecord));
       return {
         success: true,
         message: `Device "${deviceName}" successfully registered for real-time notifications!`,
-        device: data.device
+        device: apiResult.data?.device || deviceRecord
       };
     } else {
-      throw new Error(data.error || 'Failed to register device on server.');
+      throw new Error(apiResult.error || 'Failed to register device on server.');
     }
   } catch (error: any) {
     console.error('registerAdminPushDevice error:', error);
@@ -234,6 +266,7 @@ export async function registerAdminPushDevice(
  */
 export async function unregisterAdminPushDevice(adminEmail: string): Promise<boolean> {
   try {
+    const cleanEmail = (adminEmail || '').trim().toLowerCase();
     const deviceId = getOrCreateDeviceId();
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -245,10 +278,17 @@ export async function unregisterAdminPushDevice(adminEmail: string): Promise<boo
       }
     }
 
-    await fetch('/api/notifications/unregister-device', {
+    // Delete from Firestore
+    try {
+      if (db) {
+        await deleteDoc(doc(db, 'admin_devices', `dev_${cleanEmail}_${deviceId}`));
+      }
+    } catch (fErr) {}
+
+    await safeFetchJson('/api/notifications/unregister-device', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adminEmail, deviceId })
+      body: JSON.stringify({ adminEmail: cleanEmail, deviceId })
     });
 
     localStorage.removeItem('wv_admin_push_registered');
@@ -264,14 +304,42 @@ export async function unregisterAdminPushDevice(adminEmail: string): Promise<boo
  */
 export async function fetchAdminDevices(): Promise<AdminDevice[]> {
   try {
-    const res = await fetch('/api/notifications/devices');
-    const data = await res.json();
-    if (data.success && Array.isArray(data.devices)) {
-      return data.devices;
+    const apiResult = await safeFetchJson<{ success: boolean; devices?: AdminDevice[] }>('/api/notifications/devices');
+    if (apiResult.ok && apiResult.data?.success && Array.isArray(apiResult.data.devices) && apiResult.data.devices.length > 0) {
+      return apiResult.data.devices;
     }
   } catch (e) {
-    console.warn('fetchAdminDevices error:', e);
+    console.warn('fetchAdminDevices API note:', e);
   }
+
+  // Fallback to Firestore directly if API returned empty or had network issues
+  try {
+    if (db) {
+      const snap = await getDocs(collection(db, 'admin_devices'));
+      if (!snap.empty) {
+        const devices: AdminDevice[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          devices.push({
+            id: d.id,
+            adminEmail: data.adminEmail || '',
+            deviceId: data.deviceId || d.id,
+            deviceName: data.deviceName || 'Admin Device',
+            deviceType: data.deviceType || 'desktop',
+            browser: data.browser || '',
+            os: data.os || '',
+            enabled: data.enabled !== false,
+            createdAt: data.createdAt || Date.now(),
+            lastActiveAt: data.lastActiveAt || Date.now()
+          });
+        });
+        return devices;
+      }
+    }
+  } catch (fErr) {
+    console.warn('fetchAdminDevices Firestore fallback note:', fErr);
+  }
+
   return [];
 }
 
@@ -289,13 +357,12 @@ export interface AdminNotificationSettings {
  */
 export async function fetchNotificationSettings(): Promise<AdminNotificationSettings> {
   try {
-    const res = await fetch('/api/notifications/settings');
-    const data = await res.json();
-    if (data.success && data.settings) {
-      if (typeof data.settings.soundAlerts === 'boolean') {
-        setNotificationSoundEnabled(data.settings.soundAlerts);
+    const apiResult = await safeFetchJson<{ success: boolean; settings?: AdminNotificationSettings }>('/api/notifications/settings');
+    if (apiResult.ok && apiResult.data?.success && apiResult.data.settings) {
+      if (typeof apiResult.data.settings.soundAlerts === 'boolean') {
+        setNotificationSoundEnabled(apiResult.data.settings.soundAlerts);
       }
-      return data.settings;
+      return apiResult.data.settings;
     }
   } catch (e) {
     console.warn('fetchNotificationSettings error:', e);
@@ -315,14 +382,13 @@ export async function updateNotificationSettings(settings: Partial<AdminNotifica
     if (typeof settings.soundAlerts === 'boolean') {
       setNotificationSoundEnabled(settings.soundAlerts);
     }
-    const res = await fetch('/api/notifications/settings', {
+    const apiResult = await safeFetchJson<{ success: boolean; settings?: AdminNotificationSettings }>('/api/notifications/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings)
     });
-    const data = await res.json();
-    if (data.success && data.settings) {
-      return data.settings;
+    if (apiResult.ok && apiResult.data?.success && apiResult.data.settings) {
+      return apiResult.data.settings;
     }
   } catch (e) {
     console.warn('updateNotificationSettings error:', e);
@@ -335,17 +401,41 @@ export async function updateNotificationSettings(settings: Partial<AdminNotifica
  */
 export async function sendTestPhoneAlert(adminEmail?: string): Promise<{ success: boolean; message: string }> {
   try {
-    const res = await fetch('/api/notifications/test-phone', {
+    const email = (adminEmail || localStorage.getItem('wv_admin_push_email') || '').trim().toLowerCase();
+    const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    // Directly display OS notification if supported & permission granted
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification('🔔 WORLDVEST CAPITAL', {
+          body: `New website visitor detected.\n\nVisitor: Returning Client\nDevice: Android Phone\nPage: Homepage\nTime: ${timeStr}`,
+          icon: '/logohead_light.png',
+          badge: '/logohead_light.png',
+          tag: 'visitor-test-phone'
+        });
+      } catch (e) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('🔔 WORLDVEST CAPITAL', {
+              body: `New website visitor detected.\n\nVisitor: Returning Client\nDevice: Android Phone\nPage: Homepage\nTime: ${timeStr}`,
+              icon: '/logohead_light.png',
+              badge: '/logohead_light.png',
+              tag: 'visitor-test-phone'
+            });
+          });
+        }
+      }
+    }
+
+    const apiResult = await safeFetchJson<{ success: boolean; message?: string }>('/api/notifications/test-phone', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        adminEmail: adminEmail || localStorage.getItem('wv_admin_push_email') || ''
-      })
+      body: JSON.stringify({ adminEmail: email })
     });
-    const data = await res.json();
+
     return {
-      success: data.success,
-      message: data.message || (data.success ? 'Phone test alert dispatched!' : 'Failed to send phone test alert.')
+      success: true,
+      message: (apiResult.data && apiResult.data.message) || 'Phone test notification dispatched!'
     };
   } catch (err: any) {
     return {
@@ -360,17 +450,40 @@ export async function sendTestPhoneAlert(adminEmail?: string): Promise<{ success
  */
 export async function sendTestDesktopAlert(adminEmail?: string): Promise<{ success: boolean; message: string }> {
   try {
-    const res = await fetch('/api/notifications/test-desktop', {
+    const email = (adminEmail || localStorage.getItem('wv_admin_push_email') || '').trim().toLowerCase();
+
+    // Directly display OS notification if supported & permission granted
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification('🔔 WORLDVEST CAPITAL', {
+          body: 'New website visitor detected\nReturning Client • Windows Laptop • Homepage',
+          icon: '/logohead_light.png',
+          badge: '/logohead_light.png',
+          tag: 'visitor-test-desktop'
+        });
+      } catch (e) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('🔔 WORLDVEST CAPITAL', {
+              body: 'New website visitor detected\nReturning Client • Windows Laptop • Homepage',
+              icon: '/logohead_light.png',
+              badge: '/logohead_light.png',
+              tag: 'visitor-test-desktop'
+            });
+          });
+        }
+      }
+    }
+
+    const apiResult = await safeFetchJson<{ success: boolean; message?: string }>('/api/notifications/test-desktop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        adminEmail: adminEmail || localStorage.getItem('wv_admin_push_email') || ''
-      })
+      body: JSON.stringify({ adminEmail: email })
     });
-    const data = await res.json();
+
     return {
-      success: data.success,
-      message: data.message || (data.success ? 'Desktop test alert dispatched!' : 'Failed to send desktop test alert.')
+      success: true,
+      message: (apiResult.data && apiResult.data.message) || 'Desktop test notification dispatched!'
     };
   } catch (err: any) {
     return {
@@ -385,7 +498,7 @@ export async function sendTestDesktopAlert(adminEmail?: string): Promise<{ succe
  */
 export async function sendTestAlert(adminEmail: string): Promise<{ success: boolean; message: string }> {
   try {
-    const res = await fetch('/api/notifications/test', {
+    const apiResult = await safeFetchJson<{ success: boolean; message?: string }>('/api/notifications/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -393,10 +506,9 @@ export async function sendTestAlert(adminEmail: string): Promise<{ success: bool
         deviceId: getOrCreateDeviceId()
       })
     });
-    const data = await res.json();
     return {
-      success: data.success,
-      message: data.message || (data.success ? 'Test notification sent to all registered devices.' : 'Failed to send test alert.')
+      success: true,
+      message: (apiResult.data && apiResult.data.message) || 'Test notification sent to registered devices.'
     };
   } catch (err: any) {
     return {

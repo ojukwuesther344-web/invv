@@ -149,7 +149,11 @@ export async function dbSaveUserProfile(uid: string, profile: UserState): Promis
       country: profile.country || '',
       referredBy: profile.referredBy || '',
       referralsCount: Number(profile.referralsCount) || 0,
-      referralEarnings: Number(profile.referralEarnings) || 0
+      referralEarnings: Number(profile.referralEarnings) || 0,
+      referralRewardCredited: !!profile.referralRewardCredited,
+      referralRewardCreditedAt: profile.referralRewardCreditedAt || null,
+      referralRewardAmount: Number(profile.referralRewardAmount) || 0,
+      referralRewardedTo: profile.referralRewardedTo || ''
     }, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -246,7 +250,11 @@ export async function dbFetchUserProfile(uid: string): Promise<UserState | null>
         country: data.country || '',
         referredBy: data.referredBy || '',
         referralsCount: Number(data.referralsCount) || 0,
-        referralEarnings: Number(data.referralEarnings) || 0
+        referralEarnings: Number(data.referralEarnings) || 0,
+        referralRewardCredited: !!data.referralRewardCredited,
+        referralRewardCreditedAt: data.referralRewardCreditedAt || undefined,
+        referralRewardAmount: Number(data.referralRewardAmount) || 0,
+        referralRewardedTo: data.referralRewardedTo || undefined
       };
       localStorage.setItem(`user_profile_${uid}`, JSON.stringify(profile));
       return profile;
@@ -330,7 +338,11 @@ export function subscribeToUserProfile(
           country: data.country || '',
           referredBy: data.referredBy || '',
           referralsCount: Number(data.referralsCount) || 0,
-          referralEarnings: Number(data.referralEarnings) || 0
+          referralEarnings: Number(data.referralEarnings) || 0,
+          referralRewardCredited: !!data.referralRewardCredited,
+          referralRewardCreditedAt: data.referralRewardCreditedAt || undefined,
+          referralRewardAmount: Number(data.referralRewardAmount) || 0,
+          referralRewardedTo: data.referralRewardedTo || undefined
         };
         // Cache locally
         localStorage.setItem(`user_profile_${uid}`, JSON.stringify(profile));
@@ -2059,6 +2071,9 @@ export async function dbApproveDepositTransaction(
           targetUid,
           depositAmt,
           username: userData.username || txData.username,
+          referredBy: userData.referredBy || '',
+          referralRewardCredited: !!userData.referralRewardCredited,
+          isFirstDeposit: currentTotal === 0,
           planId: txData.planId,
           planName: txData.planName,
           processor: txData.processor,
@@ -2134,6 +2149,90 @@ export async function dbApproveDepositTransaction(
         });
       } catch (e) {}
 
+      // =========================================================================
+      // QUALIFYING REFERRAL REWARD DISPENSATION (7% First Qualifying Deposit Bonus)
+      // Executed strictly once per referred client using referralRewardCredited guard
+      // =========================================================================
+      if (result.referredBy && !result.referralRewardCredited && result.depositAmt > 0) {
+        try {
+          const uplineIdentifier = result.referredBy.toLowerCase().trim();
+          // Find upline referrer user doc
+          const usersCol = collection(db, 'users');
+          const uplineQ = query(usersCol, where('username', '==', result.referredBy));
+          let uplineSnap = await getDocs(uplineQ);
+          if (uplineSnap.empty) {
+            const uplineEmailQ = query(usersCol, where('email', '==', result.referredBy));
+            uplineSnap = await getDocs(uplineEmailQ);
+          }
+
+          if (!uplineSnap.empty) {
+            const uplineDoc = uplineSnap.docs[0];
+            const uplineUid = uplineDoc.id;
+            const uplineRef = doc(db, 'users', uplineUid);
+
+            // Compute standard Tier-1 7% referral commission
+            const commissionRate = 0.07;
+            const commissionAmt = Number((result.depositAmt * commissionRate).toFixed(2));
+
+            if (commissionAmt > 0) {
+              await runTransaction(db, async (t) => {
+                const uDoc = await t.get(uplineRef);
+                const clientDoc = await t.get(doc(db, 'users', result.targetUid));
+
+                if (!uDoc.exists() || !clientDoc.exists()) return;
+                const clientData = clientDoc.data();
+                if (clientData.referralRewardCredited) {
+                  // Idempotency guard: already rewarded
+                  return;
+                }
+
+                const uData = uDoc.data();
+                const curMain = Number(uData.mainAccountBalance !== undefined ? uData.mainAccountBalance : uData.accountBalance) || 0;
+                const curBal = Number(uData.accountBalance) || 0;
+                const curRefEarnings = Number(uData.referralEarnings) || 0;
+                const curRefCount = Number(uData.referralsCount) || 0;
+
+                // Credit upline balance & referral earnings
+                t.update(uplineRef, {
+                  mainAccountBalance: curMain + commissionAmt,
+                  accountBalance: curBal + commissionAmt,
+                  referralEarnings: curRefEarnings + commissionAmt,
+                  referralsCount: Math.max(curRefCount, curRefCount + 1)
+                });
+
+                // Mark client as rewarded to prevent duplicate rewards on future deposits
+                t.update(doc(db, 'users', result.targetUid), {
+                  referralRewardCredited: true,
+                  referralRewardCreditedAt: now,
+                  referralRewardAmount: commissionAmt,
+                  referralRewardedTo: uData.username || uplineUid
+                });
+              });
+
+              // Record referral bonus transaction in master transactions log
+              const refBonusTxId = `tx_ref_${transactionId}_${uplineUid}`;
+              await setDoc(doc(db, 'transactions', refBonusTxId), {
+                id: refBonusTxId,
+                userId: uplineUid,
+                username: uplineDoc.data().username || result.referredBy,
+                type: 'Bonus',
+                amount: commissionAmt,
+                date: new Date().toLocaleDateString(),
+                timestamp: now,
+                status: 'Approved',
+                processor: result.processor || 'USDT TRC20',
+                createdAt: now,
+                approvedAt: now,
+                referenceId: transactionId,
+                notes: `7% Referral Commission from ${result.username}'s first deposit of $${result.depositAmt.toFixed(2)}`
+              }, { merge: true });
+            }
+          }
+        } catch (refErr) {
+          console.warn("Referral reward dispensation notice:", refErr);
+        }
+      }
+
       return {
         success: true,
         message: `Successfully approved and credited $${result.depositAmt.toFixed(2)} to ${result.username}'s Main Account Balance and Account Balance.`,
@@ -2208,6 +2307,32 @@ export async function dbApproveDepositTransaction(
                 u.activeDeposit = (Number(u.activeDeposit) || 0) + depAmt;
               }
               localStorage.setItem(uKey, JSON.stringify(u));
+
+              // Credit offline upline if applicable
+              if (u.referredBy && !u.referralRewardCredited && depAmt > 0) {
+                const commissionAmt = Number((depAmt * 0.07).toFixed(2));
+                if (commissionAmt > 0) {
+                  for (let j = 0; j < localStorage.length; j++) {
+                    const lk = localStorage.key(j);
+                    if (lk && lk.startsWith('user_profile_')) {
+                      try {
+                        const uplineUser = JSON.parse(localStorage.getItem(lk) || '{}');
+                        if (uplineUser.username === u.referredBy || uplineUser.email === u.referredBy) {
+                          uplineUser.accountBalance = (Number(uplineUser.accountBalance) || 0) + commissionAmt;
+                          uplineUser.mainAccountBalance = (Number(uplineUser.mainAccountBalance !== undefined ? uplineUser.mainAccountBalance : uplineUser.accountBalance) || 0) + commissionAmt;
+                          uplineUser.referralEarnings = (Number(uplineUser.referralEarnings) || 0) + commissionAmt;
+                          uplineUser.referralsCount = Math.max(Number(uplineUser.referralsCount) || 0, (Number(uplineUser.referralsCount) || 0) + 1);
+                          localStorage.setItem(lk, JSON.stringify(uplineUser));
+                          break;
+                        }
+                      } catch {}
+                    }
+                  }
+                  u.referralRewardCredited = true;
+                  u.referralRewardAmount = commissionAmt;
+                  localStorage.setItem(uKey, JSON.stringify(u));
+                }
+              }
             }
             return {
               success: true,

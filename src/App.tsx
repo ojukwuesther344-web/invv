@@ -128,6 +128,21 @@ export default function App() {
     return 'dashboard';
   };
 
+  // Capture and persist referral code across navigation, sessions, and registration
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const refCode = params.get('ref');
+      if (refCode && refCode.trim()) {
+        const cleanRef = refCode.trim();
+        localStorage.setItem('wv_ref_code', cleanRef);
+        // Also persist in document.cookie for 30 days
+        document.cookie = `wv_ref_code=${encodeURIComponent(cleanRef)}; path=/; max-age=2592000; SameSite=Lax`;
+      }
+    } catch {}
+  }, []);
+
   const [currentPage, setCurrentPage] = useState<Page>(resolvePageFromLocation);
   const [dashboardSection, setDashboardSection] = useState<string>(resolveDashboardSection);
 
@@ -863,8 +878,12 @@ export default function App() {
       urlPath = `/${lowPage}`;
     }
     
-    if (window.location.pathname !== urlPath && !window.location.hash) {
-      window.history.pushState({ page }, '', urlPath);
+    // Preserve current query parameters (including ref=...)
+    const currentSearch = window.location.search;
+    const fullTargetUrl = currentSearch ? `${urlPath}${currentSearch}` : urlPath;
+    
+    if ((window.location.pathname !== urlPath || window.location.search !== currentSearch) && !window.location.hash) {
+      window.history.pushState({ page }, '', fullTargetUrl);
     }
   };
 
